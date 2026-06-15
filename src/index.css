@@ -1,0 +1,263 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --color-page: var(--bg-page);
+  --color-card: var(--bg-card);
+  --color-elevated: var(--bg-elevated);
+  --color-muted: var(--bg-muted);
+
+  --color-main: var(--c-main);
+  --color-inv: var(--c-inv);
+  --color-subtle: var(--c-subtle);
+  --color-faint: var(--c-faint);
+  --color-line: var(--c-line);
+  --color-line-strong: var(--c-line-strong);
+  --color-shadow: var(--c-shadow);
+  --color-accent-on: var(--c-accent-on);
+  --color-accent-inv: var(--c-accent-inv);
+
+  --color-c1: var(--c-yellow);
+  --color-c2: var(--c-blue);
+  --color-c3: var(--c-green);
+  --color-c4: var(--c-orange);
+  --color-c5: var(--c-red);
+}
+
+@layer base {
+  :root {
+    --bg-page: #DDE3EB;
+    --bg-card: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-muted: #F3F6F8;
+
+    --c-main: #000000;
+    --c-inv: #ffffff;
+    --c-subtle: #374151;
+    --c-faint: #6B7280;
+    --c-line: #000000;
+    --c-line-strong: #000000;
+    --c-shadow: #000000;
+    --c-accent-on: #061018;
+    --c-accent-inv: #ffffff;
+
+    --c-yellow: #E4FF00;
+    --c-blue: #0D47FF;
+    --c-green: #00E65B;
+    --c-orange: #FF6B00;
+    --c-red: #FF2323;
+  }
+
+  .theme-dark {
+    /* Dark dashboard palette: not an inverted light theme. */
+    --bg-page: #05070D;
+    --bg-card: #0E131B;
+    --bg-elevated: #151B26;
+    --bg-muted: #0A0F17;
+
+    --c-main: #F4F7FF;
+    --c-inv: #061018;
+    --c-subtle: #A7B0C2;
+    --c-faint: #6F7A8D;
+    --c-line: #263044;
+    --c-line-strong: #354157;
+    --c-shadow: rgba(0, 0, 0, 0.45);
+    --c-accent-on: #061018;
+    --c-accent-inv: #ffffff;
+
+    /* World Cup 2026 accents, toned down for dark UI. */
+    --c-yellow: #B8FF18;
+    --c-blue: #2F6BFF;
+    --c-green: #19D66B;
+    --c-orange: #FF6A2A;
+    --c-red: #FF4D4D;
+
+    --color-page: var(--bg-page);
+    --color-card: var(--bg-card);
+    --color-elevated: var(--bg-elevated);
+    --color-muted: var(--bg-muted);
+    --color-main: var(--c-main);
+    --color-inv: var(--c-inv);
+    --color-subtle: var(--c-subtle);
+    --color-faint: var(--c-faint);
+    --color-line: var(--c-line);
+    --color-line-strong: var(--c-line-strong);
+    --color-shadow: var(--c-shadow);
+    --color-accent-on: var(--c-accent-on);
+    --color-accent-inv: var(--c-accent-inv);
+    --color-c1: var(--c-yellow);
+    --color-c2: var(--c-blue);
+    --color-c3: var(--c-green);
+    --color-c4: var(--c-orange);
+    --color-c5: var(--c-red);
+  }
+
+  .theme-vintage {
+    --bg-page: #EAE6DB;
+    --bg-card: #F4F0E6;
+    --bg-elevated: #FFF8EA;
+    --c-main: #2b2824;
+    --c-inv: #F4F0E6;
+    --bg-muted: #EAE6DB;
+    --c-subtle: #4E463B;
+    --c-faint: #7B7164;
+    --c-line: #2b2824;
+    --c-line-strong: #2b2824;
+    --c-shadow: #2b2824;
+    --c-accent-on: #2b2824;
+    --c-accent-inv: #F4F0E6;
+
+    --color-page: #EAE6DB;
+    --color-card: #F4F0E6;
+    --color-elevated: #FFF8EA;
+    --color-main: #2b2824;
+    --color-inv: #F4F0E6;
+    --color-muted: #EAE6DB;
+    --color-subtle: #4E463B;
+    --color-faint: #7B7164;
+    --color-line: #2b2824;
+    --color-line-strong: #2b2824;
+    --color-shadow: #2b2824;
+    --color-accent-on: #2b2824;
+    --color-accent-inv: #F4F0E6;
+    --color-c1: #dcd6c7;
+    --color-c2: #2b2824;
+    --color-c3: #dcd6c7;
+    --color-c4: #dcd6c7;
+    --color-c5: #2b2824;
+
+    --c-yellow: #dcd6c7;
+    --c-blue: #2b2824;
+    --c-green: #dcd6c7;
+    --c-orange: #dcd6c7;
+    --c-red: #2b2824;
+  }
+
+  .theme-vintage.theme-dark {
+    --bg-page: #05070D;
+    --bg-card: #0E131B;
+    --bg-elevated: #151B26;
+    --c-main: #EAE6DB;
+    --c-inv: #111111;
+    --bg-muted: #0A0F17;
+    --c-subtle: #BFB8A8;
+    --c-faint: #827B70;
+    --c-line: #2D313A;
+    --c-line-strong: #3B414D;
+    --c-shadow: rgba(0, 0, 0, 0.45);
+    --c-accent-on: #111111;
+    --c-accent-inv: #EAE6DB;
+
+    --c-yellow: #EAE6DB;
+    --c-blue: #2F6BFF;
+    --c-green: #19D66B;
+    --c-orange: #FF6A2A;
+    --c-red: #FF4D4D;
+
+    --color-page: var(--bg-page);
+    --color-card: var(--bg-card);
+    --color-elevated: var(--bg-elevated);
+    --color-main: var(--c-main);
+    --color-inv: var(--c-inv);
+    --color-muted: var(--bg-muted);
+    --color-subtle: var(--c-subtle);
+    --color-faint: var(--c-faint);
+    --color-line: var(--c-line);
+    --color-line-strong: var(--c-line-strong);
+    --color-shadow: var(--c-shadow);
+    --color-c1: var(--c-yellow);
+    --color-c2: var(--c-blue);
+    --color-c3: var(--c-green);
+    --color-c4: var(--c-orange);
+    --color-c5: var(--c-red);
+  }
+
+  html, body, #root {
+    min-height: 100%;
+  }
+
+  body {
+    background: var(--bg-page);
+    color: var(--c-main);
+  }
+
+  input,
+  button {
+    color: inherit;
+  }
+}
+
+@layer utilities {
+  /* Dark mode should feel designed, not inverted. Existing components still use
+     many border-main/bg-main classes, so these targeted overrides keep the
+     current layout while changing the color language. */
+  .theme-dark .border-main {
+    border-color: var(--c-line-strong) !important;
+  }
+
+  .theme-dark .bg-main {
+    background-color: var(--bg-elevated) !important;
+  }
+
+  .theme-dark .bg-main.text-inv,
+  .theme-dark .bg-main .text-inv {
+    color: var(--c-main) !important;
+  }
+
+  .theme-dark .bg-c1,
+  .theme-dark .bg-c3,
+  .theme-dark .bg-c4 {
+    color: var(--c-accent-on);
+  }
+
+  .theme-dark .bg-c1 .text-main,
+  .theme-dark .bg-c3 .text-main,
+  .theme-dark .bg-c4 .text-main,
+  .theme-dark .bg-c1.text-main,
+  .theme-dark .bg-c3.text-main,
+  .theme-dark .bg-c4.text-main {
+    color: var(--c-accent-on) !important;
+  }
+
+  .theme-dark .bg-c2,
+  .theme-dark .bg-c5,
+  .theme-dark .bg-c2.text-inv,
+  .theme-dark .bg-c5.text-inv,
+  .theme-dark .bg-c2 .text-inv,
+  .theme-dark .bg-c5 .text-inv {
+    color: var(--c-accent-inv) !important;
+  }
+
+  .theme-dark .wc-rainbow-fade {
+    background: linear-gradient(to right, var(--bg-card) 0%, transparent 100%);
+  }
+
+  .theme-rounded .rounded-lg,
+  .theme-rounded .rounded-md,
+  .theme-rounded .rounded-sm,
+  .theme-rounded .border-4,
+  .theme-rounded .border-2,
+  .theme-rounded .w-10,
+  .theme-rounded .w-11,
+  .theme-rounded .border-\[3px\] {
+    border-radius: 0.75rem !important; /* 12px bo góc */
+  }
+
+  .theme-rounded .rounded-full,
+  .theme-rounded .w-3.h-3.rounded-full,
+  .theme-rounded .w-1\.5.h-1\.5.rounded-full {
+    border-radius: 9999px !important;
+  }
+
+  /* Don't round specific layout wrappers that should stay flush. */
+  .theme-rounded .border-b-4,
+  .theme-rounded .border-t-4 {
+     /* unless they are also cards, we don't force border-radius here if it breaks things, but the classes above should catch most cards */
+  }
+
+  .theme-no-shadow * {
+    box-shadow: none !important;
+  }
+}

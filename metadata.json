@@ -1,0 +1,6 @@
+{
+  "name": "Predict 2026",
+  "description": "A brutalist landing page for a sports prediction tournament",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
