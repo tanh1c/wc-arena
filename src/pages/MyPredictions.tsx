@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { BarChart2, Flame, ListChecks, Star } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import PageHero from '../components/ui/PageHero';
@@ -101,7 +102,7 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                 <div key={prediction.id} className="grid grid-cols-1 lg:grid-cols-[140px_1.4fr_140px_140px_120px_90px_150px] border-b-2 border-line last:border-b-0 font-bold text-sm hover:bg-muted transition-colors">
                   <div className="p-3 lg:border-r-2 border-main text-subtle uppercase text-xs font-black">{formatDate(match.kickoffAt)}</div>
                   <div className="p-3 lg:border-r-2 border-main">
-                    <div className="font-black uppercase text-main">{getTeamName(match.homeTeamId)} vs {getTeamName(match.awayTeamId)}</div>
+                    <Link to={`/matches/${match.id}`} className="font-black uppercase text-main hover:text-c2 hover:underline">{getTeamName(match.homeTeamId)} vs {getTeamName(match.awayTeamId)}</Link>
                     <div className="text-xs text-subtle uppercase mt-1">{match.stadium} • {match.city}</div>
                   </div>
                   <div className="p-3 lg:border-r-2 border-main text-left lg:text-center font-black">
@@ -115,9 +116,9 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                   <div className="p-3 lg:border-r-2 border-main flex lg:justify-center"><StatusPill status={status} /></div>
                   <div className="p-3 lg:border-r-2 border-main text-left lg:text-center font-black text-lg">{points}</div>
                   <div className="p-3 flex lg:justify-center">
-                    <button type="button" className="bg-card hover:bg-muted text-main font-black text-[10px] px-3 py-2 border-2 border-main uppercase shadow-[2px_2px_0_var(--color-shadow)]">
+                    <Link to={`/predictions/${prediction.id}`} className="bg-card hover:bg-muted text-main font-black text-[10px] px-3 py-2 border-2 border-main uppercase shadow-[2px_2px_0_var(--color-shadow)]">
                       View Breakdown
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}

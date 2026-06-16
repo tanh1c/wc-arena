@@ -228,7 +228,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                                <span className="bg-c5 text-main font-black text-[10px] px-3 py-1 border-2 border-main uppercase shadow-[2px_2px_0_var(--color-shadow)]">OPEN</span>
                             </div>
                             <div className="w-24 flex justify-center">
-                               <button onClick={() => onNavigate('picks')} className="bg-c2 hover:opacity-90 text-inv font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all">
+                               <button onClick={() => onNavigate('matches/m-ger-mar')} className="bg-c2 hover:opacity-90 text-inv font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all">
                                   PREDICT <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
                                </button>
                             </div>
@@ -275,7 +275,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                                <span className="bg-c1 text-main font-black text-[10px] px-2 py-1 border-2 border-main uppercase shadow-[2px_2px_0_var(--color-shadow)] text-center w-full">LOCKED SOON</span>
                             </div>
                             <div className="w-24 flex justify-center">
-                               <button className="bg-card hover:bg-muted text-main font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all">
+                               <button onClick={() => onNavigate('matches/m-fra-arg')} className="bg-card hover:bg-muted text-main font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all">
                                   DETAILS <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
                                </button>
                             </div>
@@ -378,7 +378,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                                <span className="font-black text-[10px] uppercase text-subtle">FT</span>
                             </div>
                             <div className="w-24 flex justify-center">
-                               <button className="bg-card hover:bg-page text-main font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] transition-all">
+                               <button onClick={() => onNavigate('matches/m-jpn-mex')} className="bg-card hover:bg-page text-main font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] transition-all">
                                   RESULTS <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
                                </button>
                             </div>
@@ -425,7 +425,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                                <span className="bg-c5 text-main font-black text-[10px] px-3 py-1 border-2 border-main uppercase shadow-[2px_2px_0_var(--color-shadow)]">OPEN</span>
                             </div>
                             <div className="w-24 flex justify-center">
-                               <button onClick={() => onNavigate('picks')} className="bg-c2 hover:opacity-90 text-inv font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all">
+                               <button onClick={() => onNavigate('matches/m-usa-kor')} className="bg-c2 hover:opacity-90 text-inv font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all">
                                   PREDICT <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
                                </button>
                             </div>
@@ -472,7 +472,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                                <span className="bg-muted text-main font-black text-[10px] px-3 py-1 border-2 border-main uppercase shadow-[2px_2px_0_var(--color-shadow)]">LOCKED</span>
                             </div>
                             <div className="w-24 flex justify-center">
-                               <button className="bg-card hover:bg-page text-main font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] transition-all">
+                               <button onClick={() => onNavigate('matches/m-bra-esp')} className="bg-card hover:bg-page text-main font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 w-full shadow-[2px_2px_0_var(--color-shadow)] transition-all">
                                   DETAILS <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
                                </button>
                             </div>

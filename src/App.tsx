@@ -9,8 +9,9 @@ import Login from './Login';
 import Register from './Register';
 import Onboarding from './Onboarding';
 import Fixtures from './Fixtures';
+import MatchDetail from './pages/MatchDetail';
 import MyPredictions from './pages/MyPredictions';
-import PlaceholderPage from './pages/PlaceholderPage';
+import PredictionBreakdown from './pages/PredictionBreakdown';
 
 export type ThemeControls = {
   isVintage: boolean;
@@ -81,8 +82,8 @@ export default function App() {
         <Route path="/leaderboard" element={<LegacyRoute Component={Leaderboard} themeControls={themeControls} />} />
         <Route path="/rules" element={<LegacyRoute Component={Rules} themeControls={themeControls} />} />
         <Route path="/prize-pool" element={<LegacyRoute Component={PrizePool} themeControls={themeControls} />} />
-        <Route path="/matches/:matchId" element={<PlaceholderPage title="Match Detail" description="Detailed match predictions and score breakdowns arrive in the next phase." themeControls={themeControls} />} />
-        <Route path="/predictions/:predictionId" element={<PlaceholderPage title="Prediction Breakdown" description="Transparent scoring details arrive in the next phase." themeControls={themeControls} />} />
+        <Route path="/matches/:matchId" element={<MatchDetail themeControls={themeControls} />} />
+        <Route path="/predictions/:predictionId" element={<PredictionBreakdown themeControls={themeControls} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
