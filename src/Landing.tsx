@@ -121,7 +121,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
           <RainbowGraphic />
           
           <div className="relative z-10 w-full md:w-[60%] lg:w-[50%] xl:w-[45%] p-8 lg:p-10 lg:pr-10 xl:p-12">
-            <h1 className="text-[2.5rem] sm:text-[3.5rem] lg:text-[4rem] xl:text-[4.5rem] font-black uppercase leading-[0.95] tracking-tighter mb-3 lg:mb-4 text-main drop-shadow-sm md:drop-shadow-none">
+            <h1 className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-black uppercase leading-[0.95] tracking-tighter mb-3 lg:mb-4 text-main drop-shadow-sm md:drop-shadow-none">
               Predict the score.<br/>
               Climb the leaderboard.<br/>
               Win the pool.
