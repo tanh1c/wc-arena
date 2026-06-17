@@ -56,9 +56,9 @@ function LegacyRoute({ Component, themeControls }: LegacyRouteProps) {
 export default function App() {
   const [isVintage, setIsVintage] = useState(false);
   const [isDark, setIsDark] = useState(false);
-  const [isRounded, setIsRounded] = useState(false);
+  const [isRounded, setIsRounded] = useState(true);
   const [hasShadow, setHasShadow] = useState(true);
-  const [hasFrame, setHasFrame] = useState(true);
+  const [hasFrame, setHasFrame] = useState(false);
 
   useEffect(() => {
     let cls = 'bg-page text-main min-h-screen';
