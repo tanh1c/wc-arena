@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { FR, DE, AR, SA, BR, MX, GB, TN, US as USFlag, ES, CR, MA, HR, CH, HU } from 'country-flag-icons/react/3x2';
+import { FR, DE, AR, SA, BR, MX, GB, TN, US as USFlag, ES, CR } from 'country-flag-icons/react/3x2';
 import {
-  Trophy, Wallet, ChevronDown, ChevronRight, Clock, Search, Filter,
+  Trophy, ChevronDown, ChevronRight, Clock, Search, Filter,
   MapPin, CheckCircle2, XCircle, ArrowRight, Star, AlertCircle,
   PlayCircle, Calendar, Flag, Goal, Activity, BarChart2, Check, ExternalLink, CalendarDays, MonitorPlay, Binoculars, Pencil, Settings
 } from 'lucide-react';
@@ -34,13 +34,9 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
           </div>
           <div className="flex items-center gap-3">
             <LegacySettingsMenu {...themeControls} />
-            <button onClick={() => onNavigate('login')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
-              <Wallet size={18} strokeWidth={2.5} />
-              <div className="flex flex-col items-start leading-[1.1] hidden sm:flex">
-                <span className="text-[10px] uppercase font-bold opacity-80">Wallet</span>
-                <span className="text-sm">$125.40</span>
-              </div>
-              <ChevronDown size={18} className="ml-1 hidden sm:block" />
+            <button onClick={() => onNavigate('my-predictions')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-2 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)] uppercase text-xs sm:text-sm">
+              <Pencil size={18} strokeWidth={2.5} />
+              <span>{t('nav.app.myPredictions')}</span>
             </button>
           </div>
         </nav>
@@ -108,7 +104,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
           </div>
 
           {/* Main 2-column layout */}
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch">
              
              {/* Left Column: Match List */}
              <div className="flex-1 w-full border-4 border-main flex flex-col min-w-0 bg-card shadow-[4px_4px_0_0_var(--color-shadow)]">
@@ -446,7 +442,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
              </div>
 
              {/* Right Column: Widgets */}
-             <div className="w-full lg:w-[320px] xl:w-[360px] flex flex-col gap-4 shrink-0 relative z-20">
+             <div className="w-full lg:w-[320px] xl:w-[360px] flex flex-col gap-4 shrink-0 self-stretch relative z-20">
                 
                 {/* Next Deadline */}
                 <div className="flex flex-col border-4 border-main bg-page shadow-[4px_4px_0_0_var(--color-shadow)]">
@@ -465,44 +461,9 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                    </div>
                 </div>
 
-                {/* Today's Live Matches */}
-                <div className="flex flex-col border-4 border-main bg-card shadow-[4px_4px_0_0_var(--color-shadow)]">
-                   <div className="bg-main text-inv font-black uppercase text-xs py-2 px-3 flex items-center justify-between border-b-4 border-main">
-                      <span>TODAY'S LIVE {t('nav.public.matches')}</span>
-                      <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-c4 animate-pulse"></div> <span className="text-[9px]">LIVE</span></div>
-                   </div>
-                   <div className="flex flex-col">
-                      <div className="p-3 border-b border-line flex items-center justify-between text-sm hover:bg-page transition-colors cursor-pointer group">
-                         <div className="flex items-center gap-2 font-black">
-                            <div className="w-5 h-5 rounded-[2px] overflow-hidden flex items-center justify-center shrink-0 border border-main/10"><BR className="w-full h-full object-cover" /></div>
-                            <span className="w-8">BRA</span>
-                            <span className="mr-1">1 : 0</span>
-                            <span className="w-8 text-right">MEX</span>
-                            <div className="w-5 h-5 rounded-[2px] overflow-hidden flex items-center justify-center shrink-0 border border-main/10"><MX className="w-full h-full object-cover" /></div>
-                         </div>
-                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-c4">45'</span>
-                            <button className="bg-c5 text-main font-black text-[9px] px-2 py-1 border-2 border-main uppercase shadow-[2px_2px_0_0_var(--color-shadow)] uppercase">WATCH</button>
-                         </div>
-                      </div>
-                      <div className="p-3 flex items-center justify-between text-sm hover:bg-page transition-colors cursor-pointer group">
-                         <div className="flex items-center gap-2 font-black">
-                            <div className="w-5 h-5 rounded-[2px] overflow-hidden flex items-center justify-center shrink-0 border border-main/10"><MA className="w-full h-full object-cover" /></div>
-                            <span className="w-8">MAR</span>
-                            <span className="mr-1">0 : 0</span>
-                            <span className="w-8 text-right">CRO</span>
-                            <div className="w-5 h-5 rounded-[2px] overflow-hidden flex items-center justify-center shrink-0 border border-main/10"><HR className="w-full h-full object-cover" /></div>
-                         </div>
-                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-c4">22'</span>
-                            <button className="bg-c5 text-main font-black text-[9px] px-2 py-1 border-2 border-main uppercase shadow-[2px_2px_0_0_var(--color-shadow)] uppercase">WATCH</button>
-                         </div>
-                      </div>
-                   </div>
-                </div>
 
                 {/* Your Predictions Stats */}
-                <div className="flex flex-col border-4 border-main bg-card shadow-[4px_4px_0_0_var(--color-shadow)]">
+                <div className="flex flex-col flex-1 border-4 border-main bg-card shadow-[4px_4px_0_0_var(--color-shadow)]">
                    <div className="bg-main text-inv font-black uppercase text-xs py-2 px-3 flex items-center justify-between border-b-4 border-main">
                       <span>YOUR PREDICTIONS</span>
                       <span className="text-[9px] hover:underline cursor-pointer">VIEW ALL</span>
@@ -535,39 +496,6 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                    </div>
                 </div>
 
-                {/* Group Standings */}
-                <div className="border-4 border-main bg-card flex flex-col shadow-[4px_4px_0_0_var(--color-shadow)]">
-                   <div className="bg-main text-inv font-black uppercase text-xs py-2 px-3 flex items-center justify-between border-b-4 border-main">
-                      <span>GROUP A STANDINGS</span>
-                      <span className="text-[9px] hover:underline cursor-pointer">VIEW TABLE</span>
-                   </div>
-                   <div className="flex flex-col text-xs">
-                      <div className="flex font-black uppercase bg-page px-2 py-1 border-b-2 border-main text-[9px]">
-                         <div className="w-8 text-center">POS</div>
-                         <div className="flex-1 pl-1">TEAM</div>
-                         <div className="w-6 text-center">P</div>
-                         <div className="w-8 text-center">GD</div>
-                         <div className="w-8 text-center">PTS</div>
-                      </div>
-                      {[
-                        { pos: 1, team: 'GERMANY', p: 1, gd: '+2', pts: 3, bg: 'bg-page', flag: <DE className="w-5 h-3.5 border border-main/20" /> },
-                        { pos: 2, team: 'SWITZERLAND', p: 1, gd: '+1', pts: 3, bg: 'bg-card', flag: <CH className="w-5 h-3.5 border border-main/20" /> },
-                        { pos: 3, team: 'HUNGARY', p: 1, gd: '-1', pts: 0, bg: 'bg-page', flag: <HU className="w-5 h-3.5 border border-main/20" /> },
-                        { pos: 4, team: 'SCOTLAND', p: 1, gd: '-2', pts: 0, bg: 'bg-card', flag: <GB className="w-5 h-3.5 border border-main/20" /> },
-                      ].map((row, i) => (
-                        <div key={i} className={`flex items-center font-bold px-2 py-2 border-b-2 border-line ${i === 3 ? 'border-b-0' : ''} ${row.bg}`}>
-                           <div className={`w-8 text-center font-black ${row.pos === 1 ? 'bg-c5 text-main border-2 border-main' : row.pos === 2 ? 'bg-c2 text-inv border-2 border-main' : 'bg-main text-inv border-2 border-main'}`}>{row.pos}</div>
-                           <div className="flex-1 pl-2 flex items-center gap-1.5 font-black">
-                              <div className="flex shrink-0 items-center justify-center">{row.flag}</div>
-                              <span className="truncate max-w-[80px] xl:max-w-[120px]">{row.team}</span>
-                           </div>
-                           <div className="w-6 text-center">{row.p}</div>
-                           <div className="w-8 text-center">{row.gd}</div>
-                           <div className="w-8 text-center font-black">{row.pts}</div>
-                        </div>
-                      ))}
-                   </div>
-                </div>
 
              </div>
 

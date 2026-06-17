@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Users, Wallet, ChevronDown, Calendar, Star, TrendingDown, TrendingUp, BarChart2, Medal, User, Settings } from 'lucide-react';
+import { Trophy, Users, Calendar, Star, BarChart2, Medal, User, Settings } from 'lucide-react';
 import { RainbowGraphic } from './Landing';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
 
@@ -52,13 +52,9 @@ export default function Leaderboard({ onNavigate, isVintage, setIsVintage, isDar
           </div>
           <div className="flex items-center gap-3">
             <LegacySettingsMenu {...themeControls} />
-            <button className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
-              <Wallet size={18} strokeWidth={2.5} />
-              <div className="flex flex-col items-start leading-[1.1] hidden sm:flex">
-                <span className="text-[10px] uppercase font-bold opacity-80">Wallet</span>
-                <span className="text-sm">$125.40</span>
-              </div>
-              <ChevronDown size={18} className="ml-1 hidden sm:block" />
+            <button onClick={() => onNavigate('my-predictions')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-2 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)] uppercase text-xs sm:text-sm">
+              <Settings size={18} strokeWidth={2.5} />
+              <span>{t('nav.app.myPredictions')}</span>
             </button>
           </div>
         </nav>
@@ -117,7 +113,7 @@ export default function Leaderboard({ onNavigate, isVintage, setIsVintage, isDar
           </div>
 
           {/* 2-Column Split */}
-          <div className="flex flex-col xl:flex-row gap-4 lg:gap-6 items-start">
+          <div className="flex flex-col xl:flex-row gap-4 lg:gap-6 items-stretch">
              
              {/* Left Column (Leaderboard) */}
              <div className="flex-1 w-full flex flex-col gap-4">
@@ -306,7 +302,7 @@ export default function Leaderboard({ onNavigate, isVintage, setIsVintage, isDar
              </div>
 
              {/* Right Column: Sidebar Panels */}
-             <div className="w-full xl:w-[350px] flex flex-col gap-4 lg:gap-6 flex-shrink-0">
+             <div className="w-full xl:w-[350px] flex flex-col gap-4 lg:gap-6 flex-shrink-0 self-stretch">
                
                {/* YOUR STATS */}
                <div className="bg-card border-4 border-main flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)]">
@@ -345,7 +341,7 @@ export default function Leaderboard({ onNavigate, isVintage, setIsVintage, isDar
                </div>
 
                {/* TOP PRIZE BREAKDOWN */}
-               <div className="bg-card border-4 border-main flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)]">
+               <div className="bg-card border-4 border-main flex flex-col flex-1 shadow-[8px_8px_0_0_var(--color-shadow)]">
                   <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs border-b-4 border-main">
                     TOP PRIZE BREAKDOWN
                   </div>
@@ -381,58 +377,7 @@ export default function Leaderboard({ onNavigate, isVintage, setIsVintage, isDar
                   </div>
                </div>
 
-               {/* RECENT MOVERS */}
-               <div className="bg-card border-4 border-main flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)]">
-                  <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs flex justify-between items-center border-b-4 border-main">
-                    <span>RECENT MOVERS</span>
-                    <span className="text-faint font-bold hover:text-inv cursor-pointer lowercase hover:underline">VIEW ALL</span>
-                  </div>
-                  <div className="flex flex-col">
-                     {recentMovers.map((mover, idx) => (
-                        <div key={idx} className="flex px-4 py-2.5 border-b border-line last:border-b-0 items-center justify-between text-sm font-bold">
-                           <div className="flex items-center gap-2 w-14 shrink-0">
-                              {mover.change > 0 ? (
-                                 <span className="text-c3 flex items-center font-black drop-shadow-[1px_1px_0_var(--color-shadow)]"><TrendingUp size={14} className="mr-0.5" strokeWidth={3}/> {mover.change}</span>
-                              ) : (
-                                 <span className="text-c5 flex items-center font-black drop-shadow-[1px_1px_0_var(--color-shadow)]"><TrendingDown size={14} className="mr-0.5" strokeWidth={3}/> {Math.abs(mover.change)}</span>
-                              )}
-                           </div>
-                           <div className="flex-1 flex items-center gap-2 ml-1">
-                              <div className="w-6 h-6 rounded-full border-2 border-main overflow-hidden bg-elevated shrink-0">
-                                 <img src={mover.avatar} alt={mover.name} className="w-full h-full object-cover" />
-                              </div>
-                              <span className="truncate">{mover.name}</span>
-                           </div>
-                           <div className="font-medium flex items-baseline gap-1 text-right">
-                              {mover.pts} <span className="text-[9px] font-black tracking-widest text-faint hidden sm:block">PTS</span>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
 
-               {/* NEXT DEADLINE */}
-               <div className="bg-card border-4 border-main flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)]">
-                  <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs border-b-4 border-main">
-                    NEXT DEADLINE
-                  </div>
-                  <div className="p-4 flex items-center gap-4 justify-center">
-                     <div className="w-12 h-12 bg-card border-2 border-main flex items-center justify-center shrink-0 shadow-[4px_4px_0_0_var(--color-shadow)]">
-                        <Calendar size={28} />
-                     </div>
-                     <div className="flex flex-col text-center">
-                        <div className="text-3xl font-black text-c5 tracking-tighter flex items-center justify-center gap-1 drop-shadow-[1px_1px_0_var(--color-shadow)]">
-                           02<span className="text-main mb-1">:</span>15<span className="text-main mb-1">:</span>34
-                        </div>
-                        <div className="flex items-center justify-center gap-6 text-[9px] font-black uppercase text-main tracking-widest mt-[-2px] mb-2 pr-1">
-                           <span>HRS</span><span>MINS</span><span>SECS</span>
-                        </div>
-                        <div className="font-bold text-xs uppercase tracking-wide">
-                           Jun 12, 18:00 UTC <span className="mx-1">•</span> BRA vs ESP
-                        </div>
-                     </div>
-                  </div>
-               </div>
 
              </div>
           </div>

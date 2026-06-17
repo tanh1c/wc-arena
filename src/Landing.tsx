@@ -84,8 +84,8 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
           </div>
           <div className="flex items-center gap-3">
             <LegacySettingsMenu {...themeControls} />
-            <button onClick={() => onNavigate('register')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 md:px-6 border-2 border-main flex items-center gap-2 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
-              {t('landing.joinNow')} <ArrowRight size={18} strokeWidth={3} />
+            <button onClick={() => onNavigate('my-predictions')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 md:px-6 border-2 border-main flex items-center gap-2 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)] uppercase text-xs md:text-sm">
+              {t('nav.app.myPredictions')} <ArrowRight size={18} strokeWidth={3} />
             </button>
           </div>
         </nav>

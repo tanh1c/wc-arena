@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Users, Star, Gift, UserCheck, ChevronDown, CheckCircle2, ShieldCheck, ClipboardCheck, Clock, Mail, User, PenTool, BarChart2, Medal, Flame } from 'lucide-react';
+import { Trophy, Users, Star, Gift, CheckCircle2, ShieldCheck, ClipboardCheck, Clock, Mail, User, PenTool, BarChart2, Medal, Flame } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
 
 export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame }: { onNavigate: (page: string) => void, isVintage: boolean, setIsVintage: (v: boolean) => void, isDark: boolean, setIsDark: (v: boolean) => void, isRounded: boolean, setIsRounded: (v: boolean) => void, hasShadow: boolean, setHasShadow: (v: boolean) => void, hasFrame: boolean, setHasFrame: (v: boolean) => void }) {
@@ -29,13 +29,9 @@ export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark,
           </div>
           <div className="flex items-center gap-3">
             <LegacySettingsMenu {...themeControls} />
-            <button className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
-              <UserCheck size={18} strokeWidth={2.5} />
-              <div className="flex flex-col items-start leading-[1.1] hidden sm:flex">
-                <span className="text-[10px] uppercase font-bold opacity-80">{t('common.account')}</span>
-                <span className="text-sm">{t('common.rewards')}</span>
-              </div>
-              <ChevronDown size={18} className="ml-1 hidden sm:block" />
+            <button onClick={() => onNavigate('my-predictions')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-2 transition-transform transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)] uppercase text-xs sm:text-sm">
+              <PenTool size={18} strokeWidth={2.5} />
+              <span>{t('nav.app.myPredictions')}</span>
             </button>
           </div>
         </nav>
@@ -98,7 +94,7 @@ export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark,
             </div>
 
             {/* 2-Column Main content Split */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch">
               
               {/* Left Column */}
               <div className="flex-1 w-full flex flex-col gap-4 lg:gap-6">
@@ -215,7 +211,7 @@ export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark,
               </div>
 
               {/* Right Column */}
-              <div className="w-full lg:w-[350px] flex flex-col gap-4 lg:gap-6 flex-shrink-0">
+              <div className="w-full lg:w-[350px] flex flex-col gap-4 lg:gap-6 flex-shrink-0 self-stretch">
                  
                  {/* HOW TO WIN */}
                  <div className="bg-card border-4 border-main flex flex-col shadow-[4px_4px_0_0_var(--color-shadow)]">
@@ -263,36 +259,9 @@ export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark,
                     </div>
                  </div>
 
-                 {/* SPLIT BOX RANK & DEADLINE */}
-                 <div className="flex gap-4">
-                    <div className="bg-card border-4 border-main flex flex-col flex-1 shadow-[4px_4px_0_0_var(--color-shadow)]">
-                       <div className="bg-main text-inv font-black px-3 py-2 uppercase tracking-wide text-[10px] border-b-4 border-main flex items-center gap-2">
-                         <User size={12}/> YOUR CURRENT RANK
-                       </div>
-                       <div className="p-3 flex flex-col items-center justify-center flex-1 bg-page pb-4">
-                          <div className="text-3xl font-black mb-1">124<span className="text-sm">TH</span></div>
-                          <div className="text-[10px] font-bold uppercase text-subtle mb-2">2,450 POINTS</div>
-                          <button onClick={() => onNavigate('leaderboard')} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black text-[10px] uppercase px-3 py-1.5 border-2 border-main shadow-[2px_2px_0_var(--color-main)]">
-                             VIEW {t('nav.public.leaderboard')}
-                          </button>
-                       </div>
-                    </div>
-                    <div className="bg-card border-4 border-main flex flex-col flex-1 shadow-[4px_4px_0_0_var(--color-shadow)]">
-                       <div className="bg-main text-inv font-black px-3 py-2 uppercase tracking-wide text-[10px] border-b-4 border-main flex items-center gap-2">
-                         <Clock size={12}/> NEXT DEADLINE
-                       </div>
-                       <div className="p-3 flex flex-col items-center justify-center flex-1 bg-page pb-4 text-center">
-                          <div className="text-2xl font-black text-c5 mb-1 leading-none">
-                             02<span className="text-main">:</span>15<span className="text-main">:</span>34
-                          </div>
-                          <div className="text-[10px] font-bold uppercase whitespace-nowrap">JUN 12, 18:00 UTC</div>
-                          <div className="text-[9px] font-bold uppercase text-subtle mt-1">NEXT KICKOFF LOCK</div>
-                       </div>
-                    </div>
-                 </div>
 
                  {/* RECENT TOP WINNERS */}
-                 <div className="bg-card border-4 border-main flex flex-col shadow-[4px_4px_0_0_var(--color-shadow)] mt-auto">
+                 <div className="bg-card border-4 border-main flex flex-col flex-1 shadow-[4px_4px_0_0_var(--color-shadow)]">
                     <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs border-b-4 border-main flex justify-between items-center">
                       <span>REWARD TRACK EXAMPLES</span>
                       <button onClick={() => onNavigate('rewards')} className="text-[10px] opacity-80 cursor-pointer hover:underline">VIEW REWARDS</button>
