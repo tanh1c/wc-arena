@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Gift, ShieldCheck, Star, Trophy, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
-import { mockEligibilityChecks, mockRewardTrustNotes } from '../data/mockRewards';
-import { listCurrentUserRewardReviews, type RewardReviewRow } from '../services/rewards';
+import { listCurrentUserRewardEligibilityChecks, listCurrentUserRewardReviews, listRewardTrustNotes, type RewardEligibilityCheckRow, type RewardReviewRow, type RewardTrustNoteRow } from '../services/rewards';
 import { getErrorMessage } from '../services/serviceTypes';
 import type { ThemeControls } from '../App';
 import type { EligibilityStatus, RewardStatus } from '../types/domain';
@@ -48,6 +47,8 @@ function getRewardStatus(status: string): RewardStatus {
 export default function Rewards({ themeControls }: RewardsProps) {
   const { t } = useTranslation();
   const [rewards, setRewards] = useState<RewardReviewRow[]>([]);
+  const [eligibilityChecks, setEligibilityChecks] = useState<RewardEligibilityCheckRow[]>([]);
+  const [trustNotes, setTrustNotes] = useState<RewardTrustNoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,10 +57,12 @@ export default function Rewards({ themeControls }: RewardsProps) {
     setLoading(true);
     setError(null);
 
-    listCurrentUserRewardReviews()
-      .then((nextRewards) => {
+    Promise.all([listCurrentUserRewardReviews(), listCurrentUserRewardEligibilityChecks(), listRewardTrustNotes()])
+      .then(([nextRewards, nextChecks, nextNotes]) => {
         if (!active) return;
         setRewards(nextRewards);
+        setEligibilityChecks(nextChecks);
+        setTrustNotes(nextNotes);
       })
       .catch((nextError) => {
         if (!active) return;
@@ -77,7 +80,7 @@ export default function Rewards({ themeControls }: RewardsProps) {
   const approvedCount = rewards.filter((reward) => ['approved', 'paid'].includes(reward.status)).length;
   const pendingCount = rewards.filter((reward) => reward.status === 'pending').length;
   const potentialAmount = rewards.reduce((sum, reward) => sum + reward.amount, 0);
-  const passedChecks = mockEligibilityChecks.filter((check) => check.status === 'passed').length;
+  const passedChecks = eligibilityChecks.filter((check) => check.status === 'passed').length;
 
   return (
     <AppShell themeControls={themeControls}>
@@ -94,7 +97,7 @@ export default function Rewards({ themeControls }: RewardsProps) {
               <div className="shrink-0"><ClipboardCheck size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('appPages.rewards.eligibleChecks')}</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{passedChecks}/{mockEligibilityChecks.length}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none">{passedChecks}/{eligibilityChecks.length}</div>
                 <div className="text-[10px] font-bold uppercase mt-1">{t('appPages.rewards.manualReviewReady')}</div>
               </div>
             </div>
@@ -130,18 +133,22 @@ export default function Rewards({ themeControls }: RewardsProps) {
                 {t('appPages.rewards.eligibilityChecklist')}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 bg-card border-b-4 border-main">
-                {mockEligibilityChecks.map((check, index) => (
-                  <div key={check.id} className={`p-4 border-b-4 border-main flex gap-3 ${index % 2 === 0 ? 'md:border-r-4' : ''}`}>
-                    <div className={`w-10 h-10 border-2 border-main flex items-center justify-center shrink-0 ${eligibilityStyles[check.status]}`}>
-                      {getEligibilityIcon(check.status)}
+                {eligibilityChecks.map((check, index) => {
+                  const status = check.status as EligibilityStatus;
+                  return (
+                    <div key={check.id} className={`p-4 border-b-4 border-main flex gap-3 ${index % 2 === 0 ? 'md:border-r-4' : ''}`}>
+                      <div className={`w-10 h-10 border-2 border-main flex items-center justify-center shrink-0 ${eligibilityStyles[status]}`}>
+                        {getEligibilityIcon(status)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-black uppercase text-sm">{check.label}</div>
+                        <div className="font-bold text-xs text-subtle mt-1 leading-snug">{check.description}</div>
+                        {check.href && <Link to={check.href} className="inline-flex mt-3 text-[10px] font-black uppercase text-c2 hover:underline">{t('appPages.rewards.reviewDetails')}</Link>}
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <div className="font-black uppercase text-sm">{check.label}</div>
-                      <div className="font-bold text-xs text-subtle mt-1 leading-snug">{check.description}</div>
-                      {check.href && <Link to={check.href} className="inline-flex mt-3 text-[10px] font-black uppercase text-c2 hover:underline">{t('appPages.rewards.reviewDetails')}</Link>}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+                {!loading && eligibilityChecks.length === 0 && <div className="p-4 font-black uppercase text-sm">No eligibility checks yet.</div>}
               </div>
 
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
@@ -192,12 +199,13 @@ export default function Rewards({ themeControls }: RewardsProps) {
                 {t('appPages.rewards.trustNotes')}
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
-                {mockRewardTrustNotes.map((note) => (
+                {trustNotes.map((note) => (
                   <div key={note.id} className="p-4 border-b-2 border-line last:border-b-0">
                     <div className="font-black uppercase text-sm">{note.title}</div>
                     <div className="text-xs font-bold text-subtle mt-1 leading-snug">{note.description}</div>
                   </div>
                 ))}
+                {!loading && trustNotes.length === 0 && <div className="p-4 font-black uppercase text-xs">No trust notes configured.</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-c1 text-main">

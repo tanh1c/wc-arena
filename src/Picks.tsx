@@ -4,10 +4,11 @@ import { Trophy, Users, ChevronDown, Calendar, Star, CheckCircle, Pencil, Lock, 
 import { PitchIcon } from './Landing';
 import AppShell from './components/layout/AppShell';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
-import { listMatches, type MatchRow } from './services/matches';
+import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type MatchRow } from './services/matches';
 import { listCurrentUserPredictions, submitPrediction, type PredictionWithMatch } from './services/predictions';
 import { getErrorMessage } from './services/serviceTypes';
 import { getTeamMap, type TeamRow } from './services/teams';
+import { getPublicDisplayName } from './utils/displayName';
 import { getTeamFlag } from './utils/teamFlags';
 
 type PicksProps = {
@@ -25,9 +26,13 @@ type PicksProps = {
 };
 
 type PredictionOutcome = 'home' | 'draw' | 'away';
-type DraftPick = { homeScore: string; awayScore: string; predictedOutcome: PredictionOutcome | '' };
+type PredictionType = 'exact_score' | 'outcome_only';
+type DraftPick = { predictionType: PredictionType; homeScore: string; awayScore: string; predictedOutcome: PredictionOutcome | '' };
 type DraftScores = Record<string, DraftPick>;
 type SubmitState = Record<string, { loading?: boolean; error?: string; success?: string }>;
+type StatusFilter = 'all' | 'open' | 'locked' | 'submitted';
+
+const MATCHES_PER_PAGE = 8;
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(value));
@@ -43,7 +48,7 @@ function formatDateRange(matches: MatchRow[]) {
 }
 
 function isMatchEditable(match: MatchRow) {
-  return match.status === 'open' && new Date() < new Date(match.lock_at);
+  return isMatchPredictionOpen(match);
 }
 
 function getOutcomeFromScores(homeScore: string, awayScore: string): PredictionOutcome | '' {
@@ -74,16 +79,30 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntryWithProfile[]>([]);
   const [draftScores, setDraftScores] = useState<DraftScores>({});
   const [submitState, setSubmitState] = useState<SubmitState>({});
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const predictionMap = useMemo(() => getPredictionMap(predictions), [predictions]);
   const groupMatches = useMemo(() => matches.filter((match) => match.stage === 'group'), [matches]);
+  const filteredMatches = useMemo(() => groupMatches.filter((match) => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'submitted') return predictionMap.has(match.id);
+    return getEffectiveMatchStatus(match) === statusFilter;
+  }), [groupMatches, predictionMap, statusFilter]);
+  const pageCount = Math.max(1, Math.ceil(filteredMatches.length / MATCHES_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleMatches = filteredMatches.slice((currentPage - 1) * MATCHES_PER_PAGE, currentPage * MATCHES_PER_PAGE);
   const openMatches = matches.filter(isMatchEditable).length;
   const submittedCount = predictions.length;
   const nextDeadline = matches.find(isMatchEditable);
   const nextHomeTeam = nextDeadline ? teams.get(nextDeadline.home_team_id) : undefined;
   const nextAwayTeam = nextDeadline ? teams.get(nextDeadline.away_team_id) : undefined;
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
 
   useEffect(() => {
     let active = true;
@@ -98,8 +117,9 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
         setPredictions(nextPredictions);
         setLeaderboard(nextLeaderboard.slice(0, 5));
         setDraftScores(Object.fromEntries(nextPredictions.map((prediction) => [prediction.match_id, {
-          homeScore: String(prediction.home_score),
-          awayScore: String(prediction.away_score),
+          predictionType: prediction.prediction_type as PredictionType,
+          homeScore: typeof prediction.home_score === 'number' ? String(prediction.home_score) : '',
+          awayScore: typeof prediction.away_score === 'number' ? String(prediction.away_score) : '',
           predictedOutcome: prediction.predicted_outcome as PredictionOutcome,
         }])));
       })
@@ -119,6 +139,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
   function updateDraft(matchId: string, key: 'homeScore' | 'awayScore', value: string) {
     setDraftScores((current) => {
       const next = {
+        predictionType: current[matchId]?.predictionType ?? 'exact_score',
         homeScore: current[matchId]?.homeScore ?? '',
         awayScore: current[matchId]?.awayScore ?? '',
         predictedOutcome: current[matchId]?.predictedOutcome ?? '',
@@ -129,7 +150,23 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
         ...current,
         [matchId]: {
           ...next,
-          predictedOutcome: getOutcomeFromScores(next.homeScore, next.awayScore),
+          predictedOutcome: next.predictionType === 'exact_score' ? getOutcomeFromScores(next.homeScore, next.awayScore) : next.predictedOutcome,
+        },
+      };
+    });
+  }
+
+  function updatePredictionType(matchId: string, predictionType: PredictionType) {
+    setDraftScores((current) => {
+      const homeScore = current[matchId]?.homeScore ?? '';
+      const awayScore = current[matchId]?.awayScore ?? '';
+      return {
+        ...current,
+        [matchId]: {
+          predictionType,
+          homeScore,
+          awayScore,
+          predictedOutcome: predictionType === 'exact_score' ? getOutcomeFromScores(homeScore, awayScore) : current[matchId]?.predictedOutcome ?? '',
         },
       };
     });
@@ -139,6 +176,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
     setDraftScores((current) => ({
       ...current,
       [matchId]: {
+        predictionType: current[matchId]?.predictionType ?? 'outcome_only',
         homeScore: current[matchId]?.homeScore ?? '',
         awayScore: current[matchId]?.awayScore ?? '',
         predictedOutcome,
@@ -148,24 +186,36 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
 
   async function saveMatchPrediction(match: MatchRow) {
     const draft = draftScores[match.id];
-    const homeScore = Number(draft?.homeScore);
-    const awayScore = Number(draft?.awayScore);
+    const predictionType = draft?.predictionType ?? 'exact_score';
+    let homeScore: number | null = null;
+    let awayScore: number | null = null;
+    let predictedOutcome = draft?.predictedOutcome ?? '';
 
-    if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
-      setSubmitState((current) => ({ ...current, [match.id]: { error: 'Enter two non-negative whole numbers.' } }));
-      return;
+    if (predictionType === 'exact_score') {
+      homeScore = Number(draft?.homeScore);
+      awayScore = Number(draft?.awayScore);
+
+      if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
+        setSubmitState((current) => ({ ...current, [match.id]: { error: 'Enter two non-negative whole numbers.' } }));
+        return;
+      }
+
+      predictedOutcome = getOutcomeFromScores(draft?.homeScore ?? '', draft?.awayScore ?? '');
+      if (!predictedOutcome || draft?.predictedOutcome !== predictedOutcome) {
+        setSubmitState((current) => ({ ...current, [match.id]: { error: 'Pick a result that matches your score.' } }));
+        return;
+      }
     }
 
-    const predictedOutcome = draft?.predictedOutcome || getOutcomeFromScores(draft?.homeScore ?? '', draft?.awayScore ?? '');
-    if (!predictedOutcome || predictedOutcome !== getOutcomeFromScores(draft?.homeScore ?? '', draft?.awayScore ?? '')) {
-      setSubmitState((current) => ({ ...current, [match.id]: { error: 'Pick a result that matches your score.' } }));
+    if (!predictedOutcome) {
+      setSubmitState((current) => ({ ...current, [match.id]: { error: 'Pick a match outcome.' } }));
       return;
     }
 
     setSubmitState((current) => ({ ...current, [match.id]: { loading: true } }));
 
     try {
-      await submitPrediction({ matchId: match.id, homeScore, awayScore, predictedOutcome });
+      await submitPrediction({ matchId: match.id, predictionType, homeScore, awayScore, predictedOutcome });
       const nextPredictions = await listCurrentUserPredictions();
       setPredictions(nextPredictions);
       setSubmitState((current) => ({ ...current, [match.id]: { success: 'Saved' } }));
@@ -178,7 +228,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
     const editableMatches = groupMatches.filter(isMatchEditable);
     for (const match of editableMatches) {
       const draft = draftScores[match.id];
-      if (draft?.homeScore !== undefined && draft.awayScore !== undefined && draft.homeScore !== '' && draft.awayScore !== '') {
+      if ((draft?.predictionType === 'outcome_only' && draft.predictedOutcome) || (draft?.homeScore !== undefined && draft.awayScore !== undefined && draft.homeScore !== '' && draft.awayScore !== '')) {
         await saveMatchPrediction(match);
       }
     }
@@ -187,7 +237,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
   const slipItems = [
     { label: 'Submitted Picks', calculation: `${submittedCount} saved`, value: `${submittedCount} picks`, icon: <Star size={16} /> },
     { label: 'Open Matches', calculation: `${openMatches} editable`, value: `${openMatches}`, icon: <CheckCircle size={16} className="text-c2" /> },
-    { label: 'Potential Points', calculation: `${submittedCount} x 3 pts`, value: `${submittedCount * 3} pts`, icon: <TrendingUp size={16} className="text-c4" /> },
+    { label: 'Max Exact Points', calculation: `${submittedCount} x 5 pts`, value: `${submittedCount * 5} pts`, icon: <TrendingUp size={16} className="text-c4" /> },
   ];
 
   return (
@@ -244,29 +294,32 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                   </button>
                   <div className="flex items-center gap-2 font-bold text-sm uppercase px-2 py-1">
                     <Calendar size={16} />
-                    {formatDateRange(groupMatches)}
+                    {formatDateRange(filteredMatches)}
                   </div>
                 </div>
 
                 <div className="flex border-2 border-main font-bold text-xs uppercase self-stretch sm:self-auto overflow-hidden">
-                  <button className="bg-c2 text-accent-inv px-4 py-1.5 border-r-2 border-main">ALL</button>
-                  <button className="bg-card hover:bg-elevated px-4 py-1.5 border-r-2 border-main">OPEN</button>
-                  <button className="bg-card hover:bg-elevated px-4 py-1.5 border-r-2 border-main">LOCKED</button>
-                  <button className="bg-card hover:bg-elevated px-4 py-1.5">SUBMITTED</button>
+                  {(['open', 'locked', 'submitted', 'all'] as StatusFilter[]).map((status) => (
+                    <button key={status} type="button" onClick={() => { setStatusFilter(status); setPage(1); }} className={`${statusFilter === status ? 'bg-c2 text-accent-inv' : 'bg-card hover:bg-elevated text-main'} px-4 py-1.5 border-r-2 border-main last:border-r-0 flex-1 sm:flex-none`}>
+                      {status.toUpperCase()}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="flex flex-col">
                 {loading && <div className="p-6 bg-card font-black uppercase text-sm border-b-4 border-main">Loading picks...</div>}
                 {error && <div className="p-6 bg-c5 text-main font-black uppercase text-sm border-b-4 border-main">{error}</div>}
-                {!loading && !error && groupMatches.length === 0 && <div className="p-6 bg-card font-black uppercase text-sm border-b-4 border-main">No group matches available.</div>}
-                {!loading && !error && groupMatches.map((match, index) => {
+                {!loading && !error && filteredMatches.length === 0 && <div className="p-6 bg-card font-black uppercase text-sm border-b-4 border-main">No picks found for this filter.</div>}
+                {!loading && !error && visibleMatches.map((match, index) => {
                   const homeTeam = teams.get(match.home_team_id);
                   const awayTeam = teams.get(match.away_team_id);
                   const prediction = predictionMap.get(match.id);
                   const draft = draftScores[match.id] ?? {
-                    homeScore: prediction ? String(prediction.home_score) : '',
-                    awayScore: prediction ? String(prediction.away_score) : '',
+                    predictionType: (prediction?.prediction_type as PredictionType | undefined) ?? 'exact_score',
+                    homeScore: typeof prediction?.home_score === 'number' ? String(prediction.home_score) : '',
+                    awayScore: typeof prediction?.away_score === 'number' ? String(prediction.away_score) : '',
+                    predictedOutcome: (prediction?.predicted_outcome as PredictionOutcome | undefined) ?? '',
                   };
                   const editable = isMatchEditable(match);
                   const state = submitState[match.id];
@@ -298,13 +351,25 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                             <span className="font-black text-sm lg:text-lg uppercase tracking-wide truncate">{homeTeam?.name ?? match.home_team_id}</span>
                           </div>
 
-                          <div className="flex flex-col items-center justify-center relative px-2">
-                            <div className="flex items-center gap-2">
-                              <input type="number" min="0" disabled={!editable || state?.loading} value={draft.homeScore} onChange={(event) => updateDraft(match.id, 'homeScore', event.target.value)} className="w-10 h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
-                              <div className="font-black text-xl">-</div>
-                              <input type="number" min="0" disabled={!editable || state?.loading} value={draft.awayScore} onChange={(event) => updateDraft(match.id, 'awayScore', event.target.value)} className="w-10 h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
+                          <div className="flex flex-col items-center justify-center relative px-2 gap-2">
+                            <div className="grid grid-cols-2 border-2 border-main text-[8px] font-black uppercase overflow-hidden w-[180px]">
+                              {[
+                                { value: 'exact_score' as const, label: 'Exact' },
+                                { value: 'outcome_only' as const, label: 'Outcome' },
+                              ].map((option) => (
+                                <button key={option.value} type="button" disabled={!editable || state?.loading} onClick={() => updatePredictionType(match.id, option.value)} className={`${draft.predictionType === option.value ? 'bg-c2 text-accent-inv' : 'bg-card hover:bg-elevated'} border-r-2 last:border-r-0 border-main py-1 disabled:bg-muted disabled:text-subtle`}>
+                                  {option.label}
+                                </button>
+                              ))}
                             </div>
-                            <div className="mt-2 grid grid-cols-3 border-2 border-main text-[8px] font-black uppercase overflow-hidden w-[180px]">
+                            {draft.predictionType === 'exact_score' && (
+                              <div className="flex items-center gap-2">
+                                <input type="number" min="0" disabled={!editable || state?.loading} value={draft.homeScore} onChange={(event) => updateDraft(match.id, 'homeScore', event.target.value)} className="w-10 h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
+                                <div className="font-black text-xl">-</div>
+                                <input type="number" min="0" disabled={!editable || state?.loading} value={draft.awayScore} onChange={(event) => updateDraft(match.id, 'awayScore', event.target.value)} className="w-10 h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
+                              </div>
+                            )}
+                            <div className="grid grid-cols-3 border-2 border-main text-[8px] font-black uppercase overflow-hidden w-[180px]">
                               {[
                                 { value: 'home' as const, label: homeTeam?.short_name ?? 'HOME' },
                                 { value: 'draw' as const, label: 'DRAW' },
@@ -313,7 +378,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                                 <button
                                   key={option.value}
                                   type="button"
-                                  disabled={!editable || state?.loading}
+                                  disabled={!editable || state?.loading || draft.predictionType === 'exact_score'}
                                   onClick={() => updateOutcome(match.id, option.value)}
                                   className={`${draft.predictedOutcome === option.value ? 'bg-c3 text-main' : 'bg-card hover:bg-elevated'} border-r-2 last:border-r-0 border-main py-1 disabled:bg-muted disabled:text-subtle`}
                                 >
@@ -321,8 +386,8 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                                 </button>
                               ))}
                             </div>
-                            <div className="absolute -bottom-5 w-[160px] text-center text-[8px] md:text-[9px] font-bold text-faint uppercase tracking-wider">
-                              {state?.error ?? state?.success ?? 'EXACT SCORE BONUS: 3 PTS'}
+                            <div className="absolute -bottom-5 w-[180px] text-center text-[8px] md:text-[9px] font-bold text-faint uppercase tracking-wider">
+                              {state?.error ?? state?.success ?? (draft.predictionType === 'exact_score' ? 'EXACT SCORE: 5 PTS' : 'OUTCOME: 2 PTS')}
                             </div>
                           </div>
 
@@ -354,6 +419,22 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                     </div>
                   );
                 })}
+                {!loading && !error && filteredMatches.length > MATCHES_PER_PAGE && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-card border-b-4 border-main font-black uppercase text-xs">
+                    <span>
+                      Showing {(currentPage - 1) * MATCHES_PER_PAGE + 1}-{Math.min(currentPage * MATCHES_PER_PAGE, filteredMatches.length)} of {filteredMatches.length}
+                    </span>
+                    <div className="flex items-center border-2 border-main overflow-hidden">
+                      <button type="button" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="px-4 py-2 border-r-2 border-main bg-card disabled:bg-muted disabled:text-subtle hover:bg-elevated">
+                        PREV
+                      </button>
+                      <span className="px-4 py-2 bg-page border-r-2 border-main">PAGE {currentPage}/{pageCount}</span>
+                      <button type="button" disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="px-4 py-2 bg-card disabled:bg-muted disabled:text-subtle hover:bg-elevated">
+                        NEXT
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button type="button" onClick={saveAllEditablePredictions} className="bg-c2 text-accent-inv p-6 md:p-8 flex items-center justify-between border-b-4 border-main cursor-pointer group transition-colors hover:opacity-80 transition-opacity text-left">
@@ -386,7 +467,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                   ))}
                   <div className="mt-2 pt-3 border-t-2 border-main flex items-center justify-between font-black uppercase">
                     <span className="text-subtle text-sm">TOTAL POTENTIAL POINTS</span>
-                    <span className="text-xl">{submittedCount * 3} PTS</span>
+                    <span className="text-xl">{submittedCount * 5} PTS</span>
                   </div>
                 </div>
               </div>
@@ -411,7 +492,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                           <span>{awayTeam?.short_name ?? 'TBD'}</span>
                           <span className="ml-1 flex items-center"><TeamFlag team={awayTeam} className="w-5 h-auto rounded-[2px] border border-main/10" /></span>
                         </div>
-                        <div className="font-black px-2">{prediction.home_score} - {prediction.away_score}</div>
+                        <div className="font-black px-2">{prediction.prediction_type === 'exact_score' && typeof prediction.home_score === 'number' && typeof prediction.away_score === 'number' ? `${prediction.home_score} - ${prediction.away_score}` : prediction.predicted_outcome.toUpperCase()}</div>
                         <div className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-sm border border-main font-black bg-c3 text-accent-on">{prediction.status}</div>
                       </div>
                     );
@@ -430,7 +511,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                     <div key={item.user_id} className="flex border-b border-line last:border-b-0 items-stretch hover:bg-elevated transition-colors text-sm">
                       <div className="w-8 sm:w-10 border-r border-line flex items-center justify-center font-black bg-c1 text-accent-on">{item.rank}</div>
                       <div className="p-2 border-r border-line flex items-center justify-center bg-elevated"><User size={14} strokeWidth={3} className="text-main" /></div>
-                      <div className="flex-1 p-2 font-bold flex items-center">{item.profiles?.username ?? item.user_id}</div>
+                      <div className="flex-1 p-2 font-bold flex items-center">{getPublicDisplayName(item.profiles, item.user_id)}</div>
                       <div className="p-2 font-black flex items-center justify-end text-main">{item.points.toLocaleString()} PTS</div>
                     </div>
                   ))}
@@ -441,8 +522,8 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                 <div className="flex-1 flex flex-col border-r-4 border-main">
                   <div className="bg-main text-inv font-black px-3 py-2 uppercase tracking-wide text-[11px]">SCORING {t('nav.public.rules')}</div>
                   <div className="p-3 flex flex-col gap-2 font-bold text-xs bg-card text-subtle">
-                    <div className="flex items-center gap-2"><div className="bg-c1 p-1 border border-main flex items-center justify-center"><Target size={14} strokeWidth={2.5} className="text-accent-on"/></div><span>Exact score = 3 pts</span></div>
-                    <div className="flex items-center gap-2"><div className="bg-c2 p-1 border border-main flex items-center justify-center"><CheckCircle size={14} strokeWidth={2.5} className="text-accent-inv"/></div><span>Correct outcome = 1 pt</span></div>
+                    <div className="flex items-center gap-2"><div className="bg-c1 p-1 border border-main flex items-center justify-center"><Target size={14} strokeWidth={2.5} className="text-accent-on"/></div><span>Exact score = 5 pts</span></div>
+                    <div className="flex items-center gap-2"><div className="bg-c2 p-1 border border-main flex items-center justify-center"><CheckCircle size={14} strokeWidth={2.5} className="text-accent-inv"/></div><span>Correct outcome = 2 pts</span></div>
                     <div className="flex items-center gap-2"><div className="bg-c4 p-1 border border-main flex items-center justify-center"><TrendingUp size={14} strokeWidth={2.5} className="text-accent-inv"/></div><span>Streak bonus up to 5 pts</span></div>
                   </div>
                 </div>

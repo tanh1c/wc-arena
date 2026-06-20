@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Award, Lock, Medal, ShieldCheck, Sparkles } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { listCurrentUserBadges, type UserBadgeWithBadge } from '../services/badges';
 import { getErrorMessage } from '../services/serviceTypes';
+import { getBadgeImageSrc } from '../utils/badgeImages';
 import type { ThemeControls } from '../App';
 
 type BadgesProps = {
@@ -81,6 +83,9 @@ export default function Badges({ themeControls }: BadgesProps) {
           <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">
             {t('appPages.badges.title')}
           </h1>
+          <Link to="/achievements" className="mt-3 inline-flex w-fit bg-c2 text-inv border-2 border-main px-4 py-3 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)]">
+            {t('nav.items.achievements')}
+          </Link>
         </div>
 
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
@@ -132,6 +137,7 @@ export default function Badges({ themeControls }: BadgesProps) {
                   const badge = userBadge.badges;
                   if (!badge) return null;
                   const rarity = getBadgeRarity(badge.rarity);
+                  const imageSrc = getBadgeImageSrc(badge);
                   const progress = badge.progress_target ? Math.round((userBadge.progress_current / badge.progress_target) * 100) : 0;
                   const isRightColumn = index % 2 === 1;
                   const isLastOddItem = badges.length % 2 === 1 && index === badges.length - 1;
@@ -143,8 +149,10 @@ export default function Badges({ themeControls }: BadgesProps) {
                             <div className="font-black uppercase text-xl tracking-tight">{badge.name}</div>
                             <div className="font-black uppercase text-[10px] mt-1 opacity-80">{badge.category} • {badge.rarity}</div>
                           </div>
-                          <div className="w-12 h-12 border-2 border-main bg-card text-main flex items-center justify-center shrink-0">
-                            {userBadge.unlocked_at ? <Award size={26} fill="currentColor" /> : <Lock size={24} />}
+                          <div className="w-16 h-16 border-2 border-main bg-card text-main flex items-center justify-center shrink-0 overflow-hidden p-1">
+                            {imageSrc ? (
+                              <img src={imageSrc} alt="" className={`w-full h-full object-contain ${userBadge.unlocked_at ? '' : 'grayscale opacity-50'}`} />
+                            ) : userBadge.unlocked_at ? <Award size={28} fill="currentColor" /> : <Lock size={26} />}
                           </div>
                         </div>
                       </div>

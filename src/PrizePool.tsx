@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Users, Star, Gift, CheckCircle2, ShieldCheck, ClipboardCheck, Clock, Mail, User, PenTool, BarChart2, Medal, Flame } from 'lucide-react';
+import { Trophy, Users, Star, Gift, CheckCircle2, ShieldCheck, ClipboardCheck, Clock, Mail, User, PenTool, BarChart2, Medal } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
+import StreakBadge from './components/ui/StreakBadge';
 
 export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame }: { onNavigate: (page: string) => void, isVintage: boolean, setIsVintage: (v: boolean) => void, isDark: boolean, setIsDark: (v: boolean) => void, isRounded: boolean, setIsRounded: (v: boolean) => void, hasShadow: boolean, setHasShadow: (v: boolean) => void, hasFrame: boolean, setHasFrame: (v: boolean) => void }) {
   const { t } = useTranslation();
@@ -162,7 +163,7 @@ export default function PrizePool({ onNavigate, isVintage, setIsVintage, isDark,
                        </div>
                        <div className="bg-card border-2 border-c4 p-4 relative shadow-[2px_2px_0_var(--color-c4)] flex flex-col justify-center">
                           <div className="flex items-center gap-2 font-black uppercase text-xs mb-2 border-b-2 border-c4 pb-2 text-c4">
-                             <Flame size={18} /> STREAK REWARDS
+                             <StreakBadge streak={3} size="sm" showValue={false} /> STREAK REWARDS
                           </div>
                           <span className="text-[11px] font-bold leading-snug text-main">Earn bonus points and qualify for recognition tracks through correct streaks.</span>
                        </div>

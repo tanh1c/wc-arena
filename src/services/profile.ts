@@ -3,7 +3,7 @@ import type { Database } from '../types/supabase';
 
 export type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
-export type ProfileUpdate = Partial<Pick<ProfileRow, 'username' | 'country_code' | 'fan_club_team_id' | 'avatar_url'>>;
+export type ProfileUpdate = Partial<Pick<ProfileRow, 'username' | 'display_name' | 'country_code' | 'fan_club_team_id' | 'avatar_url'>>;
 
 export async function getCurrentProfile(userId: string) {
   const { data, error } = await supabase

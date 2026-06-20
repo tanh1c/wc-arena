@@ -1,25 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import Landing from './Landing';
-import Picks from './Picks';
-import Leaderboard from './Leaderboard';
-import Rules from './Rules';
-import PrizePool from './PrizePool';
-import Login from './Login';
-import Register from './Register';
-import Onboarding from './Onboarding';
-import Fixtures from './Fixtures';
-import Activity from './pages/Activity';
-import AdminAudit from './pages/AdminAudit';
-import AdminDashboard from './pages/AdminDashboard';
-import Badges from './pages/Badges';
-import LeagueDetail from './pages/LeagueDetail';
-import Leagues from './pages/Leagues';
-import MatchDetail from './pages/MatchDetail';
-import MyPredictions from './pages/MyPredictions';
-import PredictionBreakdown from './pages/PredictionBreakdown';
-import Profile from './pages/Profile';
-import Rewards from './pages/Rewards';
+
+const Landing = lazy(() => import('./Landing'));
+const Picks = lazy(() => import('./Picks'));
+const Leaderboard = lazy(() => import('./Leaderboard'));
+const Rules = lazy(() => import('./Rules'));
+const PrizePool = lazy(() => import('./PrizePool'));
+const Login = lazy(() => import('./Login'));
+const Register = lazy(() => import('./Register'));
+const Onboarding = lazy(() => import('./Onboarding'));
+const Fixtures = lazy(() => import('./Fixtures'));
+const Achievements = lazy(() => import('./pages/Achievements'));
+const Activity = lazy(() => import('./pages/Activity'));
+const AdminAudit = lazy(() => import('./pages/AdminAudit'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const Badges = lazy(() => import('./pages/Badges'));
+const LeagueDetail = lazy(() => import('./pages/LeagueDetail'));
+const Leagues = lazy(() => import('./pages/Leagues'));
+const MatchDetail = lazy(() => import('./pages/MatchDetail'));
+const MyPredictions = lazy(() => import('./pages/MyPredictions'));
+const PredictionBreakdown = lazy(() => import('./pages/PredictionBreakdown'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Rewards = lazy(() => import('./pages/Rewards'));
 
 export type ThemeControls = {
   isVintage: boolean;
@@ -51,6 +53,14 @@ function LegacyRoute({ Component, themeControls }: LegacyRouteProps) {
   const navigate = useNavigate();
 
   return <Component {...themeControls} onNavigate={(page) => navigate(pageToPath(page))} />;
+}
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen bg-page text-main p-6 font-black uppercase">
+      Loading page...
+    </div>
+  );
 }
 
 export default function App() {
@@ -85,29 +95,32 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LegacyRoute Component={Landing} themeControls={themeControls} />} />
-        <Route path="/login" element={<LegacyRoute Component={Login} themeControls={themeControls} />} />
-        <Route path="/register" element={<LegacyRoute Component={Register} themeControls={themeControls} />} />
-        <Route path="/onboarding" element={<LegacyRoute Component={Onboarding} themeControls={themeControls} />} />
-        <Route path="/matches" element={<LegacyRoute Component={Fixtures} themeControls={themeControls} />} />
-        <Route path="/picks" element={<LegacyRoute Component={Picks} themeControls={themeControls} />} />
-        <Route path="/my-predictions" element={<MyPredictions themeControls={themeControls} />} />
-        <Route path="/leaderboard" element={<LegacyRoute Component={Leaderboard} themeControls={themeControls} />} />
-        <Route path="/rules" element={<LegacyRoute Component={Rules} themeControls={themeControls} />} />
-        <Route path="/prize-pool" element={<LegacyRoute Component={PrizePool} themeControls={themeControls} />} />
-        <Route path="/profile" element={<Profile themeControls={themeControls} />} />
-        <Route path="/badges" element={<Badges themeControls={themeControls} />} />
-        <Route path="/leagues" element={<Leagues themeControls={themeControls} />} />
-        <Route path="/leagues/:leagueId" element={<LeagueDetail themeControls={themeControls} />} />
-        <Route path="/activity" element={<Activity themeControls={themeControls} />} />
-        <Route path="/rewards" element={<Rewards themeControls={themeControls} />} />
-        <Route path="/admin" element={<AdminDashboard themeControls={themeControls} />} />
-        <Route path="/admin/audit" element={<AdminAudit themeControls={themeControls} />} />
-        <Route path="/matches/:matchId" element={<MatchDetail themeControls={themeControls} />} />
-        <Route path="/predictions/:predictionId" element={<PredictionBreakdown themeControls={themeControls} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<LegacyRoute Component={Landing} themeControls={themeControls} />} />
+          <Route path="/login" element={<LegacyRoute Component={Login} themeControls={themeControls} />} />
+          <Route path="/register" element={<LegacyRoute Component={Register} themeControls={themeControls} />} />
+          <Route path="/onboarding" element={<LegacyRoute Component={Onboarding} themeControls={themeControls} />} />
+          <Route path="/matches" element={<LegacyRoute Component={Fixtures} themeControls={themeControls} />} />
+          <Route path="/picks" element={<LegacyRoute Component={Picks} themeControls={themeControls} />} />
+          <Route path="/my-predictions" element={<MyPredictions themeControls={themeControls} />} />
+          <Route path="/leaderboard" element={<LegacyRoute Component={Leaderboard} themeControls={themeControls} />} />
+          <Route path="/rules" element={<LegacyRoute Component={Rules} themeControls={themeControls} />} />
+          <Route path="/prize-pool" element={<LegacyRoute Component={PrizePool} themeControls={themeControls} />} />
+          <Route path="/profile" element={<Profile themeControls={themeControls} />} />
+          <Route path="/badges" element={<Badges themeControls={themeControls} />} />
+          <Route path="/achievements" element={<Achievements themeControls={themeControls} />} />
+          <Route path="/leagues" element={<Leagues themeControls={themeControls} />} />
+          <Route path="/leagues/:leagueId" element={<LeagueDetail themeControls={themeControls} />} />
+          <Route path="/activity" element={<Activity themeControls={themeControls} />} />
+          <Route path="/rewards" element={<Rewards themeControls={themeControls} />} />
+          <Route path="/admin" element={<AdminDashboard themeControls={themeControls} />} />
+          <Route path="/admin/audit" element={<AdminAudit themeControls={themeControls} />} />
+          <Route path="/matches/:matchId" element={<MatchDetail themeControls={themeControls} />} />
+          <Route path="/predictions/:predictionId" element={<PredictionBreakdown themeControls={themeControls} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

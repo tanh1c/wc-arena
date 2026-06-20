@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type PredictionOutcome = 'home' | 'draw' | 'away';
+type PredictionType = 'exact_score' | 'outcome_only';
+type ScoreOutcome = 'exact' | 'correct' | 'missed';
+
 type Score = {
   home_score: number;
   away_score: number;
@@ -18,9 +22,10 @@ type MatchScore = Score & {
 type PredictionRow = {
   id: string;
   user_id: string;
-  home_score: number;
-  away_score: number;
-  predicted_outcome: 'home' | 'draw' | 'away' | null;
+  prediction_type: PredictionType | null;
+  home_score: number | null;
+  away_score: number | null;
+  predicted_outcome: PredictionOutcome | null;
   is_risk_pick: boolean;
   matches: MatchScore;
 };
@@ -29,9 +34,11 @@ type CalculatedScore = {
   prediction_id: string;
   user_id: string;
   match_kickoff_at: string;
-  outcome: 'exact' | 'correct' | 'missed';
+  outcome: ScoreOutcome;
   exact_score: number;
   correct_outcome: number;
+  goal_difference_bonus: number;
+  team_score_bonus: number;
   streak_bonus: number;
   risk_multiplier: number;
   underdog_bonus: number;
@@ -42,12 +49,19 @@ type CalculatedScore = {
 
 type UserAggregate = {
   userId: string;
+  predictionPoints: number;
+  rewardPoints: number;
   points: number;
   exactScores: number;
   accuracy: number;
   currentStreak: number;
   bestStreak: number;
   rank: number;
+};
+
+type DailyRewardRow = {
+  user_id: string;
+  points_awarded: number;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -57,24 +71,41 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function getOutcome(score: Score) {
+function getOutcome(score: Score): PredictionOutcome {
   if (score.home_score > score.away_score) return 'home';
   if (score.home_score < score.away_score) return 'away';
   return 'draw';
 }
 
-function getPredictionOutcome(prediction: PredictionRow): 'exact' | 'correct' | 'missed' {
-  const exact = prediction.home_score === prediction.matches.home_score && prediction.away_score === prediction.matches.away_score;
+function getPredictionOutcome(prediction: PredictionRow): ScoreOutcome {
+  const actualOutcome = getOutcome(prediction.matches);
+  const predictedOutcome = prediction.predicted_outcome;
+  const predictionType = prediction.prediction_type ?? 'exact_score';
+  const hasExactScores = typeof prediction.home_score === 'number' && typeof prediction.away_score === 'number';
+  const exact = predictionType === 'exact_score'
+    && hasExactScores
+    && prediction.home_score === prediction.matches.home_score
+    && prediction.away_score === prediction.matches.away_score;
+
   if (exact) return 'exact';
-  return (prediction.predicted_outcome ?? getOutcome(prediction)) === getOutcome(prediction.matches) ? 'correct' : 'missed';
+  return predictedOutcome === actualOutcome ? 'correct' : 'missed';
 }
 
 function calculateScore(prediction: PredictionRow): CalculatedScore {
   const outcome = getPredictionOutcome(prediction);
-  const exactScore = outcome === 'exact' ? 3 : 0;
-  const correctOutcome = outcome === 'correct' ? 1 : 0;
+  const predictionType = prediction.prediction_type ?? 'exact_score';
+  const actualOutcome = getOutcome(prediction.matches);
+  const hasExactScores = typeof prediction.home_score === 'number' && typeof prediction.away_score === 'number';
+  const exactScore = outcome === 'exact' ? 5 : 0;
+  const correctOutcome = outcome === 'correct' ? 2 : 0;
+  const canScoreBonuses = predictionType === 'exact_score' && hasExactScores && outcome === 'correct';
+  const predictedGoalDifference = hasExactScores ? prediction.home_score - prediction.away_score : null;
+  const actualGoalDifference = prediction.matches.home_score - prediction.matches.away_score;
+  const goalDifferenceBonus = canScoreBonuses && actualOutcome !== 'draw' && predictedGoalDifference === actualGoalDifference ? 1 : 0;
+  const teamScoreBonus = canScoreBonuses && (prediction.home_score === prediction.matches.home_score || prediction.away_score === prediction.matches.away_score) ? 1 : 0;
   const riskMultiplier = prediction.is_risk_pick ? 1 : 1;
   const calculatedAt = new Date().toISOString();
+  const baseTotal = exactScore + correctOutcome + goalDifferenceBonus + teamScoreBonus;
 
   return {
     prediction_id: prediction.id,
@@ -83,11 +114,13 @@ function calculateScore(prediction: PredictionRow): CalculatedScore {
     outcome,
     exact_score: exactScore,
     correct_outcome: correctOutcome,
+    goal_difference_bonus: goalDifferenceBonus,
+    team_score_bonus: teamScoreBonus,
     streak_bonus: 0,
     risk_multiplier: riskMultiplier,
     underdog_bonus: 0,
-    total: (exactScore + correctOutcome) * riskMultiplier,
-    scoring_version: 'mvp-2026-06-15',
+    total: baseTotal * riskMultiplier,
+    scoring_version: 'smart-2026-06-19',
     calculated_at: calculatedAt,
   };
 }
@@ -115,21 +148,26 @@ function getBestStreak(scores: CalculatedScore[]) {
   return best;
 }
 
-function buildAggregates(scores: CalculatedScore[]): UserAggregate[] {
+function buildAggregates(scores: CalculatedScore[], rewardPointsByUser: Map<string, number>): UserAggregate[] {
   const scoresByUser = new Map<string, CalculatedScore[]>();
   for (const score of scores) {
     scoresByUser.set(score.user_id, [...(scoresByUser.get(score.user_id) ?? []), score]);
   }
 
-  const aggregates = [...scoresByUser.entries()].map(([userId, userScores]) => {
-    const points = userScores.reduce((sum, score) => sum + score.total, 0);
+  const userIds = new Set([...scoresByUser.keys(), ...rewardPointsByUser.keys()]);
+  const aggregates = [...userIds].map((userId) => {
+    const userScores = scoresByUser.get(userId) ?? [];
+    const predictionPoints = userScores.reduce((sum, score) => sum + score.total, 0);
+    const rewardPoints = rewardPointsByUser.get(userId) ?? 0;
     const exactScores = userScores.filter((score) => score.outcome === 'exact').length;
     const correctScores = userScores.filter((score) => score.outcome !== 'missed').length;
     const accuracy = userScores.length ? Math.round((correctScores / userScores.length) * 100) : 0;
 
     return {
       userId,
-      points,
+      predictionPoints,
+      rewardPoints,
+      points: predictionPoints + rewardPoints,
       exactScores,
       accuracy,
       currentStreak: getCurrentStreak(userScores),
@@ -182,7 +220,7 @@ Deno.serve(async (req) => {
 
   const { data: predictions, error: predictionsError } = await supabase
     .from('predictions')
-    .select('id, user_id, home_score, away_score, predicted_outcome, is_risk_pick, matches!inner(home_score, away_score, status, kickoff_at)')
+    .select('id, user_id, prediction_type, home_score, away_score, predicted_outcome, is_risk_pick, matches!inner(home_score, away_score, status, kickoff_at)')
     .eq('matches.status', 'finished');
 
   if (predictionsError) {
@@ -198,7 +236,20 @@ Deno.serve(async (req) => {
     }
   }
 
-  const aggregates = buildAggregates(calculatedScores);
+  const { data: dailyRewards, error: dailyRewardsError } = await supabase
+    .from('daily_login_rewards')
+    .select('user_id, points_awarded');
+
+  if (dailyRewardsError) {
+    return jsonResponse({ error: dailyRewardsError.message }, 500);
+  }
+
+  const rewardPointsByUser = new Map<string, number>();
+  for (const reward of (dailyRewards ?? []) as DailyRewardRow[]) {
+    rewardPointsByUser.set(reward.user_id, (rewardPointsByUser.get(reward.user_id) ?? 0) + reward.points_awarded);
+  }
+
+  const aggregates = buildAggregates(calculatedScores, rewardPointsByUser);
   const { data: previousEntries, error: previousError } = await supabase
     .from('leaderboard_entries')
     .select('user_id, rank')

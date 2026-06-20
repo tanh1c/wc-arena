@@ -78,6 +78,7 @@ export function savePrediction(db: PredictDb, userId: string, payload: Predictio
     id: `pred-${userId}-${payload.matchId}-${Date.now()}`,
     userId,
     matchId: payload.matchId,
+    predictionType: 'exact_score',
     homeScore: payload.homeScore,
     awayScore: payload.awayScore,
     predictedOutcome: payload.predictedOutcome,

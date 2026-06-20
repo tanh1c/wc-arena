@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase, supabaseKey, supabaseUrl } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 
 export type PredictionRow = Database['public']['Tables']['predictions']['Row'];
@@ -9,8 +9,9 @@ export type PredictionWithMatch = PredictionRow & {
 };
 export type SubmitPredictionInput = {
   matchId: string;
-  homeScore: number;
-  awayScore: number;
+  predictionType: 'exact_score' | 'outcome_only';
+  homeScore?: number | null;
+  awayScore?: number | null;
   predictedOutcome: 'home' | 'draw' | 'away';
   confidence?: number;
   isRiskPick?: boolean;
@@ -49,10 +50,26 @@ export async function getMatchPredictionOutcomeSummary(matchId: string) {
 }
 
 export async function submitPrediction(input: SubmitPredictionInput) {
-  const { data, error } = await supabase.functions.invoke('submit_prediction', {
-    body: input,
-  });
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  if (error) throw error;
-  return data as { prediction: PredictionRow };
+  if (sessionError) throw sessionError;
+  if (!session) throw new Error('Sign in to save your prediction.');
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/submit_prediction`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: supabaseKey,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  });
+  const body = await response.json().catch(() => null) as { prediction?: PredictionRow; error?: string } | null;
+
+  if (!response.ok) {
+    throw new Error(body?.error ?? 'Prediction could not be saved.');
+  }
+
+  if (!body?.prediction) throw new Error('Prediction could not be saved.');
+  return body as { prediction: PredictionRow };
 }

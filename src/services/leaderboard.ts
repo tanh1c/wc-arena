@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 
 export type LeaderboardEntryRow = Database['public']['Tables']['leaderboard_entries']['Row'];
-export type LeaderboardProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'avatar_url' | 'country_code'>;
+export type LeaderboardProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'display_name' | 'avatar_url' | 'country_code'>;
 export type LeaderboardEntryWithProfile = LeaderboardEntryRow & {
   profiles: LeaderboardProfile | null;
 };
@@ -10,7 +10,7 @@ export type LeaderboardEntryWithProfile = LeaderboardEntryRow & {
 export async function listGlobalLeaderboard() {
   const { data, error } = await supabase
     .from('leaderboard_entries')
-    .select('*, profiles:user_id(username, avatar_url, country_code)')
+    .select('*, profiles:user_id(username, display_name, avatar_url, country_code)')
     .eq('scope', 'global')
     .order('rank', { ascending: true });
 
@@ -21,7 +21,7 @@ export async function listGlobalLeaderboard() {
 export async function listLeagueLeaderboard(leagueId: string) {
   const { data, error } = await supabase
     .from('leaderboard_entries')
-    .select('*, profiles:user_id(username, avatar_url, country_code)')
+    .select('*, profiles:user_id(username, display_name, avatar_url, country_code)')
     .eq('scope', 'league')
     .eq('league_id', leagueId)
     .order('rank', { ascending: true });

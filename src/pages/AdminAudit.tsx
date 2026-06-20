@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, FileSearch, ShieldAlert, ShieldCheck, TriangleAlert } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
-import { mockAdminChecklist, mockSuspiciousUserSignals } from '../data/mockAdmin';
 import { useAuth } from '../lib/auth';
-import { listAdminAuditLogs, type AdminAuditLogRow } from '../services/admin';
+import { listAdminAuditLogs, listAdminChecklistItems, listUserTrustSignalsForAdmin, type AdminAuditLogRow, type AdminChecklistItemRow, type UserTrustSignalRow } from '../services/admin';
 import { getCurrentUserRole } from '../services/profile';
 import { getErrorMessage } from '../services/serviceTypes';
 import type { ThemeControls } from '../App';
@@ -39,6 +38,8 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
   const [role, setRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogRow[]>([]);
+  const [checklist, setChecklist] = useState<AdminChecklistItemRow[]>([]);
+  const [trustSignals, setTrustSignals] = useState<UserTrustSignalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,10 +79,12 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
     setLoading(true);
     setError(null);
 
-    listAdminAuditLogs()
-      .then((nextLogs) => {
+    Promise.all([listAdminAuditLogs(), listAdminChecklistItems(), listUserTrustSignalsForAdmin()])
+      .then(([nextLogs, nextChecklist, nextSignals]) => {
         if (!active) return;
         setAuditLogs(nextLogs);
+        setChecklist(nextChecklist);
+        setTrustSignals(nextSignals);
       })
       .catch((nextError) => {
         if (!active) return;
@@ -139,8 +142,8 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
   }
 
   const warningCount = auditLogs.filter((log) => log.severity === 'warning' || log.severity === 'critical').length;
-  const readyChecks = mockAdminChecklist.filter((item) => item.status === 'ready').length;
-  const reviewSignals = mockSuspiciousUserSignals.filter((signal) => signal.status === 'review').length;
+  const readyChecks = checklist.filter((item) => item.status === 'ready').length;
+  const reviewSignals = trustSignals.filter((signal) => signal.status === 'review').length;
 
   return (
     <AppShell themeControls={themeControls}>
@@ -174,7 +177,7 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
               <div className="shrink-0"><ShieldCheck size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Checklist</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{readyChecks}/{mockAdminChecklist.length}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none">{readyChecks}/{checklist.length}</div>
                 <div className="text-[10px] font-bold uppercase mt-1">Controls ready</div>
               </div>
             </div>
@@ -220,17 +223,18 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
                 Anti-Cheat Checklist
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
-                {mockAdminChecklist.map((item) => (
+                {checklist.map((item) => (
                   <div key={item.id} className="p-4 border-b-2 border-line last:border-b-0">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="font-black uppercase text-sm">{item.label}</div>
                         <div className="text-xs font-bold text-subtle mt-1 leading-snug">{item.description}</div>
                       </div>
-                      <span className={`border-2 border-main px-2 py-1 text-[10px] font-black uppercase shrink-0 ${checklistClass[item.status]}`}>{item.status}</span>
+                      <span className={`border-2 border-main px-2 py-1 text-[10px] font-black uppercase shrink-0 ${checklistClass[item.status as AdminChecklistItem['status']]}`}>{item.status}</span>
                     </div>
                   </div>
                 ))}
+                {!loading && checklist.length === 0 && <div className="p-4 font-black uppercase text-xs">No checklist items configured.</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-c1 text-main">

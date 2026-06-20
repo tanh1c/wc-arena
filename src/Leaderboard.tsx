@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart2, Calendar, Medal, Star, Trophy, User, Users } from 'lucide-react';
+import { Medal, Star, Trophy, User, Users } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
+import PointsCoin from './components/ui/PointsCoin';
+import RankBadge from './components/ui/RankBadge';
+import StreakBadge from './components/ui/StreakBadge';
+import { useAuth } from './lib/auth';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
 import { getErrorMessage } from './services/serviceTypes';
+import { getPublicDisplayName, getPublicInitials } from './utils/displayName';
 
 type LeaderboardProps = {
   onNavigate: (page: string) => void;
@@ -29,11 +34,11 @@ function formatPoints(value?: number) {
 }
 
 function getDisplayName(entry?: LeaderboardEntryWithProfile) {
-  return entry?.profiles?.username ?? entry?.user_id ?? '—';
+  return getPublicDisplayName(entry?.profiles, entry?.user_id ?? '—');
 }
 
 function getInitials(entry?: LeaderboardEntryWithProfile) {
-  return getDisplayName(entry).slice(0, 2).toUpperCase();
+  return getPublicInitials(entry?.profiles, entry?.user_id ?? '—');
 }
 
 function getRankChange(entry: LeaderboardEntryWithProfile) {
@@ -67,8 +72,9 @@ function PodiumCard({ item, heightClass, primary }: { item?: PodiumItem; heightC
       <div className={`${primary ? 'w-20 h-20 md:w-24 md:h-24' : 'w-16 h-16 md:w-20 md:h-20'} rounded-full border-4 border-main overflow-hidden bg-elevated mb-3 flex-shrink-0 shadow-[2px_2px_0_0_var(--color-shadow)] flex items-center justify-center font-black text-main text-xl`}>
         {item?.profiles?.avatar_url ? <img src={item.profiles.avatar_url} alt={getDisplayName(item)} className="w-full h-full object-cover" /> : getInitials(item)}
       </div>
+      <RankBadge points={item?.points ?? 0} size={primary ? 'lg' : 'md'} showPoints className="mb-3 bg-card text-main border-2 border-main px-2 py-1 shadow-[2px_2px_0_0_var(--color-shadow)]" />
       <div className={`${primary ? 'font-bold text-base md:text-xl' : 'font-bold text-sm md:text-lg'} leading-tight truncate w-full text-center`}>{getDisplayName(item)}</div>
-      <div className={`${primary ? 'font-black text-3xl md:text-4xl text-main' : 'font-black text-2xl md:text-3xl'} mb-4`}>{formatPoints(item?.points)} <span className="text-sm md:text-lg">PTS</span></div>
+      <div className={`${primary ? 'font-black text-3xl md:text-4xl text-main' : 'font-black text-2xl md:text-3xl'} mb-4 flex items-center justify-center gap-2`}><PointsCoin size={primary ? 'lg' : 'md'} />{formatPoints(item?.points)} <span className="text-sm md:text-lg">PTS</span></div>
       <div className="bg-card text-main border-2 border-main rounded-sm px-2 py-1 flex items-center gap-1 text-[9px] md:text-[10px] font-black uppercase text-center justify-center shadow-[2px_2px_0_0_var(--color-shadow)]">
         <Star size={12} fill="currentColor" /> EXACT SCORES: {item?.exact_scores ?? 0}
       </div>
@@ -78,6 +84,7 @@ function PodiumCard({ item, heightClass, primary }: { item?: PodiumItem; heightC
 
 export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame }: LeaderboardProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const themeControls = { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame };
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntryWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +122,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     thirdRank ? { ...thirdRank, color: 'bg-c4', textColor: 'text-accent-on' } : undefined,
   ], [secondRank, thirdRank, topRank]);
   const leaderboardRest = leaderboard.filter((entry) => entry.rank > 3);
-  const currentEntry = leaderboard.find((entry) => entry.profiles?.username === 'YourName') ?? leaderboardRest[leaderboardRest.length - 1] ?? leaderboard[0];
+  const currentEntry = (user ? leaderboard.find((entry) => entry.user_id === user.id) : undefined) ?? leaderboardRest[leaderboardRest.length - 1] ?? leaderboard[0];
   const totalPlayers = leaderboard.length;
   const totalPoints = leaderboard.reduce((sum, entry) => sum + entry.points, 0);
 
@@ -134,7 +141,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
               <div className="shrink-0"><Trophy size={36} strokeWidth={2.5}/></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Top Score</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{formatPoints(topRank?.points)}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none flex items-center gap-2"><PointsCoin size="md" />{formatPoints(topRank?.points)}</div>
                 <div className="text-[10px] font-bold uppercase mt-1">{getDisplayName(topRank)}</div>
               </div>
             </div>
@@ -147,7 +154,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
               </div>
             </div>
             <div className="flex items-center gap-4 border-b-4 sm:border-b-0 sm:border-r-4 border-main p-4 lg:p-5 bg-c3 text-main">
-              <div className="shrink-0"><BarChart2 size={36} strokeWidth={2.5}/></div>
+              <div className="shrink-0"><RankBadge points={currentEntry?.points ?? 0} size="lg" showLabel={false} /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">YOUR RANK</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{currentEntry?.rank ?? '—'}</div>
@@ -155,10 +162,10 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
               </div>
             </div>
             <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
-              <div className="shrink-0"><Star size={36} fill="currentColor" strokeWidth={2.5}/></div>
+              <div className="shrink-0"><PointsCoin size="lg" /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">YOUR POINTS</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{formatPoints(currentEntry?.points)}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none flex items-center gap-2">{formatPoints(currentEntry?.points)} <span className="text-xs">PTS</span></div>
                 <div className="text-[10px] font-bold uppercase mt-1">TOTAL POINTS</div>
               </div>
             </div>
@@ -196,6 +203,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                         <div className="w-16 text-center">RANK</div>
                         <div className="w-12"></div>
                         <div className="flex-1">PLAYER</div>
+                        <div className="w-28 text-center">RANK TIER</div>
                         <div className="w-24 text-center">POINTS</div>
                         <div className="w-32 text-center text-[10px] lg:text-xs">EXACT SCORES</div>
                         <div className="w-32 text-center">ACCURACY</div>
@@ -212,11 +220,13 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                                 <div className="w-10 sm:w-16 font-black text-base sm:text-lg text-center">{item.rank}</div>
                                 <Avatar entry={item} />
                                 <div className="flex-1 font-bold text-sm lg:text-base leading-tight truncate">{getDisplayName(item)}</div>
-                                <div className="font-black text-base sm:hidden">{formatPoints(item.points)}</div>
+                                <div className="sm:hidden"><RankBadge points={item.points} size="sm" showLabel={false} /></div>
+                              <div className="font-black text-base sm:hidden flex items-center gap-1"><PointsCoin size="sm" />{formatPoints(item.points)}</div>
                               </div>
 
                               <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto text-xs sm:text-sm pl-10 sm:pl-0 font-bold">
-                                <div className="hidden sm:block w-24 text-center text-sm">{formatPoints(item.points)}</div>
+                                <div className="hidden sm:flex w-28 justify-center"><RankBadge points={item.points} size="sm" showLabel={false} /></div>
+                                <div className="hidden sm:flex w-24 justify-center items-center gap-1 text-sm"><PointsCoin size="sm" />{formatPoints(item.points)}</div>
                                 <div className="w-auto sm:w-32 text-center text-subtle sm:text-main flex flex-col sm:flex-row items-center sm:justify-center">
                                   <span className="sm:hidden text-[9px] uppercase font-black tracking-widest text-faint mb-0.5">EXACT</span>
                                   {item.exact_scores}
@@ -232,7 +242,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                                 </div>
                                 <div className="w-auto sm:w-20 text-center flex flex-col sm:flex-row items-center sm:justify-center gap-0.5 font-medium">
                                   <span className="sm:hidden text-[9px] uppercase font-black tracking-widest text-faint mb-0.5">STREAK</span>
-                                  {item.streak}
+                                  <StreakBadge streak={item.streak} size="sm" />
                                 </div>
                                 <div className="w-auto sm:w-20 text-center flex flex-col sm:flex-row items-center sm:justify-center">
                                   <span className="sm:hidden text-[9px] uppercase font-black tracking-widest text-faint mb-0.5">CHANGE</span>
@@ -249,14 +259,16 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                               <div className="w-10 sm:w-16 font-black text-lg text-center">{currentEntry.rank}</div>
                               <Avatar entry={currentEntry} />
                               <div className="flex-1 font-black text-sm lg:text-base leading-tight truncate">{getDisplayName(currentEntry)}</div>
-                              <div className="font-black text-base sm:hidden">{formatPoints(currentEntry.points)}</div>
+                              <div className="sm:hidden"><RankBadge points={currentEntry.points} size="sm" showLabel={false} /></div>
+                              <div className="font-black text-base sm:hidden flex items-center gap-1"><PointsCoin size="sm" />{formatPoints(currentEntry.points)}</div>
                             </div>
 
                             <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto text-xs sm:text-sm pl-10 sm:pl-0 font-black text-main">
-                              <div className="hidden sm:block w-24 text-center">{formatPoints(currentEntry.points)}</div>
+                              <div className="hidden sm:flex w-28 justify-center"><RankBadge points={currentEntry.points} size="sm" showLabel={false} /></div>
+                              <div className="hidden sm:flex w-24 justify-center items-center gap-1"><PointsCoin size="sm" />{formatPoints(currentEntry.points)}</div>
                               <div className="w-auto sm:w-32 text-center flex flex-col sm:flex-row items-center sm:justify-center"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">EXACT</span>{currentEntry.exact_scores}</div>
                               <div className="w-auto sm:w-32 text-center flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1 sm:gap-2"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">ACCURACY</span><span>{currentEntry.accuracy}%</span></div>
-                              <div className="w-auto sm:w-20 text-center flex flex-col sm:flex-row items-center sm:justify-center gap-0.5"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">STREAK</span>{currentEntry.streak}</div>
+                              <div className="w-auto sm:w-20 text-center flex flex-col sm:flex-row items-center sm:justify-center gap-0.5"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">STREAK</span><StreakBadge streak={currentEntry.streak} size="sm" /></div>
                               <div className="w-auto sm:w-20 text-center flex flex-col sm:flex-row items-center sm:justify-center font-black"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">CHANGE</span><span className="text-c3 font-black bg-main text-[#E4FF00] px-1 shadow-[2px_2px_0_0_var(--color-card)] border border-card">LIVE</span></div>
                             </div>
                           </div>
@@ -280,16 +292,20 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                     <span className="text-main font-black">{currentEntry?.rank ?? '—'}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
-                    <span className="flex items-center gap-2 text-main"><Star size={16} /> POINTS</span>
-                    <span className="text-main font-black">{formatPoints(currentEntry?.points)}</span>
+                    <span className="flex items-center gap-2 text-main"><Star size={16} /> TIER</span>
+                    <RankBadge points={currentEntry?.points ?? 0} size="sm" />
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
+                    <span className="flex items-center gap-2 text-main"><PointsCoin size="sm" /> POINTS</span>
+                    <span className="text-main font-black flex items-center gap-1"><PointsCoin size="sm" />{formatPoints(currentEntry?.points)}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
                     <span className="flex items-center gap-2 text-main"><Medal size={16} /> EXACT SCORES</span>
                     <span className="text-main font-black">{currentEntry?.exact_scores ?? 0}</span>
                   </div>
                   <div className="flex justify-between items-center pb-3 border-b-2 border-line text-subtle">
-                    <span className="flex items-center gap-2 text-main"><Calendar size={16} /> TOTAL POINTS</span>
-                    <span className="text-main font-black">{formatPoints(totalPoints)}</span>
+                    <span className="flex items-center gap-2 text-main"><PointsCoin size="sm" /> TOTAL POINTS</span>
+                    <span className="text-main font-black flex items-center gap-1"><PointsCoin size="sm" />{formatPoints(totalPoints)}</span>
                   </div>
                   <div className="pt-2 flex flex-col gap-2">
                     <div className="flex justify-between items-center text-xs uppercase font-black tracking-widest text-main">

@@ -37,6 +37,7 @@ export const appNavigationGroups: NavigationGroup[] = [
       { labelKey: 'nav.items.leagues', to: '/leagues', icon: Users },
       { labelKey: 'nav.items.activity', to: '/activity', icon: Activity },
       { labelKey: 'nav.items.badges', to: '/badges', icon: Medal },
+      { labelKey: 'nav.items.achievements', to: '/achievements', icon: Trophy },
     ],
   },
   {

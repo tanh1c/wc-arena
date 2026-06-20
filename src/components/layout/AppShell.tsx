@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown, Settings, Wallet } from 'lucide-react';
+import { CalendarCheck, ChevronDown, Settings, Wallet } from 'lucide-react';
 import type { ThemeControls } from '../../App';
+import DailyLoginRewardPopup from '../DailyLoginRewardPopup';
 import { appNavigationGroups, mobileNavigation } from '../../config/navigation';
 import { useAuth } from '../../lib/auth';
+import { claimDailyLoginReward, getTodayDailyLoginReward, type ClaimDailyLoginRewardResponse } from '../../services/dailyLoginReward';
+import { getCurrentProfile, type ProfileRow } from '../../services/profile';
+import PointsCoin from '../ui/PointsCoin';
+import RankBadge from '../ui/RankBadge';
+import StreakBadge from '../ui/StreakBadge';
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -52,6 +58,26 @@ function HeaderNavigation() {
   );
 }
 
+function HeaderUserStats({ profile }: { profile: ProfileRow | null }) {
+  if (!profile) return null;
+
+  return (
+    <Link to="/profile" className="hidden xl:grid grid-cols-[auto_auto_auto] items-center border-2 border-main bg-card shadow-[3px_3px_0_var(--color-shadow)] hover:bg-muted transition-colors divide-x-2 divide-main overflow-hidden">
+      <div className="px-3 py-2 flex items-center gap-2">
+        <RankBadge points={profile.points} size="sm" showPoints={false} className="text-[10px] text-main" />
+      </div>
+      <div className="px-3 py-2 flex items-center gap-2 font-black text-xs uppercase text-main">
+        <StreakBadge streak={profile.current_streak} size="sm" showValue={false} />
+        <span>{profile.current_streak}</span>
+      </div>
+      <div className="px-3 py-2 font-black text-xs uppercase text-main whitespace-nowrap flex items-center gap-2">
+        <PointsCoin size="sm" />
+        <span>{profile.points.toLocaleString()} PTS</span>
+      </div>
+    </Link>
+  );
+}
+
 function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
   const [showSettings, setShowSettings] = useState(false);
   const { t, i18n } = useTranslation();
@@ -92,6 +118,87 @@ function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
 export default function AppShell({ children, themeControls, fullHeight = false }: AppShellProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [dailyReward, setDailyReward] = useState<ClaimDailyLoginRewardResponse | null>(null);
+  const [showDailyReward, setShowDailyReward] = useState(false);
+  const [dailyCheckInStatus, setDailyCheckInStatus] = useState<'idle' | 'claiming' | 'claimed'>('idle');
+  const [dailyCheckInError, setDailyCheckInError] = useState<string | null>(null);
+  const [showAlreadyClaimedMessage, setShowAlreadyClaimedMessage] = useState(false);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setDailyReward(null);
+      setDailyCheckInStatus('idle');
+      setShowAlreadyClaimedMessage(false);
+      return;
+    }
+
+    let active = true;
+
+    Promise.all([getCurrentProfile(user.id), getTodayDailyLoginReward()])
+      .then(([nextProfile, reward]) => {
+        if (!active) return;
+        setProfile(nextProfile);
+
+        if (!reward) {
+          setDailyReward(null);
+          setDailyCheckInStatus('idle');
+          setShowAlreadyClaimedMessage(false);
+          return;
+        }
+
+        setDailyReward({
+          claimed: false,
+          alreadyClaimed: true,
+          pointsAwarded: reward.pointsAwarded,
+          rewardDate: reward.rewardDate,
+          weekStartDate: reward.weekStartDate,
+          weekday: reward.weekday,
+          totalPoints: nextProfile.points,
+        });
+        setDailyCheckInStatus('claimed');
+        setShowAlreadyClaimedMessage(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setProfile(null);
+        setDailyReward(null);
+        setDailyCheckInStatus('idle');
+        setShowAlreadyClaimedMessage(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  function openDailyCheckIn() {
+    if (!user) return;
+    setShowDailyReward(true);
+  }
+
+  function closeDailyCheckIn() {
+    setShowDailyReward(false);
+    if (dailyCheckInStatus === 'claimed') setShowAlreadyClaimedMessage(true);
+  }
+
+  async function handleDailyCheckIn() {
+    if (!user || dailyCheckInStatus === 'claiming' || dailyCheckInStatus === 'claimed') return;
+
+    setDailyCheckInStatus('claiming');
+    setDailyCheckInError(null);
+    try {
+      const reward = await claimDailyLoginReward();
+      setDailyReward(reward);
+      setShowAlreadyClaimedMessage(reward.alreadyClaimed);
+      setProfile((currentProfile) => currentProfile ? { ...currentProfile, points: reward.totalPoints } : currentProfile);
+      setDailyCheckInStatus('claimed');
+    } catch (error) {
+      setDailyCheckInStatus('idle');
+      setDailyCheckInError(error instanceof Error ? error.message : t('dailyLogin.claimError'));
+    }
+  }
 
   return (
     <div className={`${fullHeight ? 'h-[100dvh]' : 'min-h-screen'} bg-page flex font-sans relative overflow-hidden`}>
@@ -105,6 +212,21 @@ export default function AppShell({ children, themeControls, fullHeight = false }
             <HeaderNavigation />
           </div>
           <div className="flex items-center gap-3 ml-auto">
+            {user && (
+              <button
+                type="button"
+                onClick={openDailyCheckIn}
+                disabled={dailyCheckInStatus === 'claiming'}
+                className={`border-2 border-main py-2 px-3 md:px-4 font-black uppercase text-xs flex items-center gap-2 shadow-[4px_4px_0_0_var(--color-shadow)] transition-all active:translate-y-[2px] active:translate-x-[2px] active:shadow-none ${dailyCheckInStatus === 'claimed' ? 'bg-muted text-subtle hover:bg-card' : 'bg-c1 text-main hover:bg-c3'}`}
+              >
+                <CalendarCheck size={18} strokeWidth={2.5} />
+                <span className="hidden sm:inline">
+                  {dailyCheckInStatus === 'claiming' ? t('dailyLogin.claiming') : dailyCheckInStatus === 'claimed' ? t('dailyLogin.claimed') : t('dailyLogin.headerClaim')}
+                </span>
+                <span className="sm:hidden">+1</span>
+              </button>
+            )}
+            {user && <HeaderUserStats profile={profile} />}
             <ThemeSettings themeControls={themeControls} />
             <Link to={user ? '/profile' : '/login'} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
               <Wallet size={18} strokeWidth={2.5} />
@@ -129,6 +251,17 @@ export default function AppShell({ children, themeControls, fullHeight = false }
           })}
         </nav>
       </div>
+      <DailyLoginRewardPopup
+        open={showDailyReward}
+        status={dailyCheckInStatus}
+        alreadyClaimed={dailyReward?.alreadyClaimed || showAlreadyClaimedMessage}
+        pointsAwarded={dailyReward?.pointsAwarded ?? (new Date().getDay() || 7)}
+        totalPoints={dailyReward?.totalPoints}
+        weekday={dailyReward?.weekday}
+        error={dailyCheckInError}
+        onClaim={() => void handleDailyCheckIn()}
+        onClose={closeDailyCheckIn}
+      />
     </div>
   );
 }

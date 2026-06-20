@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
 import { getErrorMessage } from './services/serviceTypes';
-import { listMatches, type MatchRow } from './services/matches';
+import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type MatchRow } from './services/matches';
 import { getTeamMap, type TeamRow } from './services/teams';
 import { getTeamFlag } from './utils/teamFlags';
 
@@ -110,8 +110,9 @@ function MatchScore({ match }: { match: MatchRow }) {
 }
 
 function MatchListRow({ match, homeTeam, awayTeam, featured, onNavigate }: { key?: string; match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow; featured: boolean; onNavigate: (page: string) => void }) {
-  const isLive = match.status === 'live';
-  const isFinished = match.status === 'finished';
+  const effectiveStatus = getEffectiveMatchStatus(match);
+  const isLive = effectiveStatus === 'live';
+  const isFinished = effectiveStatus === 'finished';
 
   return (
     <div className={`flex border-b-4 border-main relative hover:bg-page transition-colors ${isLive ? 'bg-[#f0f9ff]' : 'bg-card'} ${isFinished ? 'opacity-80' : ''}`}>
@@ -153,9 +154,9 @@ function MatchListRow({ match, homeTeam, awayTeam, featured, onNavigate }: { key
           </div>
         </div>
         <div className="w-full md:w-auto mt-4 md:mt-0 md:ml-6 flex items-center gap-3 justify-end shrink-0">
-          <span className={`${getStatusClass(match.status)} px-3 py-1 border-2 border-main uppercase`}>{getStatusLabel(match.status)}</span>
-          <button onClick={() => onNavigate(`matches/${match.id}`)} className={`${match.status === 'open' ? 'bg-c2 text-inv hover:opacity-90' : 'bg-card hover:bg-page text-main'} font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 min-w-24 focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all`}>
-            {match.status === 'open' ? 'PREDICT' : isFinished ? 'RESULTS' : 'DETAILS'} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
+          <span className={`${getStatusClass(effectiveStatus)} px-3 py-1 border-2 border-main uppercase`}>{getStatusLabel(effectiveStatus)}</span>
+          <button onClick={() => onNavigate(`matches/${match.id}`)} className={`${effectiveStatus === 'open' ? 'bg-c2 text-inv hover:opacity-90' : 'bg-card hover:bg-page text-main'} font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 min-w-24 focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all`}>
+            {effectiveStatus === 'open' ? 'PREDICT' : isFinished ? 'RESULTS' : 'DETAILS'} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
           </button>
         </div>
       </div>
@@ -200,9 +201,10 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   }, []);
 
   const filteredMatches = useMemo(() => matches.filter((match) => {
+    const effectiveStatus = getEffectiveMatchStatus(match);
     const stageMatches = match.stage === stageFilter;
     const matchdayMatches = matchdayFilter === 'all' || String(match.matchday) === matchdayFilter;
-    const statusMatches = statusFilter === 'all' || match.status === statusFilter;
+    const statusMatches = statusFilter === 'all' || effectiveStatus === statusFilter;
     return stageMatches && matchdayMatches && statusMatches;
   }), [matches, matchdayFilter, stageFilter, statusFilter]);
 
@@ -211,13 +213,13 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   const currentPage = Math.min(page, pageCount);
   const visibleMatches = filteredMatches.slice((currentPage - 1) * MATCHES_PER_PAGE, currentPage * MATCHES_PER_PAGE);
   const totalMatches = matches.length;
-  const liveMatches = matches.filter((match) => match.status === 'live').length;
-  const upcomingMatches = matches.filter((match) => match.status === 'open' || match.status === 'scheduled').length;
-  const completedMatches = matches.filter((match) => match.status === 'finished').length;
-  const nextDeadline = matches.find((match) => match.status === 'open' || match.status === 'scheduled');
+  const liveMatches = matches.filter((match) => getEffectiveMatchStatus(match) === 'live').length;
+  const upcomingMatches = matches.filter((match) => ['open', 'scheduled'].includes(getEffectiveMatchStatus(match))).length;
+  const completedMatches = matches.filter((match) => getEffectiveMatchStatus(match) === 'finished').length;
+  const nextDeadline = matches.find(isMatchPredictionOpen);
   const nextHomeTeam = nextDeadline ? teams.get(nextDeadline.home_team_id) : undefined;
   const nextAwayTeam = nextDeadline ? teams.get(nextDeadline.away_team_id) : undefined;
-  const firstOpenMatchId = filteredMatches.find((match) => match.status === 'open')?.id;
+  const firstOpenMatchId = filteredMatches.find(isMatchPredictionOpen)?.id;
 
   return (
     <AppShell themeControls={themeControls}>

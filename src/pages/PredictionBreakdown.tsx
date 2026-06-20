@@ -7,8 +7,9 @@ import { calculatePredictionScore, getPredictionOutcome } from '../lib/scoring';
 import { getPrediction, type PredictionWithMatch } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
+import { formatPredictionPick } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
-import type { MatchResult, Prediction, PredictionDisplayStatus } from '../types/domain';
+import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
 
 type PredictionBreakdownProps = {
   themeControls: ThemeControls;
@@ -28,6 +29,7 @@ function toPrediction(row: PredictionWithMatch): Prediction {
     id: row.id,
     userId: row.user_id,
     matchId: row.match_id,
+    predictionType: row.prediction_type as PredictionType,
     homeScore: row.home_score,
     awayScore: row.away_score,
     predictedOutcome,
@@ -156,6 +158,8 @@ export default function PredictionBreakdown({ themeControls }: PredictionBreakdo
     predictionId: storedScore.prediction_id,
     exactScore: storedScore.exact_score,
     correctOutcome: storedScore.correct_outcome,
+    goalDifferenceBonus: storedScore.goal_difference_bonus,
+    teamScoreBonus: storedScore.team_score_bonus,
     streakBonus: storedScore.streak_bonus,
     riskMultiplier: storedScore.risk_multiplier,
     underdogBonus: storedScore.underdog_bonus,
@@ -176,14 +180,14 @@ export default function PredictionBreakdown({ themeControls }: PredictionBreakdo
           <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">
             Prediction Breakdown
           </h1>
-          <p className="font-bold text-sm text-subtle max-w-xl">Transparent scoring details for your exact-score prediction.</p>
+          <p className="font-bold text-sm text-subtle max-w-xl">Transparent scoring details for your result or exact-score prediction.</p>
         </div>
 
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
             <div className="flex items-center gap-4 border-b-4 sm:border-r-4 xl:border-b-0 border-main p-4 lg:p-5 bg-c1 text-main">
               <Target size={36} strokeWidth={2.5} />
-              <div><div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Your Pick</div><div className="text-2xl sm:text-3xl font-black leading-none">{homeTeam.short_name} {prediction.homeScore}-{prediction.awayScore} {awayTeam.short_name}</div><div className="text-[10px] font-bold uppercase mt-1">Exact score prediction</div></div>
+              <div><div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Your Pick</div><div className="text-2xl sm:text-3xl font-black leading-none">{formatPredictionPick(prediction, homeTeam.short_name, awayTeam.short_name)}</div><div className="text-[10px] font-bold uppercase mt-1">{prediction.predictionType === 'exact_score' ? 'Exact score prediction' : 'Outcome-only prediction'}</div></div>
             </div>
             <div className="flex items-center gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-4 lg:p-5 bg-c2 text-inv">
               <Trophy size={36} strokeWidth={2.5} />
@@ -205,11 +209,13 @@ export default function PredictionBreakdown({ themeControls }: PredictionBreakdo
                 Scoring Ledger
               </div>
               <div className="bg-card flex flex-col">
-                <BreakdownLine label="Exact score" value={score?.exactScore ?? 'Pending'} description="Awarded when both team scores match the final result. Exact score is worth 3 points." tone={score?.exactScore ? 'bg-c3' : 'bg-card'} />
-                <BreakdownLine label="Correct outcome" value={score?.correctOutcome ?? 'Pending'} description="Awarded when the win/draw/loss outcome is correct but the exact score is not. Correct outcome is worth 1 point." tone={score?.correctOutcome ? 'bg-c1' : 'bg-card'} />
-                <BreakdownLine label="Streak bonus" value={score?.streakBonus ?? 'Placeholder'} description="Reserved for future streak rules. Phase 2 keeps this visible but not fully integrated." />
-                <BreakdownLine label="Risk multiplier" value={score ? `${score.riskMultiplier}x` : 'Placeholder'} description="Reserved for future risk-pick scoring. Current data keeps the multiplier neutral." />
-                <BreakdownLine label="Underdog bonus" value={score?.underdogBonus ?? 'Placeholder'} description="Reserved for future underdog rules after product validation." />
+                <BreakdownLine label="Exact score" value={score?.exactScore ?? 'Pending'} description="Awarded when both team scores match the final result. Exact score is worth 5 points." tone={score?.exactScore ? 'bg-c3' : 'bg-card'} />
+                <BreakdownLine label="Correct outcome" value={score?.correctOutcome ?? 'Pending'} description="Awarded when the win/draw/loss outcome is correct. Correct outcome is worth 2 points." tone={score?.correctOutcome ? 'bg-c1' : 'bg-card'} />
+                <BreakdownLine label="Goal difference bonus" value={score?.goalDifferenceBonus ?? 'Pending'} description="Awarded to exact-score picks when the winner and goal difference are both correct." tone={score?.goalDifferenceBonus ? 'bg-c4' : 'bg-card'} />
+                <BreakdownLine label="Team score bonus" value={score?.teamScoreBonus ?? 'Pending'} description="Awarded to exact-score picks when one team score is correct." tone={score?.teamScoreBonus ? 'bg-c4' : 'bg-card'} />
+                <BreakdownLine label="Streak bonus" value={score?.streakBonus ?? 0} description="Reserved for future streak rules. Current smart scoring keeps this at zero." />
+                <BreakdownLine label="Risk multiplier" value={score ? `${score.riskMultiplier}x` : '1x'} description="Reserved for future risk-pick scoring. Current data keeps the multiplier neutral." />
+                <BreakdownLine label="Underdog bonus" value={score?.underdogBonus ?? 0} description="Reserved for future underdog rules after product validation." />
                 <div className="p-5 bg-main text-inv flex items-center justify-between uppercase">
                   <div>
                     <div className="font-black text-xs tracking-widest">Total earned</div>

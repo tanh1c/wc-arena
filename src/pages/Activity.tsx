@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Award, Bell, Calculator, Lock, TrendingUp, Users } from 'lucide-react';
+import { Award, Bell, Calculator, CalendarCheck, Lock, TrendingUp, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { listCurrentUserActivity, type ActivityEventRow } from '../services/activity';
 import { getErrorMessage } from '../services/serviceTypes';
@@ -18,6 +18,7 @@ const activityMeta: Record<ActivityItem['type'], { labelKey: string; icon: typeo
   badge_unlocked: { labelKey: 'appPages.activity.types.badgeUnlocked', icon: Award, tone: 'bg-c2 text-inv' },
   rank_changed: { labelKey: 'appPages.activity.types.rankChanged', icon: TrendingUp, tone: 'bg-c4 text-inv' },
   league_joined: { labelKey: 'appPages.activity.types.leagueJoined', icon: Users, tone: 'bg-card text-main' },
+  daily_login_reward: { labelKey: 'appPages.activity.types.dailyLoginReward', icon: CalendarCheck, tone: 'bg-c1 text-main' },
 };
 
 function formatDateTime(value: string) {

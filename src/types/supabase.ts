@@ -158,6 +158,36 @@ export type Database = {
           },
         ]
       }
+      admin_checklist_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          label: string
+          sort_order: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id: string
+          label: string
+          sort_order?: number
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string
@@ -187,6 +217,44 @@ export type Database = {
           rarity?: string
         }
         Relationships: []
+      }
+      daily_login_rewards: {
+        Row: {
+          created_at: string
+          id: string
+          points_awarded: number
+          reward_date: string
+          user_id: string
+          week_start_date: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          reward_date: string
+          user_id: string
+          week_start_date: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          reward_date?: string
+          user_id?: string
+          week_start_date?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_login_rewards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leaderboard_entries: {
         Row: {
@@ -468,11 +536,13 @@ export type Database = {
           calculated_at: string
           correct_outcome: number
           exact_score: number
+          goal_difference_bonus: number
           outcome: string
           prediction_id: string
           risk_multiplier: number
           scoring_version: string
           streak_bonus: number
+          team_score_bonus: number
           total: number
           underdog_bonus: number
         }
@@ -480,11 +550,13 @@ export type Database = {
           calculated_at?: string
           correct_outcome?: number
           exact_score?: number
+          goal_difference_bonus?: number
           outcome: string
           prediction_id: string
           risk_multiplier?: number
           scoring_version: string
           streak_bonus?: number
+          team_score_bonus?: number
           total?: number
           underdog_bonus?: number
         }
@@ -492,11 +564,13 @@ export type Database = {
           calculated_at?: string
           correct_outcome?: number
           exact_score?: number
+          goal_difference_bonus?: number
           outcome?: string
           prediction_id?: string
           risk_multiplier?: number
           scoring_version?: string
           streak_bonus?: number
+          team_score_bonus?: number
           total?: number
           underdog_bonus?: number
         }
@@ -512,45 +586,48 @@ export type Database = {
       }
       predictions: {
         Row: {
-          away_score: number
+          away_score: number | null
           confidence: number
           created_at: string
-          home_score: number
+          home_score: number | null
           id: string
           is_risk_pick: boolean
           locked_at: string | null
           match_id: string
           predicted_outcome: string
+          prediction_type: string
           revision: number
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          away_score: number
+          away_score?: number | null
           confidence?: number
           created_at?: string
-          home_score: number
+          home_score?: number | null
           id?: string
           is_risk_pick?: boolean
           locked_at?: string | null
           match_id: string
           predicted_outcome: string
+          prediction_type?: string
           revision?: number
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          away_score?: number
+          away_score?: number | null
           confidence?: number
           created_at?: string
-          home_score?: number
+          home_score?: number | null
           id?: string
           is_risk_pick?: boolean
           locked_at?: string | null
           match_id?: string
           predicted_outcome?: string
+          prediction_type?: string
           revision?: number
           status?: string
           updated_at?: string
@@ -581,6 +658,7 @@ export type Database = {
           country_code: string | null
           created_at: string
           current_streak: number
+          display_name: string | null
           email: string | null
           exact_scores: number
           fan_club_team_id: string | null
@@ -597,6 +675,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           current_streak?: number
+          display_name?: string | null
           email?: string | null
           exact_scores?: number
           fan_club_team_id?: string | null
@@ -613,6 +692,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           current_streak?: number
+          display_name?: string | null
           email?: string | null
           exact_scores?: number
           fan_club_team_id?: string | null
@@ -675,6 +755,121 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "reward_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_eligibility_checks: {
+        Row: {
+          created_at: string
+          description: string
+          href: string | null
+          id: string
+          label: string
+          sort_order: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          href?: string | null
+          id: string
+          label: string
+          sort_order?: number
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          href?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_eligibility_checks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_trust_notes: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_public: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id: string
+          is_public?: boolean
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_public?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_trust_signals: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          label: string
+          severity: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id: string
+          label: string
+          severity: string
+          status: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          label?: string
+          severity?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_trust_signals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -750,6 +945,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_daily_login_reward: {
+        Args: { target_user_id: string }
+        Returns: {
+          already_claimed: boolean
+          claimed: boolean
+          points_awarded: number
+          reward_date: string
+          total_points: number
+          week_start_date: string
+          weekday: number
+        }[]
+      }
       get_match_prediction_outcome_summary: {
         Args: { target_match_id: string }
         Returns: {

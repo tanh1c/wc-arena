@@ -101,6 +101,7 @@ type MatchUpdatePlan = {
 
 const ESPN_BASE_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
 const ESPN_SUMMARY_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary';
+const ESPN_CORE_BASE_URL = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world';
 const args = process.argv.slice(2);
 const shouldApply = args.includes('--apply');
 const dateArg = getArgValue('--date');
@@ -314,8 +315,9 @@ function getTeamRecord(competitor?: EspnCompetitor) {
 
 function mapEspnStatus(candidate: EspnCandidate): MatchUpdate['status'] | undefined {
   const status = normalize(candidate.status);
-  if (candidate.completed) return 'finished';
-  if (status.includes('in')) return 'live';
+  const state = normalize(candidate.state);
+  if (candidate.completed || state === 'post') return 'finished';
+  if (state === 'in') return 'live';
   if (status.includes('postponed')) return 'postponed';
   if (status.includes('cancel')) return 'cancelled';
   return undefined;
@@ -345,6 +347,12 @@ async function fetchSummary(eventId: string) {
   const response = await fetch(`${ESPN_SUMMARY_URL}?event=${eventId}`);
   if (!response.ok) throw new Error(`ESPN summary request failed for ${eventId}: ${response.status} ${response.statusText}`);
   return response.json() as Promise<unknown>;
+}
+
+async function fetchCompetitionOdds(eventId: string, competitionId: string) {
+  const response = await fetch(`${ESPN_CORE_BASE_URL}/events/${eventId}/competitions/${competitionId}/odds`);
+  if (!response.ok) throw new Error(`ESPN odds request failed for ${eventId}: ${response.status} ${response.statusText}`);
+  return response.json() as Promise<{ items?: unknown[] }>;
 }
 
 function buildCandidates(scoreboard: EspnScoreboard) {
@@ -491,14 +499,15 @@ function sanitizeStatistics(value: unknown) {
   }).slice(0, 12);
 }
 
-function sanitizeLeaders(value: unknown): JsonRecord[] {
+function sanitizeLeaders(value: unknown, parentLabel?: string | null): JsonRecord[] {
   return toArray(value).flatMap((leader) => {
     if (!isRecord(leader)) return [];
-    if (Array.isArray(leader.leaders)) return sanitizeLeaders(leader.leaders);
+    const groupLabel = neutralText(leader.displayName ?? leader.label ?? leader.name) ?? parentLabel ?? null;
+    if (Array.isArray(leader.leaders)) return sanitizeLeaders(leader.leaders, groupLabel);
 
     const athlete = isRecord(leader.athlete) ? leader.athlete : undefined;
     const name = neutralText(athlete?.displayName ?? leader.displayName ?? leader.name);
-    const label = neutralText(leader.label ?? leader.shortDisplayName ?? leader.displayName);
+    const label = neutralText(leader.label ?? leader.shortDisplayName) ?? groupLabel;
     const leaderValue = neutralText(leader.displayValue ?? leader.value ?? leader.stat);
     if (!name && !label) return [];
 
@@ -585,6 +594,29 @@ function sanitizeSummary(summary: unknown): Json | null {
   return Object.keys(payload).length ? payload as Json : null;
 }
 
+async function enrichPlansWithOdds(plans: MatchUpdatePlan[]) {
+  await Promise.all(plans.map(async (plan) => {
+    if (plan.candidate.predictionSignal || !plan.candidate.competitionId) return;
+
+    try {
+      const odds = await fetchCompetitionOdds(plan.candidate.eventId, plan.candidate.competitionId);
+      for (const source of odds.items ?? []) {
+        const signal = signalFromSource(source);
+        if (!signal) continue;
+
+        plan.candidate.predictionSignal = signal;
+        plan.update.espn_home_win_pct = signal.home;
+        plan.update.espn_draw_pct = signal.draw;
+        plan.update.espn_away_win_pct = signal.away;
+        plan.update.espn_prediction_updated_at = new Date().toISOString();
+        return;
+      }
+    } catch (error) {
+      console.warn(`Skipping ESPN odds for ${plan.candidate.eventId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }));
+}
+
 async function enrichPlansWithSummaries(plans: MatchUpdatePlan[]) {
   await Promise.all(plans.map(async (plan) => {
     try {
@@ -654,6 +686,7 @@ async function main() {
   const [scoreboard, { matches, teamMap }] = await Promise.all([fetchScoreboard(), loadSupabaseData()]);
   const candidates = buildCandidates(scoreboard);
   const plans = buildUpdatePlan(matches, candidates, teamMap);
+  await enrichPlansWithOdds(plans);
   await enrichPlansWithSummaries(plans);
   const unmatchedCandidates = candidates.filter((candidate) => !plans.some((plan) => plan.candidate.eventId === candidate.eventId));
 

@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { ChevronDown, ChevronRight, ShieldCheck, Star, Trophy, Upload, User, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
+import { useAuth } from './lib/auth';
+import { updateCurrentProfile } from './services/profile';
+import { getErrorMessage } from './services/serviceTypes';
 import type { ThemeControls } from './App';
 
 type OnboardingProps = ThemeControls & {
@@ -9,9 +13,33 @@ type OnboardingProps = ThemeControls & {
 
 export default function Onboarding({ onNavigate, ...themeControls }: OnboardingProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [displayNameDraft, setDisplayNameDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFinish = () => {
-    onNavigate('picks');
+  const handleFinish = async () => {
+    const nextDisplayName = displayNameDraft.trim();
+    if (nextDisplayName.length > 40) {
+      setError('Display name must be 40 characters or fewer.');
+      return;
+    }
+
+    if (!user || !nextDisplayName) {
+      onNavigate('picks');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await updateCurrentProfile(user.id, { display_name: nextDisplayName });
+      onNavigate('picks');
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -27,7 +55,7 @@ export default function Onboarding({ onNavigate, ...themeControls }: OnboardingP
             {t('common.product')}
           </button>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={handleFinish} className="hidden sm:flex bg-card text-main border-2 border-main px-4 py-2 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)] hover:bg-muted">
+            <button type="button" onClick={() => void handleFinish()} className="hidden sm:flex bg-card text-main border-2 border-main px-4 py-2 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)] hover:bg-muted">
               {t('onboarding.skipForNow')}
             </button>
             <LegacySettingsMenu {...themeControls} />
@@ -101,7 +129,7 @@ export default function Onboarding({ onNavigate, ...themeControls }: OnboardingP
                 <label className="font-black uppercase text-xs">{t('onboarding.displayName')}</label>
                 <div className="relative">
                   <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-main opacity-80" />
-                  <input type="text" placeholder={t('onboarding.displayNamePlaceholder')} className="w-full border-2 border-main p-3 pl-10 font-bold text-sm bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none focus:translate-y-[2px] focus:translate-x-[2px] transition-all outline-none" />
+                  <input type="text" value={displayNameDraft} onChange={(event) => { setDisplayNameDraft(event.target.value); setError(null); }} placeholder={t('onboarding.displayNamePlaceholder')} className="w-full border-2 border-main p-3 pl-10 font-bold text-sm bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none focus:translate-y-[2px] focus:translate-x-[2px] transition-all outline-none" />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 w-full">
@@ -120,10 +148,11 @@ export default function Onboarding({ onNavigate, ...themeControls }: OnboardingP
                   <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-main pointer-events-none" />
                 </div>
               </div>
-              <button type="button" onClick={handleFinish} className="w-full bg-c3 hover:opacity-90 text-main font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-lg flex items-center justify-center gap-3">
-                {t('onboarding.startPredicting')} <ChevronRight strokeWidth={3} />
+              {error && <div className="border-2 border-main bg-c5 p-3 font-black uppercase text-xs text-main">{error}</div>}
+              <button type="button" onClick={() => void handleFinish()} disabled={saving} className="w-full bg-c3 hover:opacity-90 text-main font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-lg flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-wait">
+                {saving ? 'Saving...' : t('onboarding.startPredicting')} <ChevronRight strokeWidth={3} />
               </button>
-              <button type="button" onClick={handleFinish} className="text-xs font-black uppercase text-subtle hover:text-main hover:underline">
+              <button type="button" onClick={() => void handleFinish()} className="text-xs font-black uppercase text-subtle hover:text-main hover:underline">
                 {t('onboarding.skipForNow')}
               </button>
             </div>

@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BarChart2, Flame, ListChecks, Star } from 'lucide-react';
+import { BarChart2, ListChecks, Star } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import StatusPill from '../components/ui/StatusPill';
+import StreakBadge from '../components/ui/StreakBadge';
 import { calculateAccuracy, calculatePredictionScore, calculateStreak, getPredictionOutcome } from '../lib/scoring';
 import { listCurrentUserPredictions, type PredictionWithMatch } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
+import { formatPredictionPick } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
-import type { MatchResult, Prediction, PredictionDisplayStatus } from '../types/domain';
+import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
 
 type MyPredictionsProps = {
   themeControls: ThemeControls;
@@ -20,6 +22,8 @@ type PredictionRow = {
   source: PredictionWithMatch;
   result?: MatchResult;
   status: PredictionDisplayStatus;
+  exactScorePoints: number;
+  outcomePoints: number;
   points: number;
 };
 
@@ -30,6 +34,7 @@ function toPrediction(row: PredictionWithMatch): Prediction {
     id: row.id,
     userId: row.user_id,
     matchId: row.match_id,
+    predictionType: row.prediction_type as PredictionType,
     homeScore: row.home_score,
     awayScore: row.away_score,
     predictedOutcome,
@@ -103,13 +108,16 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
     const prediction = toPrediction(source);
     const result = getMatchResult(source);
     const score = result ? calculatePredictionScore(prediction, result, { riskMultiplier: prediction.isRiskPick ? 1 : 1 }) : undefined;
+    const storedScore = source.prediction_scores;
 
     return [{
       prediction,
       source,
       result,
       status: getDisplayStatus(prediction, result),
-      points: source.prediction_scores?.total ?? score?.total ?? 0,
+      exactScorePoints: storedScore?.exact_score ?? score?.exactScore ?? 0,
+      outcomePoints: storedScore?.correct_outcome ?? score?.correctOutcome ?? 0,
+      points: storedScore?.total ?? score?.total ?? 0,
     }];
   }), [predictions]);
 
@@ -117,6 +125,8 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
   const exactScores = rows.filter((row) => row.status === 'exact').length;
   const accuracy = calculateAccuracy(scoredItems);
   const currentStreak = calculateStreak(scoredItems);
+  const exactScorePoints = rows.reduce((sum, row) => sum + row.exactScorePoints, 0);
+  const outcomePoints = rows.reduce((sum, row) => sum + row.outcomePoints, 0);
   const totalPoints = rows.reduce((sum, row) => sum + row.points, 0);
 
   return (
@@ -155,10 +165,10 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
               </div>
             </div>
             <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
-              <div className="shrink-0"><Flame size={36} strokeWidth={2.5} /></div>
+              <div className="shrink-0"><StreakBadge streak={currentStreak} size="lg" showValue={false} /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('appPages.predictions.currentStreak')}</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{currentStreak}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none"><StreakBadge streak={currentStreak} size="sm" /></div>
                 <div className="text-[10px] font-bold uppercase mt-1">{t('appPages.predictions.correctResults')}</div>
               </div>
             </div>
@@ -197,7 +207,7 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                       </div>
                       <div className="p-3 lg:border-r-2 border-main text-left lg:text-center font-black">
                         <span className="lg:hidden text-[10px] uppercase text-subtle mr-2">{t('nav.items.picks')}</span>
-                        {getTeamShortName(teams, match.home_team_id)} {prediction.homeScore} - {prediction.awayScore} {getTeamShortName(teams, match.away_team_id)}
+                        {formatPredictionPick(prediction, getTeamShortName(teams, match.home_team_id), getTeamShortName(teams, match.away_team_id))}
                       </div>
                       <div className="p-3 lg:border-r-2 border-main text-left lg:text-center font-black">
                         <span className="lg:hidden text-[10px] uppercase text-subtle mr-2">{t('appPages.common.actual')}</span>
@@ -222,10 +232,10 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                   {t('appPages.predictions.pointsBreakdown')}
                 </div>
                 <div className="p-4 bg-card flex flex-col gap-3 text-sm font-bold">
-                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.exactScorePoints')}</span><span className="font-black">{exactScores * 3}</span></div>
-                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.outcomePoints')}</span><span className="font-black">{rows.reduce((sum, row) => sum + (row.status === 'correct' ? 1 : 0), 0)}</span></div>
-                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.streakBonus')}</span><span className="font-black">{t('appPages.predictions.placeholder')}</span></div>
-                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.riskMultiplier')}</span><span className="font-black">{t('appPages.predictions.placeholder')}</span></div>
+                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.exactScorePoints')}</span><span className="font-black">{exactScorePoints}</span></div>
+                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.outcomePoints')}</span><span className="font-black">{outcomePoints}</span></div>
+                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.goalDifferenceBonus')}</span><span className="font-black">{rows.reduce((sum, row) => sum + (row.source.prediction_scores?.goal_difference_bonus ?? 0), 0)}</span></div>
+                  <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('appPages.predictions.teamScoreBonus')}</span><span className="font-black">{rows.reduce((sum, row) => sum + (row.source.prediction_scores?.team_score_bonus ?? 0), 0)}</span></div>
                   <div className="flex justify-between text-lg uppercase"><span>{t('appPages.predictions.totalEarned')}</span><span className="font-black">{totalPoints} {t('common.pointsShort')}</span></div>
                 </div>
               </div>

@@ -5,6 +5,7 @@ import AppShell from '../components/layout/AppShell';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listLeagues, type LeagueRow } from '../services/leagues';
 import { getErrorMessage } from '../services/serviceTypes';
+import { getPublicDisplayName } from '../utils/displayName';
 import type { ThemeControls } from '../App';
 
 type LeaguesProps = {
@@ -45,7 +46,7 @@ export default function Leagues({ themeControls }: LeaguesProps) {
   const privateCount = leagues.filter((league) => league.visibility === 'private').length;
   const publicCount = leagues.length - privateCount;
   const topEntry = leaderboard[0];
-  const topUsername = topEntry?.profiles?.username;
+  const topUsername = topEntry ? getPublicDisplayName(topEntry.profiles, topEntry.user_id) : null;
 
   return (
     <AppShell themeControls={themeControls}>

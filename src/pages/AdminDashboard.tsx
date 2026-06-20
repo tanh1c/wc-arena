@@ -2,17 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
-import { mockSuspiciousUserSignals } from '../data/mockAdmin';
-import { mockPredictions } from '../data/mockPredictions';
-import { mockRewards } from '../data/mockRewards';
-import { getUserById } from '../data/mockUsers';
 import { useAuth } from '../lib/auth';
-import { listAdminAuditLogs, recalculateScores, updateMatchResult, type AdminAuditLogRow } from '../services/admin';
+import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
+import { getPublicDisplayName } from '../utils/displayName';
+import { formatPredictionPick } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
 
 type AdminDashboardProps = {
@@ -40,6 +38,9 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntryWithProfile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogRow[]>([]);
+  const [trustSignals, setTrustSignals] = useState<UserTrustSignalRow[]>([]);
+  const [rewardReviews, setRewardReviews] = useState<RewardReviewRow[]>([]);
+  const [recentPredictions, setRecentPredictions] = useState<AdminPredictionRow[]>([]);
   const [resultDrafts, setResultDrafts] = useState<ResultDrafts>({});
   const [matchActionState, setMatchActionState] = useState<Record<string, ActionState>>({});
   const [recalcState, setRecalcState] = useState<ActionState>({});
@@ -51,16 +52,22 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     setError(null);
 
     try {
-      const [nextMatches, nextTeams, nextLeaderboard, nextAuditLogs] = await Promise.all([
+      const [nextMatches, nextTeams, nextLeaderboard, nextAuditLogs, nextSignals, nextRewardReviews, nextRecentPredictions] = await Promise.all([
         listMatches(),
         getTeamMap(),
         listGlobalLeaderboard(),
         listAdminAuditLogs(),
+        listUserTrustSignalsForAdmin(),
+        listRewardReviewsForAdmin(),
+        listRecentPredictionsForAdmin(),
       ]);
       setMatches(nextMatches);
       setTeams(nextTeams);
       setLeaderboard(nextLeaderboard);
       setAuditLogs(nextAuditLogs);
+      setTrustSignals(nextSignals);
+      setRewardReviews(nextRewardReviews);
+      setRecentPredictions(nextRecentPredictions);
       setResultDrafts(Object.fromEntries(nextMatches.map((match) => [match.id, {
         homeScore: match.home_score?.toString() ?? '',
         awayScore: match.away_score?.toString() ?? '',
@@ -182,8 +189,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
   const finishedMatches = matches.filter((match) => match.status === 'finished').length;
   const lockedMatches = matches.filter((match) => match.status === 'locked' || match.status === 'live').length;
-  const pendingRewards = mockRewards.filter((reward) => reward.status === 'pending').length;
-  const recentPredictions = mockPredictions.slice(0, 5);
+  const pendingRewards = rewardReviews.filter((reward) => reward.status === 'pending').length;
 
   return (
     <AppShell themeControls={themeControls}>
@@ -217,7 +223,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
               <div className="shrink-0"><Radar size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Signals</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{mockSuspiciousUserSignals.length}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none">{trustSignals.length}</div>
                 <div className="text-[10px] font-bold uppercase mt-1">Watch/review queue</div>
               </div>
             </div>
@@ -268,15 +274,30 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
               </div>
               <div className="bg-card flex flex-col">
                 {recentPredictions.map((prediction) => {
-                  const user = getUserById(prediction.userId);
-                  const match = matches.find((item) => item.id === prediction.matchId);
+                  const match = prediction.matches;
+                  const displayPrediction = {
+                    id: prediction.id,
+                    userId: prediction.user_id,
+                    matchId: prediction.match_id,
+                    predictionType: prediction.prediction_type as 'exact_score' | 'outcome_only',
+                    homeScore: prediction.home_score,
+                    awayScore: prediction.away_score,
+                    predictedOutcome: prediction.predicted_outcome as 'home' | 'draw' | 'away',
+                    confidence: prediction.confidence,
+                    isRiskPick: prediction.is_risk_pick,
+                    createdAt: prediction.created_at,
+                    updatedAt: prediction.updated_at,
+                    lockedAt: prediction.locked_at ?? undefined,
+                    status: prediction.status as 'draft' | 'submitted' | 'locked' | 'scored',
+                    revision: prediction.revision,
+                  };
                   return (
                     <div key={prediction.id} className="grid grid-cols-1 md:grid-cols-[1fr_140px_110px_130px] border-b-4 border-main last:border-b-0 font-bold text-sm">
                       <div className="p-3 md:border-r-2 border-main">
-                        <div className="font-black uppercase">{user?.username ?? prediction.userId}</div>
-                        <div className="text-xs text-subtle uppercase mt-1">{match ? getMatchLabel(match, teams) : prediction.matchId}</div>
+                        <div className="font-black uppercase">{getPublicDisplayName(prediction.profiles, prediction.user_id)}</div>
+                        <div className="text-xs text-subtle uppercase mt-1">{match ? getMatchLabel(match, teams) : prediction.match_id}</div>
                       </div>
-                      <div className="p-3 md:border-r-2 border-main">{prediction.homeScore}-{prediction.awayScore}</div>
+                      <div className="p-3 md:border-r-2 border-main">{match ? formatPredictionPick(displayPrediction, teams.get(match.home_team_id)?.short_name ?? match.home_team_id, teams.get(match.away_team_id)?.short_name ?? match.away_team_id) : prediction.predicted_outcome.toUpperCase()}</div>
                       <div className="p-3 md:border-r-2 border-main">Rev {prediction.revision}</div>
                       <div className="p-3 uppercase text-[10px] font-black">{prediction.status}</div>
                     </div>
@@ -292,7 +313,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
               <div className="p-4 bg-card flex flex-col gap-3 border-b-4 border-main">
                 {leaderboard.slice(0, 4).map((entry) => (
                   <div key={entry.user_id} className="border-2 border-main p-3 flex items-center justify-between font-bold text-sm">
-                    <span className="uppercase">#{entry.rank} {entry.profiles?.username ?? entry.user_id}</span>
+                    <span className="uppercase">#{entry.rank} {getPublicDisplayName(entry.profiles, entry.user_id)}</span>
                     <span className="font-black">{entry.points} pts</span>
                   </div>
                 ))}
@@ -306,15 +327,13 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 Suspicious Signals
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
-                {mockSuspiciousUserSignals.map((signal) => {
-                  const user = getUserById(signal.userId);
-                  return (
-                    <div key={signal.id} className="p-4 border-b-2 border-line last:border-b-0">
-                      <div className="font-black uppercase flex items-center gap-2"><AlertTriangle size={16} /> {user?.username ?? signal.userId}</div>
-                      <div className="text-xs font-bold text-subtle mt-1">{signal.label} • {signal.severity}</div>
-                    </div>
-                  );
-                })}
+                {trustSignals.map((signal) => (
+                  <div key={signal.id} className="p-4 border-b-2 border-line last:border-b-0">
+                    <div className="font-black uppercase flex items-center gap-2"><AlertTriangle size={16} /> {signal.user_id ?? 'System signal'}</div>
+                    <div className="text-xs font-bold text-subtle mt-1">{signal.label} • {signal.severity}</div>
+                  </div>
+                ))}
+                {!loading && trustSignals.length === 0 && <div className="p-4 font-black uppercase text-xs">No trust signals.</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-card">

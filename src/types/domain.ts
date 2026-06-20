@@ -3,10 +3,12 @@ export type PredictionStatus = 'draft' | 'submitted' | 'locked' | 'scored' | 'vo
 export type PredictionDisplayStatus = 'pending' | 'locked' | 'exact' | 'correct' | 'missed';
 export type MatchStage = 'group' | 'round32' | 'round16' | 'quarter' | 'semi' | 'third_place' | 'final';
 export type MatchOutcome = 'home' | 'away' | 'draw';
+export type PredictionType = 'exact_score' | 'outcome_only';
 
 export type User = {
   id: string;
   username: string;
+  displayName?: string;
   email: string;
   avatarUrl?: string;
   countryCode?: string;
@@ -51,8 +53,9 @@ export type Prediction = {
   id: string;
   userId: string;
   matchId: string;
-  homeScore: number;
-  awayScore: number;
+  predictionType: PredictionType;
+  homeScore: number | null;
+  awayScore: number | null;
   predictedOutcome: MatchOutcome;
   confidence: number;
   isRiskPick: boolean;
@@ -72,6 +75,8 @@ export type ScoreBreakdown = {
   predictionId: string;
   exactScore: number;
   correctOutcome: number;
+  goalDifferenceBonus: number;
+  teamScoreBonus: number;
   streakBonus: number;
   riskMultiplier: number;
   underdogBonus: number;
@@ -126,7 +131,7 @@ export type League = {
 
 export type ActivityItem = {
   id: string;
-  type: 'prediction_locked' | 'score_calculated' | 'badge_unlocked' | 'rank_changed' | 'league_joined';
+  type: 'prediction_locked' | 'score_calculated' | 'badge_unlocked' | 'rank_changed' | 'league_joined' | 'daily_login_reward';
   title: string;
   description: string;
   createdAt: string;

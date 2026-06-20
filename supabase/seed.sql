@@ -86,7 +86,15 @@ insert into public.badges (id, name, description, category, rarity, icon_path, p
 values
   ('exact-score-merchant', 'Exact Score Merchant', 'Call five exact scores.', 'skill', 'rare', null, 5),
   ('hot-streak', 'Hot Streak', 'Hit three correct outcomes in a row.', 'streak', 'common', null, 3),
-  ('risk-taker', 'Risk Taker', 'Score points with a risk pick.', 'risk', 'epic', null, 3)
+  ('risk-taker', 'Risk Taker', 'Score points with a risk pick.', 'risk', 'epic', null, 3),
+  ('first-pick', 'First Pick', 'Submit your first match prediction.', 'skill', 'common', null, 1),
+  ('outcome-master', 'Outcome Master', 'Call ten match outcomes correctly.', 'skill', 'rare', null, 10),
+  ('group-stage', 'Group Stage Grinder', 'Submit predictions across the group stage.', 'event', 'common', null, 12),
+  ('knockout', 'Knockout Specialist', 'Score points during the knockout rounds.', 'event', 'epic', null, 4),
+  ('finals', 'Finals Oracle', 'Submit predictions for the final match window.', 'event', 'legendary', null, 1),
+  ('top-ranker', 'Top Ranker', 'Reach a top leaderboard tier.', 'rank', 'legendary', null, 1),
+  ('daily-return', 'Daily Return', 'Come back on multiple matchdays to keep predicting.', 'social', 'common', null, 7),
+  ('league-player', 'League Player', 'Join a league and compete with other players.', 'social', 'rare', null, 1)
 on conflict (id) do nothing;
 
 insert into public.user_badges (user_id, badge_id, progress_current, unlocked_at)

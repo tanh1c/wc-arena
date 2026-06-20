@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Activity, ArrowLeft, Crown, Shield, Trophy, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
-import { mockActivity } from '../data/mockActivity';
-import { mockUsers } from '../data/mockUsers';
+import RankBadge from '../components/ui/RankBadge';
+import StreakBadge from '../components/ui/StreakBadge';
+import { listLeagueActivity, type ActivityEventRow } from '../services/activity';
 import { listLeagueLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
-import { getLeague, type LeagueRow } from '../services/leagues';
+import { getLeague, listLeagueMembers, type LeagueMemberRow, type LeagueRow } from '../services/leagues';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getCurrentProfile, type ProfileRow } from '../services/profile';
+import { getPublicDisplayName } from '../utils/displayName';
 import type { ThemeControls } from '../App';
 
 type LeagueDetailProps = {
@@ -23,6 +25,8 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   const [league, setLeague] = useState<LeagueRow | null>(null);
   const [creator, setCreator] = useState<ProfileRow | null>(null);
   const [standings, setStandings] = useState<LeaderboardEntryWithProfile[]>([]);
+  const [members, setMembers] = useState<LeagueMemberRow[]>([]);
+  const [leagueActivity, setLeagueActivity] = useState<ActivityEventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,20 +44,26 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
 
     getLeague(leagueId)
       .then(async (nextLeague) => {
-        const [nextStandings, nextCreator] = await Promise.all([
+        const [nextStandings, nextCreator, nextMembers, nextActivity] = await Promise.all([
           listLeagueLeaderboard(nextLeague.id),
           nextLeague.creator_id ? getCurrentProfile(nextLeague.creator_id).catch(() => null) : Promise.resolve(null),
+          listLeagueMembers(nextLeague.id),
+          listLeagueActivity(nextLeague.id),
         ]);
         if (!active) return;
         setLeague(nextLeague);
         setStandings(nextStandings);
         setCreator(nextCreator);
+        setMembers(nextMembers);
+        setLeagueActivity(nextActivity);
       })
       .catch((nextError) => {
         if (!active) return;
         setError(getErrorMessage(nextError));
         setLeague(null);
         setStandings([]);
+        setMembers([]);
+        setLeagueActivity([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -97,7 +107,6 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     );
   }
 
-  const leagueActivity = mockActivity.filter((item) => item.leagueId === league.id || league.id === 'league-global');
   const memberPreview = standings.length > 0 ? standings : [];
 
   return (
@@ -130,7 +139,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
             </div>
             <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
               <Crown size={36} strokeWidth={2.5} />
-              <div><div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Creator</div><div className="text-2xl sm:text-3xl font-black leading-none">{creator?.username ?? '—'}</div><div className="text-[10px] font-bold uppercase mt-1">{formatDate(league.created_at)}</div></div>
+              <div><div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Creator</div><div className="text-2xl sm:text-3xl font-black leading-none">{getPublicDisplayName(creator)}</div><div className="text-[10px] font-bold uppercase mt-1">{formatDate(league.created_at)}</div></div>
             </div>
           </div>
 
@@ -140,9 +149,10 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
                 <span>Standings</span>
                 <Link to="/leagues" className="text-[10px] opacity-80 hover:underline inline-flex items-center gap-1"><ArrowLeft size={12} /> All Leagues</Link>
               </div>
-              <div className="hidden md:grid grid-cols-[80px_1fr_120px_120px_120px] bg-card border-b-4 border-main font-black uppercase text-[10px] tracking-widest text-subtle">
+              <div className="hidden md:grid grid-cols-[80px_1fr_120px_120px_120px_120px] bg-card border-b-4 border-main font-black uppercase text-[10px] tracking-widest text-subtle">
                 <div className="p-3 border-r-2 border-main text-center">Rank</div>
                 <div className="p-3 border-r-2 border-main">Player</div>
+                <div className="p-3 border-r-2 border-main text-center">Tier</div>
                 <div className="p-3 border-r-2 border-main text-center">Points</div>
                 <div className="p-3 border-r-2 border-main text-center">Accuracy</div>
                 <div className="p-3 text-center">Streak</div>
@@ -150,12 +160,13 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
               <div className="bg-card flex flex-col">
                 {standings.length === 0 && <div className="p-6 font-black uppercase text-sm">No standings published for this league yet.</div>}
                 {standings.map((entry) => (
-                  <div key={entry.user_id} className="grid grid-cols-1 md:grid-cols-[80px_1fr_120px_120px_120px] border-b-4 border-main last:border-b-0 font-bold text-sm hover:bg-muted transition-colors">
+                  <div key={entry.user_id} className="grid grid-cols-1 md:grid-cols-[80px_1fr_120px_120px_120px_120px] border-b-4 border-main last:border-b-0 font-bold text-sm hover:bg-muted transition-colors">
                     <div className="p-3 md:border-r-2 border-main font-black text-lg md:text-center">#{entry.rank}</div>
-                    <div className="p-3 md:border-r-2 border-main"><div className="font-black uppercase">{entry.profiles?.username ?? entry.user_id}</div><div className="text-xs text-subtle uppercase">Previous #{entry.previous_rank ?? entry.rank}</div></div>
+                    <div className="p-3 md:border-r-2 border-main"><div className="font-black uppercase">{getPublicDisplayName(entry.profiles, entry.user_id)}</div><div className="text-xs text-subtle uppercase">Previous #{entry.previous_rank ?? entry.rank}</div></div>
+                    <div className="p-3 md:border-r-2 border-main md:flex md:justify-center font-black"><RankBadge points={entry.points} size="sm" showLabel={false} /></div>
                     <div className="p-3 md:border-r-2 border-main md:text-center font-black">{entry.points}</div>
                     <div className="p-3 md:border-r-2 border-main md:text-center font-black">{entry.accuracy}%</div>
-                    <div className="p-3 md:text-center font-black">{entry.streak}</div>
+                    <div className="p-3 md:text-center font-black"><StreakBadge streak={entry.streak} size="sm" /></div>
                   </div>
                 ))}
               </div>
@@ -177,16 +188,19 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
                 {memberPreview.length > 0 ? memberPreview.map((entry) => (
-                  <div key={entry.user_id} className="p-3 border-b-2 border-line last:border-b-0 flex items-center justify-between font-bold text-sm">
-                    <span className="font-black uppercase">{entry.profiles?.username ?? entry.user_id}</span>
+                  <div key={entry.user_id} className="p-3 border-b-2 border-line last:border-b-0 flex items-center justify-between gap-3 font-bold text-sm">
+                    <span className="font-black uppercase truncate">{getPublicDisplayName(entry.profiles, entry.user_id)}</span>
+                    <RankBadge points={entry.points} size="sm" showLabel={false} />
                     <span>{entry.points} pts</span>
                   </div>
-                )) : mockUsers.slice(0, 4).map((user) => (
-                  <div key={user.id} className="p-3 border-b-2 border-line last:border-b-0 flex items-center justify-between font-bold text-sm">
-                    <span className="font-black uppercase">{user.username}</span>
-                    <span>{user.points} pts</span>
+                )) : members.map((member) => (
+                  <div key={member.user_id} className="p-3 border-b-2 border-line last:border-b-0 flex items-center justify-between gap-3 font-bold text-sm">
+                    <span className="font-black uppercase truncate">{getPublicDisplayName(member.profiles, member.user_id)}</span>
+                    <RankBadge points={member.profiles?.points ?? 0} size="sm" showLabel={false} />
+                    <span>{member.profiles?.points ?? 0} pts</span>
                   </div>
                 ))}
+                {memberPreview.length === 0 && members.length === 0 && <div className="p-3 font-black uppercase text-xs">No members visible yet.</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-card">
@@ -200,6 +214,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
                       <div className="font-bold text-xs text-subtle mt-1 leading-snug">{item.description}</div>
                     </Link>
                   ))}
+                  {leagueActivity.length === 0 && <div className="p-4 font-black uppercase text-xs">No league activity yet.</div>}
                 </div>
               </div>
             </div>

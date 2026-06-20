@@ -445,3 +445,9 @@ entrypoint = "./functions/recalculate_scores/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/recalculate_scores/*.html" ]
+
+[functions.sync_espn_results]
+enabled = true
+verify_jwt = false
+import_map = "./functions/sync_espn_results/deno.json"
+entrypoint = "./functions/sync_espn_results/index.ts"

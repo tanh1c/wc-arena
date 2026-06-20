@@ -5,11 +5,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type PredictionOutcome = 'home' | 'draw' | 'away';
+type PredictionType = 'exact_score' | 'outcome_only';
+
 type SubmitPredictionBody = {
   matchId: string;
-  homeScore: number;
-  awayScore: number;
-  predictedOutcome: 'home' | 'draw' | 'away';
+  predictionType: PredictionType;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  predictedOutcome: PredictionOutcome;
   confidence?: number;
   isRiskPick?: boolean;
 };
@@ -21,14 +25,29 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function getScoreOutcome(homeScore: number, awayScore: number): 'home' | 'draw' | 'away' {
+function getScoreOutcome(homeScore: number, awayScore: number): PredictionOutcome {
   if (homeScore > awayScore) return 'home';
   if (homeScore < awayScore) return 'away';
   return 'draw';
 }
 
-function isPredictionOutcome(value: unknown): value is 'home' | 'draw' | 'away' {
+function isPredictionOutcome(value: unknown): value is PredictionOutcome {
   return value === 'home' || value === 'draw' || value === 'away';
+}
+
+function isPredictionType(value: unknown): value is PredictionType {
+  return value === 'exact_score' || value === 'outcome_only';
+}
+
+function isValidScore(value: unknown): value is number {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function getProfileUsername(user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) {
+  const metadataUsername = user.user_metadata?.username;
+  const requestedUsername = typeof metadataUsername === 'string' ? metadataUsername.trim() : '';
+  const baseUsername = requestedUsername || user.email?.split('@')[0]?.trim() || 'player';
+  return `${baseUsername}-${user.id.slice(0, 8)}`;
 }
 
 Deno.serve(async (req) => {
@@ -65,12 +84,24 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Invalid JSON payload' }, 400);
   }
 
-  if (!body.matchId || !Number.isInteger(body.homeScore) || !Number.isInteger(body.awayScore) || body.homeScore < 0 || body.awayScore < 0 || !isPredictionOutcome(body.predictedOutcome)) {
+  if (!body.matchId || !isPredictionType(body.predictionType) || !isPredictionOutcome(body.predictedOutcome)) {
     return jsonResponse({ error: 'Invalid prediction payload' }, 400);
   }
 
-  if (body.predictedOutcome !== getScoreOutcome(body.homeScore, body.awayScore)) {
-    return jsonResponse({ error: 'Prediction outcome must match the exact score.' }, 400);
+  let homeScore: number | null = null;
+  let awayScore: number | null = null;
+
+  if (body.predictionType === 'exact_score') {
+    if (!isValidScore(body.homeScore) || !isValidScore(body.awayScore)) {
+      return jsonResponse({ error: 'Exact-score predictions require two non-negative whole numbers.' }, 400);
+    }
+
+    if (body.predictedOutcome !== getScoreOutcome(body.homeScore, body.awayScore)) {
+      return jsonResponse({ error: 'Prediction outcome must match the exact score.' }, 400);
+    }
+
+    homeScore = body.homeScore;
+    awayScore = body.awayScore;
   }
 
   const { data: match, error: matchError } = await supabase
@@ -87,6 +118,19 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Prediction deadline has passed' }, 409);
   }
 
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userData.user.id,
+      username: getProfileUsername(userData.user),
+      email: userData.user.email,
+      role: 'user',
+    }, { onConflict: 'id', ignoreDuplicates: true });
+
+  if (profileError) {
+    return jsonResponse({ error: profileError.message }, 500);
+  }
+
   const { data: existing, error: existingError } = await supabase
     .from('predictions')
     .select('id, revision')
@@ -101,8 +145,9 @@ Deno.serve(async (req) => {
   const predictionValues = {
     user_id: userData.user.id,
     match_id: body.matchId,
-    home_score: body.homeScore,
-    away_score: body.awayScore,
+    prediction_type: body.predictionType,
+    home_score: homeScore,
+    away_score: awayScore,
     predicted_outcome: body.predictedOutcome,
     confidence: body.confidence ?? 50,
     is_risk_pick: body.isRiskPick ?? false,
