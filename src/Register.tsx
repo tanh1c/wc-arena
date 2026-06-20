@@ -4,6 +4,7 @@ import { ArrowRight, CheckSquare, ChevronDown, DollarSign, Eye, EyeOff, Flag, Gl
 import LegacySettingsMenu from './components/LegacySettingsMenu';
 import { supabase } from './lib/supabaseClient';
 import { updateCurrentProfile } from './services/profile';
+import { getAuthRedirectUrl } from './utils/authRedirect';
 import type { ThemeControls } from './App';
 
 type RegisterProps = ThemeControls & {
@@ -19,12 +20,32 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
   const [confirmPassword, setConfirmPassword] = useState('');
   const [countryCode, setCountryCode] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [formNotice, setFormNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthSubmitting, setOauthSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  async function handleGoogleRegister() {
+    setFormError(null);
+    setFormNotice(null);
+    setOauthSubmitting(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: getAuthRedirectUrl('/login'),
+      },
+    });
+
+    if (error) {
+      setOauthSubmitting(false);
+      setFormError(error.message);
+    }
+  }
+
   const handleRegister = async () => {
     setFormError(null);
+    setFormNotice(null);
 
     if (!agree) {
       setFormError('Please accept the rules and prize terms.');
@@ -39,11 +60,13 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
     setSubmitting(true);
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedUsername = username.trim();
+    const emailRedirectTo = getAuthRedirectUrl('/login');
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
         data: { username: normalizedUsername },
+        emailRedirectTo,
       },
     });
 
@@ -53,12 +76,24 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
       return;
     }
 
-    if (data.session && countryCode) {
-      await updateCurrentProfile(data.user.id, {
-        country_code: countryCode,
-        fan_club_team_id: null,
-        avatar_url: null,
-      });
+    if (!data.session) {
+      setSubmitting(false);
+      setFormNotice('Account created. Check your email and confirm your account, then sign in here.');
+      return;
+    }
+
+    if (countryCode) {
+      try {
+        await updateCurrentProfile(data.user.id, {
+          country_code: countryCode,
+          fan_club_team_id: null,
+          avatar_url: null,
+        });
+      } catch (profileError) {
+        setSubmitting(false);
+        setFormError(profileError instanceof Error ? profileError.message : 'Account created, but profile setup failed.');
+        return;
+      }
     }
 
     setSubmitting(false);
@@ -113,6 +148,15 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
               <div className="bg-c2 text-inv p-4 text-center">{t('auth.createAccount')}</div>
             </div>
             <div className="p-5 lg:p-6 bg-card flex flex-col gap-4">
+              <button type="button" onClick={handleGoogleRegister} disabled={oauthSubmitting || submitting} className="w-full bg-card hover:bg-muted text-main font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-main bg-white text-base font-black text-main">G</span>
+                {oauthSubmitting ? 'Connecting to Google...' : 'Continue with Google'}
+              </button>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[10px] font-black uppercase text-subtle">
+                <div className="border-t-2 border-main" />
+                <span>Email fallback</span>
+                <div className="border-t-2 border-main" />
+              </div>
               <div className="flex flex-col gap-1.5">
                 <label className="font-black uppercase text-xs">{t('auth.username')}</label>
                 <div className="relative">
@@ -170,6 +214,7 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
                 <span className="font-bold text-xs select-none">{t('auth.agreePrefix')} <span className="text-c2 hover:underline cursor-pointer">{t('auth.rules')}</span> and <span className="text-c2 hover:underline cursor-pointer">{t('auth.prizeTerms')}</span>{t('auth.agreeSuffix')}</span>
               </label>
               {formError && <div className="border-2 border-main bg-c5 text-main p-3 font-black uppercase text-xs">{formError}</div>}
+              {formNotice && <div className="border-2 border-main bg-c1 text-main p-3 font-black uppercase text-xs">{formNotice}</div>}
               <button type="button" onClick={handleRegister} disabled={submitting} className="w-full bg-c2 hover:opacity-90 text-inv font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-lg disabled:opacity-60 flex items-center justify-center gap-3">
                 {submitting ? 'Creating account...' : t('auth.createAccount')} <Trophy size={20} strokeWidth={3} />
               </button>

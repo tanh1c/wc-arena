@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Lock, Mail, ShieldCheck, Trophy } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
+import { useAuth } from './lib/auth';
 import { supabase } from './lib/supabaseClient';
+import { getAuthRedirectUrl } from './utils/authRedirect';
 import type { ThemeControls } from './App';
 
 type LoginProps = ThemeControls & {
@@ -11,14 +13,23 @@ type LoginProps = ThemeControls & {
 
 export default function Login({ onNavigate, ...themeControls }: LoginProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [formNotice, setFormNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthSubmitting, setOauthSubmitting] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) onNavigate('matches');
+  }, [onNavigate, user]);
 
   async function handleLogin() {
     setFormError(null);
+    setFormNotice(null);
     setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     setSubmitting(false);
@@ -29,6 +40,47 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
     }
 
     onNavigate('matches');
+  }
+
+  async function handleGoogleLogin() {
+    setFormError(null);
+    setFormNotice(null);
+    setOauthSubmitting(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: getAuthRedirectUrl('/login'),
+      },
+    });
+
+    if (error) {
+      setOauthSubmitting(false);
+      setFormError(error.message);
+    }
+  }
+
+  async function handleForgotPassword() {
+    const normalizedEmail = email.trim().toLowerCase();
+    setFormError(null);
+    setFormNotice(null);
+
+    if (!normalizedEmail) {
+      setFormError('Enter your email first, then request a reset link.');
+      return;
+    }
+
+    setResetSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: getAuthRedirectUrl('/reset-password'),
+    });
+    setResetSubmitting(false);
+
+    if (error) {
+      setFormError(error.message);
+      return;
+    }
+
+    setFormNotice('Password reset email sent. Open the link in your inbox to set a new password.');
   }
 
   return (
@@ -71,6 +123,15 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
               <button type="button" onClick={() => onNavigate('register')} className="bg-card text-main p-4 hover:bg-muted">{t('auth.createAccount')}</button>
             </div>
             <div className="p-5 lg:p-6 flex flex-col gap-4">
+              <button type="button" onClick={handleGoogleLogin} disabled={oauthSubmitting || submitting} className="w-full bg-card hover:bg-muted text-main font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-main bg-white text-base font-black text-main">G</span>
+                {oauthSubmitting ? 'Connecting to Google...' : 'Continue with Google'}
+              </button>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[10px] font-black uppercase text-subtle">
+                <div className="border-t-2 border-main" />
+                <span>Email fallback</span>
+                <div className="border-t-2 border-main" />
+              </div>
               <div className="flex flex-col gap-1.5">
                 <label className="font-black uppercase text-xs">{t('auth.emailUsername')}</label>
                 <div className="relative">
@@ -90,9 +151,12 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
               </div>
               <div className="flex items-center justify-between mt-1 mb-2">
                 <span className="font-bold text-xs text-subtle">{t('auth.rememberMe')}</span>
-                <span className="font-bold text-xs text-c2 cursor-pointer hover:underline">{t('auth.forgotPassword')}</span>
+                <button type="button" onClick={handleForgotPassword} disabled={resetSubmitting || submitting || oauthSubmitting} className="font-bold text-xs text-c2 cursor-pointer hover:underline disabled:cursor-not-allowed disabled:opacity-60">
+                  {resetSubmitting ? 'Sending reset...' : t('auth.forgotPassword')}
+                </button>
               </div>
               {formError && <div className="border-2 border-main bg-c5 text-main p-3 font-black uppercase text-xs">{formError}</div>}
+              {formNotice && <div className="border-2 border-main bg-c1 text-main p-3 font-black uppercase text-xs">{formNotice}</div>}
               <button type="button" onClick={handleLogin} disabled={submitting} className="w-full bg-c2 hover:opacity-90 text-inv font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-lg disabled:opacity-60">
                 {submitting ? 'Signing in...' : t('auth.signIn')}
               </button>

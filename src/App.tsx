@@ -8,6 +8,7 @@ const Rules = lazy(() => import('./Rules'));
 const PrizePool = lazy(() => import('./PrizePool'));
 const Login = lazy(() => import('./Login'));
 const Register = lazy(() => import('./Register'));
+const ResetPassword = lazy(() => import('./ResetPassword'));
 const Onboarding = lazy(() => import('./Onboarding'));
 const Fixtures = lazy(() => import('./Fixtures'));
 const Achievements = lazy(() => import('./pages/Achievements'));
@@ -100,6 +101,7 @@ export default function App() {
           <Route path="/" element={<LegacyRoute Component={Landing} themeControls={themeControls} />} />
           <Route path="/login" element={<LegacyRoute Component={Login} themeControls={themeControls} />} />
           <Route path="/register" element={<LegacyRoute Component={Register} themeControls={themeControls} />} />
+          <Route path="/reset-password" element={<LegacyRoute Component={ResetPassword} themeControls={themeControls} />} />
           <Route path="/onboarding" element={<LegacyRoute Component={Onboarding} themeControls={themeControls} />} />
           <Route path="/matches" element={<LegacyRoute Component={Fixtures} themeControls={themeControls} />} />
           <Route path="/picks" element={<LegacyRoute Component={Picks} themeControls={themeControls} />} />
