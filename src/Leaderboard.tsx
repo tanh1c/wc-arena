@@ -7,6 +7,7 @@ import RankBadge from './components/ui/RankBadge';
 import StreakBadge from './components/ui/StreakBadge';
 import { useAuth } from './lib/auth';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
+import { getCurrentProfile, type ProfileRow } from './services/profile';
 import { getErrorMessage } from './services/serviceTypes';
 import { getPublicDisplayName, getPublicInitials } from './utils/displayName';
 
@@ -28,6 +29,8 @@ type PodiumItem = LeaderboardEntryWithProfile & {
   color: string;
   textColor: string;
 };
+
+type CurrentLeaderboardEntry = LeaderboardEntryWithProfile | (Omit<LeaderboardEntryWithProfile, 'rank'> & { rank: number | null });
 
 function formatPoints(value?: number) {
   return (value ?? 0).toLocaleString();
@@ -87,6 +90,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
   const { user } = useAuth();
   const themeControls = { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame };
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntryWithProfile[]>([]);
+  const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,11 +98,16 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     let active = true;
     setLoading(true);
     setError(null);
+    setCurrentProfile(null);
 
-    listGlobalLeaderboard()
-      .then((nextLeaderboard) => {
+    Promise.all([
+      listGlobalLeaderboard(),
+      user ? getCurrentProfile(user.id) : Promise.resolve(null),
+    ])
+      .then(([nextLeaderboard, nextProfile]) => {
         if (!active) return;
         setLeaderboard(nextLeaderboard);
+        setCurrentProfile(nextProfile);
       })
       .catch((nextError) => {
         if (!active) return;
@@ -111,7 +120,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
   const topRank = leaderboard.find((entry) => entry.rank === 1);
   const secondRank = leaderboard.find((entry) => entry.rank === 2);
@@ -122,8 +131,25 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     thirdRank ? { ...thirdRank, color: 'bg-c4', textColor: 'text-accent-on' } : undefined,
   ], [secondRank, thirdRank, topRank]);
   const leaderboardRest = leaderboard.filter((entry) => entry.rank > 3);
-  const currentEntry = (user ? leaderboard.find((entry) => entry.user_id === user.id) : undefined) ?? leaderboardRest[leaderboardRest.length - 1] ?? leaderboard[0];
   const totalPlayers = leaderboard.length;
+  const leaderboardCurrentEntry = user ? leaderboard.find((entry) => entry.user_id === user.id) : undefined;
+  const currentProfileEntry = currentProfile ? {
+    id: `profile-${currentProfile.id}`,
+    scope: 'global',
+    league_id: null,
+    user_id: currentProfile.id,
+    rank: null,
+    previous_rank: null,
+    points: currentProfile.points,
+    exact_scores: currentProfile.exact_scores,
+    accuracy: currentProfile.accuracy ?? 0,
+    streak: currentProfile.current_streak,
+    updated_at: currentProfile.created_at,
+    profiles: currentProfile,
+  } satisfies CurrentLeaderboardEntry : undefined;
+  const currentEntry: CurrentLeaderboardEntry | undefined = leaderboardCurrentEntry ?? currentProfileEntry;
+  const currentRank = currentEntry?.rank ?? '—';
+  const currentRankLabel = currentEntry?.rank ? `OUT OF ${totalPlayers.toLocaleString()}` : 'NOT RANKED YET';
   const totalPoints = leaderboard.reduce((sum, entry) => sum + entry.points, 0);
 
   return (
@@ -157,8 +183,8 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
               <div className="shrink-0"><RankBadge points={currentEntry?.points ?? 0} size="lg" showLabel={false} /></div>
               <div className="flex flex-col justify-center">
                 <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">YOUR RANK</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{currentEntry?.rank ?? '—'}</div>
-                <div className="text-[10px] font-bold uppercase mt-1 opacity-80">OUT OF {totalPlayers.toLocaleString()}</div>
+                <div className="text-2xl sm:text-3xl font-black leading-none">{currentRank}</div>
+                <div className="text-[10px] font-bold uppercase mt-1 opacity-80">{currentRankLabel}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
@@ -256,7 +282,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                         {currentEntry && (
                           <div className="flex flex-col sm:flex-row sm:items-center p-3 lg:p-3 bg-c1 border-y-4 border-main hover:opacity-90">
                             <div className="flex items-center flex-1 sm:w-auto mb-2 sm:mb-0 text-main">
-                              <div className="w-10 sm:w-16 font-black text-lg text-center">{currentEntry.rank}</div>
+                              <div className="w-10 sm:w-16 font-black text-lg text-center">{currentRank}</div>
                               <Avatar entry={currentEntry} />
                               <div className="flex-1 font-black text-sm lg:text-base leading-tight truncate">{getDisplayName(currentEntry)}</div>
                               <div className="sm:hidden"><RankBadge points={currentEntry.points} size="sm" showLabel={false} /></div>
@@ -289,7 +315,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                 <div className="p-4 flex flex-col gap-3 font-bold text-sm">
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
                     <span className="flex items-center gap-2 text-main"><Trophy size={16} /> RANK</span>
-                    <span className="text-main font-black">{currentEntry?.rank ?? '—'}</span>
+                    <span className="text-main font-black">{currentRank}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
                     <span className="flex items-center gap-2 text-main"><Star size={16} /> TIER</span>

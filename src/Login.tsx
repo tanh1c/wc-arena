@@ -81,7 +81,7 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
       return;
     }
 
-    setFormNotice('Password reset email sent. Open the link in your inbox to set a new password.');
+    setFormNotice('Password reset email sent. Open the link in your inbox to set a new password. If you do not see it within a minute, check Spam or Promotions.');
   }
 
   return (

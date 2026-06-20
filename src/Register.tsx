@@ -86,7 +86,7 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
 
     if (!data.session) {
       setSubmitting(false);
-      setFormNotice('Account created. Check your email and confirm your account, then sign in here.');
+      setFormNotice('Account created. Check your email and confirm your account, then sign in here. If you do not see it within a minute, check Spam or Promotions.');
       return;
     }
 
