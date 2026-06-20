@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, CheckSquare, ChevronDown, DollarSign, Eye, EyeOff, Flag, Globe, Lock, Mail, Shield, Trophy, User } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
+import GoogleIcon from './components/ui/GoogleIcon';
 import { supabase } from './lib/supabaseClient';
 import { updateCurrentProfile } from './services/profile';
 import { getAuthRedirectUrl } from './utils/authRedirect';
@@ -72,7 +73,14 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
 
     if (error || !data.user) {
       setSubmitting(false);
-      setFormError(error?.message ?? 'Unable to create account.');
+      const message = error?.message ?? 'Unable to create account.';
+      if (message.toLowerCase().includes('redirect')) {
+        setFormError('This signup redirect is not allowed yet. Add this domain to Supabase Auth Redirect URLs, then try again.');
+      } else if (message.toLowerCase().includes('email')) {
+        setFormError('Unable to send confirmation email. Check Supabase SMTP settings, then try again.');
+      } else {
+        setFormError(message);
+      }
       return;
     }
 
@@ -148,9 +156,15 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
               <div className="bg-c2 text-inv p-4 text-center">{t('auth.createAccount')}</div>
             </div>
             <div className="p-5 lg:p-6 bg-card flex flex-col gap-4">
-              <button type="button" onClick={handleGoogleRegister} disabled={oauthSubmitting || submitting} className="w-full bg-card hover:bg-muted text-main font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-main bg-white text-base font-black text-main">G</span>
-                {oauthSubmitting ? 'Connecting to Google...' : 'Continue with Google'}
+              <button type="button" onClick={handleGoogleRegister} disabled={oauthSubmitting || submitting} className="group relative w-full overflow-hidden bg-gradient-to-r from-c1 via-card to-c3 text-main font-black uppercase py-4 border-4 border-main shadow-[6px_6px_0_0_var(--color-shadow)] hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4285F4] via-[#34A853] via-[#FBBC05] to-[#EA4335]" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-main bg-white shadow-[2px_2px_0_var(--color-shadow)] group-hover:rotate-[-6deg] transition-transform">
+                  <GoogleIcon />
+                </span>
+                <span className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] tracking-[0.22em] text-subtle">Fast signup</span>
+                  <span className="text-base">{oauthSubmitting ? 'Connecting...' : 'Continue with Google'}</span>
+                </span>
               </button>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[10px] font-black uppercase text-subtle">
                 <div className="border-t-2 border-main" />

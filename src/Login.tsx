@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Lock, Mail, ShieldCheck, Trophy } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
+import GoogleIcon from './components/ui/GoogleIcon';
 import { useAuth } from './lib/auth';
 import { supabase } from './lib/supabaseClient';
 import { getAuthRedirectUrl } from './utils/authRedirect';
@@ -123,9 +124,15 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
               <button type="button" onClick={() => onNavigate('register')} className="bg-card text-main p-4 hover:bg-muted">{t('auth.createAccount')}</button>
             </div>
             <div className="p-5 lg:p-6 flex flex-col gap-4">
-              <button type="button" onClick={handleGoogleLogin} disabled={oauthSubmitting || submitting} className="w-full bg-card hover:bg-muted text-main font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-main bg-white text-base font-black text-main">G</span>
-                {oauthSubmitting ? 'Connecting to Google...' : 'Continue with Google'}
+              <button type="button" onClick={handleGoogleLogin} disabled={oauthSubmitting || submitting} className="group relative w-full overflow-hidden bg-gradient-to-r from-c1 via-card to-c3 text-main font-black uppercase py-4 border-4 border-main shadow-[6px_6px_0_0_var(--color-shadow)] hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4285F4] via-[#34A853] via-[#FBBC05] to-[#EA4335]" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-main bg-white shadow-[2px_2px_0_var(--color-shadow)] group-hover:rotate-[-6deg] transition-transform">
+                  <GoogleIcon />
+                </span>
+                <span className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] tracking-[0.22em] text-subtle">Fast sign in</span>
+                  <span className="text-base">{oauthSubmitting ? 'Connecting...' : 'Continue with Google'}</span>
+                </span>
               </button>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[10px] font-black uppercase text-subtle">
                 <div className="border-t-2 border-main" />
