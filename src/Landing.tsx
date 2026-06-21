@@ -24,10 +24,10 @@ export function PitchIcon({ className }: { className?: string }) {
   );
 }
 
-export const RainbowGraphic = () => (
+export const RainbowGraphic = ({ alt }: { alt: string }) => (
   <div className="absolute top-0 right-0 w-full md:w-[55%] lg:w-[60%] xl:w-[65%] h-full pointer-events-none z-0 overflow-hidden hidden md:block">
     <div className="wc-rainbow-fade absolute inset-0 bg-gradient-to-r from-card via-transparent to-transparent w-full z-10 hidden md:block"></div>
-    <img src="https://s6.imgcdn.dev/Ybh5S0.webp" alt="Background graphic" className="wc-rainbow-img w-full h-full object-cover object-left lg:object-center relative z-0" />
+    <img src="https://s6.imgcdn.dev/Ybh5S0.webp" alt={alt} className="wc-rainbow-img w-full h-full object-cover object-left lg:object-center relative z-0" />
   </div>
 );
 
@@ -79,6 +79,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntryWithProfile[]>([]);
+  const [totalPlayers, setTotalPlayers] = useState(0);
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
         setMatches(nextMatches);
         setTeams(nextTeams);
         setLeaderboard(nextLeaderboard.slice(0, 5));
+        setTotalPlayers(nextLeaderboard.length);
         setLeagues(nextLeagues);
       })
       .catch((nextError) => {
@@ -119,11 +121,10 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
   const nextDeadline = useMemo(() => {
     return matches.find((match) => new Date(match.lock_at) > now && ['open', 'scheduled'].includes(getEffectiveMatchStatus(match, now)));
   }, [matches, now]);
-  const totalPlayers = leagues.reduce((sum, league) => sum + league.member_count, 0);
   const sponsorLeague = leagues.find((league) => league.prize_mode === 'sponsor');
 
   const stats = [
-    { label: t('landing.stats.prizePool'), value: sponsorLeague ? 'Sponsor' : 'Manual', bgColor: 'bg-c1', textColor: 'text-accent-on', icon: <Trophy size={36} strokeWidth={2.5}/> },
+    { label: t('landing.stats.prizePool'), value: sponsorLeague ? t('ui.sponsor') : t('ui.manual'), bgColor: 'bg-c1', textColor: 'text-accent-on', icon: <Trophy size={36} strokeWidth={2.5}/> },
     { label: t('landing.stats.players'), value: totalPlayers ? totalPlayers.toLocaleString() : '—', bgColor: 'bg-c2', textColor: 'text-accent-inv', icon: <Users size={36} strokeWidth={2.5}/> },
     { label: t('landing.stats.matches'), value: matches.length ? matches.length.toLocaleString() : '—', bgColor: 'bg-c3', textColor: 'text-accent-on', icon: <PitchIcon className="w-9 h-9" /> },
     { label: t('landing.stats.deadline'), value: nextDeadline ? formatDuration(nextDeadline.lock_at, now) : '—', bgColor: 'bg-c5', textColor: 'text-accent-inv', icon: <Clock size={36} strokeWidth={2.5}/> },
@@ -140,7 +141,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
         </div>
 
         <nav className="flex items-center justify-between border-b-4 border-main px-6 py-4 bg-card z-20 relative">
-          <div className="text-2xl md:text-3xl font-black uppercase tracking-tighter cursor-pointer" onClick={() => onNavigate('landing')}>PREDICT 2026</div>
+          <div className="text-2xl md:text-3xl font-black uppercase tracking-tighter cursor-pointer" onClick={() => onNavigate('landing')}>{t('common.product')}</div>
           <div className="hidden lg:flex space-x-10 font-bold uppercase text-sm tracking-wide">
             <button className="hover:text-c2 transition-colors pb-1 text-main" onClick={() => onNavigate('matches')}>{t('nav.public.matches')}</button>
             <button className="hover:text-c2 transition-colors pb-1 text-main" onClick={() => onNavigate('leaderboard')}>{t('nav.public.leaderboard')}</button>
@@ -156,7 +157,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
         </nav>
 
         <div className="relative border-b-4 border-main bg-card overflow-hidden min-h-[350px] flex items-center">
-          <RainbowGraphic />
+          <RainbowGraphic alt={t('ui.backgroundGraphic')} />
 
           <div className="relative z-10 w-full md:w-[60%] lg:w-[50%] xl:w-[45%] p-8 lg:p-10 lg:pr-10 xl:p-12">
             <h1 className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-black uppercase leading-[0.95] tracking-tighter mb-3 lg:mb-4 text-main drop-shadow-sm md:drop-shadow-none">
@@ -199,8 +200,8 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
             </div>
 
             <div className="flex flex-col bg-card">
-              {loading && <div className="p-6 font-black uppercase text-sm border-b-4 border-main">Loading matches...</div>}
-              {!loading && !error && visibleMatches.length === 0 && <div className="p-6 font-black uppercase text-sm border-b-4 border-main">No matches available.</div>}
+              {loading && <div className="p-6 font-black uppercase text-sm border-b-4 border-main">{t('ui.loadingMatches')}</div>}
+              {!loading && !error && visibleMatches.length === 0 && <div className="p-6 font-black uppercase text-sm border-b-4 border-main">{t('ui.noMatches')}</div>}
               {!loading && visibleMatches.map((match) => {
                 const homeTeam = teams.get(match.home_team_id);
                 const awayTeam = teams.get(match.away_team_id);
@@ -209,7 +210,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
                     <div className="w-full sm:w-20 md:w-24 border-b-4 sm:border-b-0 sm:border-r-4 border-main flex flex-row sm:flex-col items-center sm:justify-center p-2 sm:p-3 bg-c1 text-main gap-2 sm:gap-0">
                       <div className="font-bold text-xs lg:text-sm uppercase whitespace-nowrap">{formatDate(match.kickoff_at)}</div>
                       <div className="font-black text-xl lg:text-2xl leading-none">{formatTime(match.kickoff_at)}</div>
-                      <div className="font-bold text-[10px] lg:text-xs uppercase opacity-80 sm:mt-1">UTC</div>
+                      <div className="font-bold text-[10px] lg:text-xs uppercase opacity-80 sm:mt-1">{t('ui.utc')}</div>
                     </div>
 
                     <div className="flex-1 flex items-center justify-between p-3 lg:p-4">
@@ -287,8 +288,8 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
             </div>
 
             <div className="flex flex-col bg-card border-b-4 border-main">
-              {loading && <div className="p-4 font-black uppercase text-sm">Loading leaderboard...</div>}
-              {!loading && leaderboard.length === 0 && <div className="p-4 font-black uppercase text-sm">No leaderboard entries yet.</div>}
+              {loading && <div className="p-4 font-black uppercase text-sm">{t('ui.loadingLeaderboard')}</div>}
+              {!loading && leaderboard.length === 0 && <div className="p-4 font-black uppercase text-sm">{t('ui.noLeaderboardEntries')}</div>}
               {!loading && leaderboard.map((item, index) => (
                 <div key={item.user_id} className="flex border-b-4 border-main last:border-b-0 items-stretch hover:bg-elevated transition-colors">
                   <div className={`w-10 sm:w-12 border-r-4 border-main flex items-center justify-center font-black text-lg sm:text-xl ${index === 0 ? 'bg-c1 text-accent-on' : index === 1 ? 'bg-c2 text-accent-inv' : index === 2 ? 'bg-c3 text-accent-on' : index === 3 ? 'bg-c4 text-accent-on' : 'bg-c5 text-accent-inv'}`}>
@@ -301,7 +302,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
                     {getPublicDisplayName(item.profiles, item.user_id)}
                   </div>
                   <div className="p-3 font-black text-sm md:text-base flex items-center justify-end text-main">
-                    {item.points.toLocaleString()} PTS
+                    {item.points.toLocaleString()} {t('ui.pointsShort')}
                   </div>
                 </div>
               ))}

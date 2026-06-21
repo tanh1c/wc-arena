@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink } from 'react-router-dom';
-import { CalendarCheck, ChevronDown, Settings, Wallet } from 'lucide-react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { CalendarCheck, ChevronDown, MoreHorizontal, Settings, Wallet, X } from 'lucide-react';
 import type { ThemeControls } from '../../App';
 import DailyLoginRewardPopup from '../DailyLoginRewardPopup';
-import { appNavigationGroups, mobileNavigation } from '../../config/navigation';
+import { appNavigationGroups } from '../../config/navigation';
 import { useAuth } from '../../lib/auth';
 import { claimDailyLoginReward, getTodayDailyLoginReward, type ClaimDailyLoginRewardResponse } from '../../services/dailyLoginReward';
 import { getCurrentProfile, type ProfileRow } from '../../services/profile';
@@ -78,6 +78,8 @@ function HeaderUserStats({ profile }: { profile: ProfileRow | null }) {
   );
 }
 
+const mobilePrimaryPaths = ['/matches', '/picks', '/leaderboard'];
+
 function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
   const [showSettings, setShowSettings] = useState(false);
   const { t, i18n } = useTranslation();
@@ -118,12 +120,39 @@ function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
 export default function AppShell({ children, themeControls, fullHeight = false }: AppShellProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const location = useLocation();
   const [dailyReward, setDailyReward] = useState<ClaimDailyLoginRewardResponse | null>(null);
   const [showDailyReward, setShowDailyReward] = useState(false);
+  const [showMobileMore, setShowMobileMore] = useState(false);
   const [dailyCheckInStatus, setDailyCheckInStatus] = useState<'idle' | 'claiming' | 'claimed'>('idle');
   const [dailyCheckInError, setDailyCheckInError] = useState<string | null>(null);
   const [showAlreadyClaimedMessage, setShowAlreadyClaimedMessage] = useState(false);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const mobileNavRef = useRef<HTMLElement | null>(null);
+  const [mobileScrollSpacer, setMobileScrollSpacer] = useState(128);
+
+  useEffect(() => {
+    const nav = mobileNavRef.current;
+    if (!nav) return;
+
+    const updateSpacer = () => {
+      const rect = nav.getBoundingClientRect();
+      const bottomGap = Math.max(window.innerHeight - rect.bottom, 0);
+      setMobileScrollSpacer(Math.ceil(rect.height + bottomGap + 96));
+    };
+
+    updateSpacer();
+    const resizeObserver = new ResizeObserver(updateSpacer);
+    resizeObserver.observe(nav);
+    window.addEventListener('resize', updateSpacer);
+    window.addEventListener('orientationchange', updateSpacer);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateSpacer);
+      window.removeEventListener('orientationchange', updateSpacer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -200,15 +229,26 @@ export default function AppShell({ children, themeControls, fullHeight = false }
     }
   }
 
+  const mobilePrimaryNavigation = appNavigationGroups.flatMap((group) => group.items).filter((item) => mobilePrimaryPaths.includes(item.to));
+  const mobileMoreGroups = appNavigationGroups
+    .filter((group) => group.labelKey !== 'nav.groups.admin' || profile?.role === 'admin')
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !mobilePrimaryPaths.includes(item.to)),
+    }))
+    .filter((group) => group.items.length > 0);
+  const isMoreActive = mobileMoreGroups.some((group) => group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)));
+  const mobileScrollClearance = `${mobileScrollSpacer}px`;
+
   return (
     <div className={`${fullHeight ? 'h-[100dvh]' : 'min-h-screen'} bg-page flex font-sans relative overflow-hidden`}>
       <div className="absolute inset-x-0 top-[84px] h-[calc(100vh-116px)] z-0 pointer-events-none opacity-90 overflow-hidden flex justify-center">
         <img src="https://s6.imgcdn.dev/Ybh5S0.webp" alt="" aria-hidden="true" className="w-full h-full object-cover object-top" />
       </div>
-      <div className="flex-1 min-w-0 flex flex-col pb-20 lg:pb-0 h-screen overflow-y-auto relative z-10">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col pb-[var(--mobile-scroll-clearance)] lg:pb-0 h-[100dvh] overflow-y-auto relative z-10 scroll-pb-[var(--mobile-scroll-clearance)] lg:scroll-pb-0" style={{ '--mobile-scroll-clearance': mobileScrollClearance } as React.CSSProperties}>
         <header className="flex items-center justify-between border-b-4 border-main px-4 md:px-6 py-4 bg-card z-30 sticky top-0 shrink-0 gap-4">
           <div className="flex items-center min-w-0">
-            <Link to="/" className="text-xl md:text-3xl font-black uppercase tracking-tighter whitespace-nowrap hover:text-c2 transition-colors">PREDICT 2026</Link>
+            <Link to="/" className="text-xl md:text-3xl font-black uppercase tracking-tighter whitespace-nowrap hover:text-c2 transition-colors">{t('common.product')}</Link>
             <HeaderNavigation />
           </div>
           <div className="flex items-center gap-3 ml-auto">
@@ -238,19 +278,76 @@ export default function AppShell({ children, themeControls, fullHeight = false }
             </Link>
           </div>
         </header>
-        {children}
-        <nav className="lg:hidden fixed left-3 right-3 bottom-3 z-50 border-4 border-main bg-card shadow-[6px_6px_0_var(--color-shadow)] grid grid-cols-4 overflow-hidden">
-          {mobileNavigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => `py-2 px-1 border-r-2 border-main last:border-r-0 flex flex-col items-center justify-center gap-1 font-black uppercase text-[10px] ${isActive ? 'bg-c2 text-inv' : 'bg-card text-main'}`}>
-                {Icon && <Icon size={18} strokeWidth={2.5} />}
-                <span>{t(item.shortLabelKey ?? item.labelKey)}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+        <main className="shrink-0">
+          {children}
+        </main>
+        <div aria-hidden="true" className="lg:hidden shrink-0" style={{ height: mobileScrollSpacer }} />
+        {showMobileMore && (
+          <div className="lg:hidden fixed inset-0 z-40">
+            <button type="button" aria-label={t('ui.closeMenu')} onClick={() => setShowMobileMore(false)} className="absolute inset-0 bg-main/35" />
+            <div className="absolute left-3 right-3 bottom-[68px] max-h-[62dvh] overflow-y-auto bg-card border-[3px] border-main shadow-[5px_5px_0_var(--color-shadow)] rounded-lg">
+              <div className="sticky top-0 z-10 bg-c2 text-inv border-b-[3px] border-main px-3 py-2 flex items-center justify-between rounded-t-lg">
+                <div className="font-black uppercase text-xs tracking-wide">{t('common.morePages')}</div>
+                <button type="button" onClick={() => setShowMobileMore(false)} className="border-2 border-main bg-card text-main p-1 shadow-[2px_2px_0_var(--color-shadow)]" aria-label={t('ui.closeMenu')}>
+                  <X size={16} strokeWidth={3} />
+                </button>
+              </div>
+              <div className="p-2 flex flex-col gap-2 pb-3">
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileMore(false);
+                      openDailyCheckIn();
+                    }}
+                    disabled={dailyCheckInStatus === 'claiming'}
+                    className={`border-2 border-main px-3 py-2 font-black uppercase text-[11px] flex items-center gap-3 shadow-[2px_2px_0_var(--color-shadow)] rounded-md ${dailyCheckInStatus === 'claimed' ? 'bg-muted text-subtle' : 'bg-c1 text-main'}`}
+                  >
+                    <CalendarCheck size={17} strokeWidth={2.5} />
+                    <span>{dailyCheckInStatus === 'claiming' ? t('dailyLogin.claiming') : dailyCheckInStatus === 'claimed' ? t('dailyLogin.claimed') : t('dailyLogin.headerClaim')}</span>
+                  </button>
+                )}
+                {mobileMoreGroups.map((group) => (
+                  <div key={group.labelKey} className="border-2 border-main bg-page rounded-md overflow-hidden">
+                    <div className="border-b-2 border-main px-3 py-1.5 font-black uppercase text-[10px] text-subtle bg-muted rounded-t-md">{t(group.labelKey)}</div>
+                    <div className="grid grid-cols-2 gap-2 p-2">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <NavLink
+                            key={item.to}
+                            to={item.to}
+                            onClick={() => setShowMobileMore(false)}
+                            className={({ isActive }) => `min-h-11 border-2 border-main px-2 py-2 flex items-center gap-2 font-black uppercase text-[10px] rounded-md ${isActive ? 'bg-c2 text-inv' : 'bg-card text-main'}`}
+                          >
+                            {Icon && <Icon size={16} strokeWidth={2.5} className="shrink-0" />}
+                            <span className="truncate">{t(item.shortLabelKey ?? item.labelKey)}</span>
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      <nav ref={mobileNavRef} className="lg:hidden fixed left-3 right-3 bottom-3 z-50 border-[3px] border-main bg-card shadow-[4px_4px_0_var(--color-shadow)] grid grid-cols-4 overflow-hidden">
+        {mobilePrimaryNavigation.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink key={item.to} to={item.to} onClick={() => setShowMobileMore(false)} className={({ isActive }) => `min-h-[48px] py-1 px-1 border-r-2 border-main flex flex-col items-center justify-center gap-0.5 font-black uppercase text-[9px] leading-none ${isActive ? 'bg-c2 text-inv' : 'bg-card text-main'}`}>
+              {Icon && <Icon size={17} strokeWidth={2.5} />}
+              <span>{t(item.shortLabelKey ?? item.labelKey)}</span>
+            </NavLink>
+          );
+        })}
+        <button type="button" onClick={() => setShowMobileMore((current) => !current)} className={`min-h-[48px] py-1 px-1 flex flex-col items-center justify-center gap-0.5 font-black uppercase text-[9px] leading-none ${showMobileMore || isMoreActive ? 'bg-c2 text-inv' : 'bg-card text-main'}`} aria-expanded={showMobileMore}>
+          <MoreHorizontal size={17} strokeWidth={2.5} />
+          <span>{t('common.more')}</span>
+        </button>
+      </nav>
       <DailyLoginRewardPopup
         open={showDailyReward}
         status={dailyCheckInStatus}

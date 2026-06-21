@@ -17,6 +17,32 @@ export async function listLeagues() {
   return data;
 }
 
+export async function listLeagueMemberCounts(leagueIds: string[]) {
+  if (leagueIds.length === 0) return new Map<string, number>();
+
+  const { data, error } = await supabase
+    .from('league_members')
+    .select('league_id')
+    .in('league_id', leagueIds);
+
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  leagueIds.forEach((leagueId) => counts.set(leagueId, 0));
+  data.forEach((member) => counts.set(member.league_id, (counts.get(member.league_id) ?? 0) + 1));
+  return counts;
+}
+
+export async function getLeagueMemberCount(leagueId: string) {
+  const { count, error } = await supabase
+    .from('league_members')
+    .select('league_id', { count: 'exact', head: true })
+    .eq('league_id', leagueId);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getLeague(leagueId: string) {
   const { data, error } = await supabase
     .from('leagues')

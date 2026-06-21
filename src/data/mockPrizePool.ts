@@ -5,7 +5,7 @@ export const mockPrizePoolSummary = {
   sponsorFundedAmount: 22000,
   communityBackedAmount: 3000,
   currency: 'USD',
-  eligiblePlayers: 12480,
+  eligiblePlayers: 0,
 };
 
 export const mockPrizeTiers: PrizeTier[] = [

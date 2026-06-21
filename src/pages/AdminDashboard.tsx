@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
@@ -31,6 +32,7 @@ function getMatchLabel(match: MatchRow, teams: Map<string, TeamRow>) {
 }
 
 export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
+  const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
   const [role, setRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     const awayScore = Number(draft?.awayScore);
 
     if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
-      setMatchActionState((current) => ({ ...current, [match.id]: { error: 'Enter two non-negative whole numbers.' } }));
+      setMatchActionState((current) => ({ ...current, [match.id]: { error: t('ui.enterWholeScores') } }));
       return;
     }
 
@@ -127,7 +129,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     try {
       await updateMatchResult({ matchId: match.id, homeScore, awayScore });
       await loadAdminData();
-      setMatchActionState((current) => ({ ...current, [match.id]: { success: 'Result saved' } }));
+      setMatchActionState((current) => ({ ...current, [match.id]: { success: t('ui.resultSaved') } }));
     } catch (nextError) {
       setMatchActionState((current) => ({ ...current, [match.id]: { error: getErrorMessage(nextError) } }));
     }
@@ -139,7 +141,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     try {
       const result = await recalculateScores() as { predictionScores?: number; leaderboardEntries?: number };
       await loadAdminData();
-      setRecalcState({ success: `Updated ${result.predictionScores ?? 0} scores / ${result.leaderboardEntries ?? 0} entries` });
+      setRecalcState({ success: t('ui.recalcUpdated', { scores: result.predictionScores ?? 0, entries: result.leaderboardEntries ?? 0 }) });
     } catch (nextError) {
       setRecalcState({ error: getErrorMessage(nextError) });
     }
@@ -150,9 +152,9 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Admin Control Room</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.adminControlRoom')}</h1>
           </div>
-          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">Loading admin access...</div>
+          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">{t('ui.loadingAdminAccess')}</div>
         </div>
       </AppShell>
     );
@@ -163,11 +165,11 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Admin Control Room</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.adminControlRoom')}</h1>
           </div>
           <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm flex flex-col gap-3">
-            <span>Sign in to access admin tools.</span>
-            <Link to="/login" className="text-c2 underline">Go to login</Link>
+            <span>{t('ui.signInAdmin')}</span>
+            <Link to="/login" className="text-c2 underline">{t('ui.goToLogin')}</Link>
           </div>
         </div>
       </AppShell>
@@ -179,9 +181,9 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Admin Control Room</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.adminControlRoom')}</h1>
           </div>
-          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">Admin access required.</div>
+          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">{t('ui.adminAccessRequired')}</div>
         </div>
       </AppShell>
     );
@@ -196,7 +198,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
           <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">
-            Admin Control Room
+            {t('ui.adminControlRoom')}
           </h1>
         </div>
 
@@ -206,33 +208,33 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
             <div className="flex items-center gap-4 border-b-4 sm:border-r-4 xl:border-b-0 border-main p-4 lg:p-5 bg-c1 text-main">
               <div className="shrink-0"><Trophy size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Matches</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.matches')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{loading ? '—' : matches.length}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">{finishedMatches} finished</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.finishedCount', { count: finishedMatches })}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-4 lg:p-5 bg-c2 text-inv">
               <div className="shrink-0"><ClipboardCheck size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Leaderboard</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('nav.items.leaderboard')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{loading ? '—' : leaderboard.length}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">{lockedMatches} locked/live matches</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.lockedLiveMatchesCount', { count: lockedMatches })}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-b-4 sm:border-b-0 sm:border-r-4 border-main p-4 lg:p-5 bg-c3 text-main">
               <div className="shrink-0"><Radar size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Signals</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.signals')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{trustSignals.length}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Watch/review queue</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.watchReviewQueue')}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
               <div className="shrink-0"><ShieldCheck size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Rewards</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.rewards')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{pendingRewards}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Pending manual review</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.pendingManualReview')}</div>
               </div>
             </div>
           </div>
@@ -240,10 +242,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
           <div className="flex flex-col xl:flex-row flex-1">
             <div className="flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Match Operations
+                {t('ui.matchOperations')}
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
-                {loading && <div className="p-4 font-black uppercase text-sm">Loading admin data...</div>}
+                {loading && <div className="p-4 font-black uppercase text-sm">{t('ui.loadingAdminData')}</div>}
                 {!loading && matches.map((match) => {
                   const state = matchActionState[match.id];
                   const draft = resultDrafts[match.id] ?? { homeScore: '', awayScore: '' };
@@ -255,12 +257,12 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         <div className="text-xs text-subtle uppercase mt-1">{match.city}</div>
                       </div>
                       <div className="p-3 md:border-r-2 border-main uppercase">{match.status}</div>
-                      <div className="p-3 md:border-r-2 border-main text-xs uppercase">Lock: {formatDate(match.lock_at)}</div>
+                      <div className="p-3 md:border-r-2 border-main text-xs uppercase">{t('ui.lockDate', { date: formatDate(match.lock_at) })}</div>
                       <div className="p-3 flex flex-col gap-2">
                         <div className="flex gap-2">
-                          <input value={draft.homeScore} onChange={(event) => setResultDrafts((current) => ({ ...current, [match.id]: { ...draft, homeScore: event.target.value } }))} className="w-14 bg-card border-2 border-main px-2 py-1 font-black text-center" inputMode="numeric" aria-label="Home score" />
-                          <input value={draft.awayScore} onChange={(event) => setResultDrafts((current) => ({ ...current, [match.id]: { ...draft, awayScore: event.target.value } }))} className="w-14 bg-card border-2 border-main px-2 py-1 font-black text-center" inputMode="numeric" aria-label="Away score" />
-                          <button type="button" onClick={() => void saveMatchResult(match)} disabled={state?.loading} className="bg-c2 text-inv border-2 border-main px-2 py-1 font-black uppercase text-[10px] disabled:opacity-60">Save</button>
+                          <input value={draft.homeScore} onChange={(event) => setResultDrafts((current) => ({ ...current, [match.id]: { ...draft, homeScore: event.target.value } }))} className="w-14 bg-card border-2 border-main px-2 py-1 font-black text-center" inputMode="numeric" aria-label={t('ui.homeScore')} />
+                          <input value={draft.awayScore} onChange={(event) => setResultDrafts((current) => ({ ...current, [match.id]: { ...draft, awayScore: event.target.value } }))} className="w-14 bg-card border-2 border-main px-2 py-1 font-black text-center" inputMode="numeric" aria-label={t('ui.awayScore')} />
+                          <button type="button" onClick={() => void saveMatchResult(match)} disabled={state?.loading} className="bg-c2 text-inv border-2 border-main px-2 py-1 font-black uppercase text-[10px] disabled:opacity-60">{t('ui.save')}</button>
                         </div>
                         {(state?.error || state?.success) && <div className={`font-black uppercase text-[10px] ${state.error ? 'text-c5' : 'text-c2'}`}>{state.error ?? state.success}</div>}
                       </div>
@@ -270,7 +272,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
               </div>
 
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Prediction Integrity
+                {t('ui.predictionIntegrity')}
               </div>
               <div className="bg-card flex flex-col">
                 {recentPredictions.map((prediction) => {
@@ -298,7 +300,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         <div className="text-xs text-subtle uppercase mt-1">{match ? getMatchLabel(match, teams) : prediction.match_id}</div>
                       </div>
                       <div className="p-3 md:border-r-2 border-main">{match ? formatPredictionPick(displayPrediction, teams.get(match.home_team_id)?.short_name ?? match.home_team_id, teams.get(match.away_team_id)?.short_name ?? match.away_team_id) : prediction.predicted_outcome.toUpperCase()}</div>
-                      <div className="p-3 md:border-r-2 border-main">Rev {prediction.revision}</div>
+                      <div className="p-3 md:border-r-2 border-main">{t('ui.revLabel', { revision: prediction.revision })}</div>
                       <div className="p-3 uppercase text-[10px] font-black">{prediction.status}</div>
                     </div>
                   );
@@ -308,38 +310,38 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
             <div className="w-full xl:w-[380px] bg-card flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Leaderboard Recalc
+                {t('ui.leaderboardRecalc')}
               </div>
               <div className="p-4 bg-card flex flex-col gap-3 border-b-4 border-main">
                 {leaderboard.slice(0, 4).map((entry) => (
                   <div key={entry.user_id} className="border-2 border-main p-3 flex items-center justify-between font-bold text-sm">
                     <span className="uppercase">#{entry.rank} {getPublicDisplayName(entry.profiles, entry.user_id)}</span>
-                    <span className="font-black">{entry.points} pts</span>
+                    <span className="font-black">{entry.points} {t('ui.pointsShort')}</span>
                   </div>
                 ))}
                 <button type="button" onClick={() => void runRecalculation()} disabled={recalcState.loading} className="border-2 border-main bg-c1 p-3 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">
-                  {recalcState.loading ? 'Recalculating...' : 'Recalculate Scores'}
+                  {recalcState.loading ? t('ui.recalculating') : t('ui.recalculateScores')}
                 </button>
                 {(recalcState.error || recalcState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${recalcState.error ? 'bg-c5' : 'bg-c3'}`}>{recalcState.error ?? recalcState.success}</div>}
               </div>
 
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Suspicious Signals
+                {t('ui.suspiciousSignals')}
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
                 {trustSignals.map((signal) => (
                   <div key={signal.id} className="p-4 border-b-2 border-line last:border-b-0">
-                    <div className="font-black uppercase flex items-center gap-2"><AlertTriangle size={16} /> {signal.user_id ?? 'System signal'}</div>
+                    <div className="font-black uppercase flex items-center gap-2"><AlertTriangle size={16} /> {signal.user_id ?? t('ui.systemSignal')}</div>
                     <div className="text-xs font-bold text-subtle mt-1">{signal.label} • {signal.severity}</div>
                   </div>
                 ))}
-                {!loading && trustSignals.length === 0 && <div className="p-4 font-black uppercase text-xs">No trust signals.</div>}
+                {!loading && trustSignals.length === 0 && <div className="p-4 font-black uppercase text-xs">{t('ui.noTrustSignals')}</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-card">
                 <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main flex justify-between items-center">
-                  <span>Recent Audit Events</span>
-                  <Link to="/admin/audit" className="text-[10px] opacity-80 hover:underline">View Audit Log</Link>
+                  <span>{t('ui.recentAuditEvents')}</span>
+                  <Link to="/admin/audit" className="text-[10px] opacity-80 hover:underline">{t('ui.viewAuditLog')}</Link>
                 </div>
                 <div className="p-4 bg-card flex flex-col gap-3 text-xs font-bold flex-1">
                   {auditLogs.slice(0, 4).map((log) => (
@@ -348,7 +350,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                       <div className="text-subtle mt-1">{log.description}</div>
                     </div>
                   ))}
-                  {!loading && auditLogs.length === 0 && <div className="font-black uppercase text-xs">No audit events yet.</div>}
+                  {!loading && auditLogs.length === 0 && <div className="font-black uppercase text-xs">{t('ui.noAuditEvents')}</div>}
                 </div>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import AppShell from '../components/layout/AppShell';
 import PageHero from '../components/ui/PageHero';
 import Panel from '../components/ui/Panel';
@@ -10,13 +11,15 @@ type PlaceholderPageProps = {
 };
 
 export default function PlaceholderPage({ title, description, themeControls }: PlaceholderPageProps) {
+  const { t } = useTranslation();
+
   return (
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 bg-page flex-1">
         <PageHero title={title} description={description} />
-        <Panel title="Coming Next">
+        <Panel title={t('ui.comingNext')}>
           <div className="p-6 bg-card font-bold text-sm text-subtle">
-            This route is wired for the frontend foundation pass. The full feature UI will be built in a later phase.
+            {t('ui.placeholderBody')}
           </div>
         </Panel>
       </div>

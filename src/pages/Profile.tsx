@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Award, BarChart2, Shield, Star, Trophy, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
@@ -8,7 +9,7 @@ import StatusPill from '../components/ui/StatusPill';
 import StreakBadge from '../components/ui/StreakBadge';
 import { useAuth } from '../lib/auth';
 import { listCurrentUserBadges, type UserBadgeWithBadge } from '../services/badges';
-import { listCurrentUserLeagueMemberships, type LeagueMemberRow } from '../services/leagues';
+import { listCurrentUserLeagueMemberships, listLeagueMemberCounts, type LeagueMemberRow } from '../services/leagues';
 import { calculateAccuracy, calculateStreak, getPredictionOutcome } from '../lib/scoring';
 import { listCurrentUserPredictions, type PredictionWithMatch } from '../services/predictions';
 import { ensureCurrentProfile, updateCurrentProfile, type ProfileRow } from '../services/profile';
@@ -61,12 +62,14 @@ function formatDate(value: string) {
 }
 
 export default function Profile({ themeControls }: ProfileProps) {
+  const { t } = useTranslation();
   const { user: authUser, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [predictions, setPredictions] = useState<PredictionWithMatch[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [badges, setBadges] = useState<UserBadgeWithBadge[]>([]);
   const [leagueMemberships, setLeagueMemberships] = useState<LeagueMemberRow[]>([]);
+  const [leagueMemberCounts, setLeagueMemberCounts] = useState<Map<string, number>>(new Map());
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
@@ -90,7 +93,8 @@ export default function Profile({ themeControls }: ProfileProps) {
     setProfileError(null);
 
     Promise.all([ensureCurrentProfile(authUser.id, authUser.email, authUser.user_metadata.username), listCurrentUserPredictions(), getTeamMap(), listCurrentUserBadges(), listCurrentUserLeagueMemberships()])
-      .then(([nextProfile, nextPredictions, nextTeams, nextBadges, nextLeagueMemberships]) => {
+      .then(async ([nextProfile, nextPredictions, nextTeams, nextBadges, nextLeagueMemberships]) => {
+        const nextLeagueMemberCounts = await listLeagueMemberCounts(nextLeagueMemberships.map((membership) => membership.league_id));
         if (!active) return;
         setProfile(nextProfile);
         setDisplayNameDraft(nextProfile.display_name ?? '');
@@ -100,6 +104,7 @@ export default function Profile({ themeControls }: ProfileProps) {
         setTeams(nextTeams);
         setBadges(nextBadges);
         setLeagueMemberships(nextLeagueMemberships);
+        setLeagueMemberCounts(nextLeagueMemberCounts);
       })
       .catch((error) => {
         if (!active) return;
@@ -119,7 +124,7 @@ export default function Profile({ themeControls }: ProfileProps) {
 
     const nextDisplayName = displayNameDraft.trim();
     if (nextDisplayName.length > 40) {
-      setDisplayNameError('Display name must be 40 characters or fewer.');
+      setDisplayNameError(t('ui.displayNameTooLong'));
       setDisplayNameStatus('idle');
       return;
     }
@@ -140,12 +145,12 @@ export default function Profile({ themeControls }: ProfileProps) {
   if (authLoading || profileLoading) {
     return (
       <AppShell themeControls={themeControls}>
-        <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-          <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Player Profile</h1>
+        <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
+          <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">{t('ui.playerProfile')}</h1>
           </div>
-          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">
-            Loading profile...
+          <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">
+            {t('ui.loadingProfile')}
           </div>
         </div>
       </AppShell>
@@ -157,11 +162,11 @@ export default function Profile({ themeControls }: ProfileProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Player Profile</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.playerProfile')}</h1>
           </div>
           <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm flex flex-col gap-3">
-            <span>Sign in to view your profile.</span>
-            <Link to="/login" className="text-c2 underline">Go to login</Link>
+            <span>{t('ui.signInProfile')}</span>
+            <Link to="/login" className="text-c2 underline">{t('ui.goToLogin')}</Link>
           </div>
         </div>
       </AppShell>
@@ -171,12 +176,12 @@ export default function Profile({ themeControls }: ProfileProps) {
   if (profileError || !profile) {
     return (
       <AppShell themeControls={themeControls}>
-        <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-          <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Player Profile</h1>
+        <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
+          <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">{t('ui.playerProfile')}</h1>
           </div>
-          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">
-            {profileError ?? 'Profile not found.'}
+          <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">
+            {profileError ?? t('ui.profileNotFound')}
           </div>
         </div>
       </AppShell>
@@ -188,53 +193,54 @@ export default function Profile({ themeControls }: ProfileProps) {
 
   return (
     <AppShell themeControls={themeControls}>
-      <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-        <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-          <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">
-            Player Profile
+      <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
+        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">
+            {t('ui.playerProfile')}
           </h1>
         </div>
 
-        <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
-            <div className="flex items-center gap-4 border-b-4 sm:border-r-4 xl:border-b-0 border-main p-4 lg:p-5 bg-c1 text-main">
-              <div className="shrink-0"><Trophy size={36} strokeWidth={2.5} /></div>
-              <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Global Rank</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">#{profile.rank ?? '—'}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Global Arena</div>
+        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
+          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
+            <div className="flex items-center gap-2 sm:gap-4 border-b-4 border-r-4 xl:border-b-0 border-main p-2.5 sm:p-4 lg:p-5 bg-c1 text-main min-w-0">
+              <div className="shrink-0"><Trophy size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5} /></div>
+              <div className="flex flex-col justify-center min-w-0">
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90 truncate">{t('ui.globalRank')}</div>
+                <div className="text-lg sm:text-3xl font-black leading-none">#{profile.rank ?? '—'}</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{t('ui.globalArena')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-4 lg:p-5 bg-c2 text-inv">
-              <div className="shrink-0"><RankBadge points={profile.points} size="lg" showLabel={false} /></div>
-              <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Rank Tier</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none"><RankBadge points={profile.points} size="sm" /></div>
-                <div className="text-[10px] font-bold uppercase mt-1 flex items-center gap-1"><PointsCoin size="sm" />{profile.points.toLocaleString()} points</div>
+            <div className="flex items-center gap-2 sm:gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c2 text-inv min-w-0">
+              <div className="shrink-0"><RankBadge points={profile.points} size="sm" showLabel={false} /></div>
+              <div className="flex flex-col justify-center min-w-0">
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90 truncate">{t('ui.rankTier')}</div>
+                <div className="text-lg sm:text-3xl font-black leading-none truncate"><RankBadge points={profile.points} size="sm" /></div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 flex items-center gap-1 truncate"><PointsCoin size="sm" />{profile.points.toLocaleString()} {t('ui.pointsShort')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-4 border-b-4 sm:border-b-0 sm:border-r-4 border-main p-4 lg:p-5 bg-c3 text-main">
-              <div className="shrink-0"><BarChart2 size={36} strokeWidth={2.5} /></div>
-              <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Accuracy</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none">{accuracy || profile.accuracy || 0}%</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Exact or outcome</div>
+            <div className="flex items-center gap-2 sm:gap-4 border-r-4 xl:border-r-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c3 text-main min-w-0">
+              <div className="shrink-0"><BarChart2 size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5} /></div>
+              <div className="flex flex-col justify-center min-w-0">
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90 truncate">{t('ui.accuracy')}</div>
+                <div className="text-lg sm:text-3xl font-black leading-none">{accuracy || profile.accuracy || 0}%</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{t('ui.exactOrOutcome')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
-              <div className="shrink-0"><StreakBadge streak={streak || profile.current_streak} size="lg" showValue={false} /></div>
-              <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Streak</div>
-                <div className="text-2xl sm:text-3xl font-black leading-none"><StreakBadge streak={streak || profile.current_streak} size="sm" /></div>
-                <div className="text-[10px] font-bold uppercase mt-1">Best {profile.best_streak}</div>
+            <div className="flex items-center gap-2 sm:gap-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c4 text-main min-w-0">
+              <div className="shrink-0"><StreakBadge streak={streak || profile.current_streak} size="sm" showValue={false} /></div>
+              <div className="flex flex-col justify-center min-w-0">
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90 truncate">{t('ui.streak')}</div>
+                <div className="text-lg sm:text-3xl font-black leading-none truncate"><StreakBadge streak={streak || profile.current_streak} size="sm" /></div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{t('ui.best')} {profile.best_streak}</div>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col xl:flex-row flex-1">
-            <div className="flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Recent Predictions
+            <div className="order-2 xl:order-1 flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
+              <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between">
+                <span>{t('ui.recentPredictions')}</span>
+                <span className="text-[10px] font-bold text-faint">{t('ui.picksCount', { count: userPredictions.length })}</span>
               </div>
               <div className="flex flex-col bg-card">
                 {userPredictions.slice(0, 5).map(({ source, prediction, result }) => {
@@ -243,70 +249,70 @@ export default function Profile({ themeControls }: ProfileProps) {
                   const homeTeam = teams.get(match.home_team_id);
                   const awayTeam = teams.get(match.away_team_id);
                   return (
-                    <div key={prediction.id} className="grid grid-cols-1 md:grid-cols-[1fr_150px_130px] border-b-4 border-main last:border-b-0 font-bold text-sm hover:bg-muted transition-colors">
-                      <div className="p-4 md:border-r-2 border-main">
-                        <Link to={`/matches/${match.id}`} className="font-black uppercase text-main hover:text-c2 hover:underline">{homeTeam?.name ?? match.home_team_id} vs {awayTeam?.name ?? match.away_team_id}</Link>
-                        <div className="text-xs text-subtle uppercase mt-1">{formatDate(match.kickoff_at)} • {match.city}</div>
+                    <div key={prediction.id} className="grid grid-cols-1 md:grid-cols-[1fr_150px_130px] border-b-4 border-main last:border-b-0 font-bold text-xs sm:text-sm hover:bg-muted transition-colors">
+                      <div className="p-3 sm:p-4 md:border-r-2 border-main min-w-0">
+                        <Link to={`/matches/${match.id}`} className="font-black uppercase text-main hover:text-c2 hover:underline block truncate">{homeTeam?.name ?? match.home_team_id} vs {awayTeam?.name ?? match.away_team_id}</Link>
+                        <div className="text-[10px] sm:text-xs text-subtle uppercase mt-1 truncate">{formatDate(match.kickoff_at)} • {match.city}</div>
                       </div>
-                      <div className="p-4 md:border-r-2 border-main font-black md:text-center flex items-center">{formatPredictionPick(prediction, homeTeam?.short_name ?? 'TBD', awayTeam?.short_name ?? 'TBD')}</div>
-                      <div className="p-4 flex md:justify-center items-center"><StatusPill status={getDisplayStatus(prediction, result)} /></div>
+                      <div className="px-3 pb-2 sm:p-4 md:border-r-2 border-main font-black md:text-center flex items-center">{formatPredictionPick(prediction, homeTeam?.short_name ?? t('appPages.common.unknownTeam'), awayTeam?.short_name ?? t('appPages.common.unknownTeam'))}</div>
+                      <div className="px-3 pb-3 sm:p-4 flex md:justify-center items-center"><StatusPill status={getDisplayStatus(prediction, result)} /></div>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-y-4 border-main">
-                Badge Progress
+              <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-y-4 border-main">
+                {t('ui.badgeProgress')}
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 bg-card">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 bg-card">
                 {badges.map((userBadge, index) => {
                   const badge = userBadge.badges;
                   if (!badge) return null;
                   const imageSrc = getBadgeImageSrc(badge);
                   const progress = badge.progress_target ? Math.round((userBadge.progress_current / badge.progress_target) * 100) : 0;
                   return (
-                    <Link key={badge.id} to="/badges" className={`p-4 border-b-4 border-main hover:bg-muted ${index % 3 !== 2 ? 'lg:border-r-4' : ''}`}>
-                      <div className="flex items-center gap-3 font-black uppercase text-sm">
-                        <div className="w-10 h-10 border-2 border-main bg-card text-main flex items-center justify-center shrink-0 overflow-hidden p-1">
+                    <Link key={badge.id} to="/badges" className={`p-3 sm:p-4 border-b-4 border-main hover:bg-muted ${index % 2 !== 1 ? 'sm:border-r-4' : ''} ${index % 3 !== 2 ? 'lg:border-r-4' : ''}`}>
+                      <div className="flex items-center gap-2 sm:gap-3 font-black uppercase text-xs sm:text-sm min-w-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 border-2 border-main bg-card text-main flex items-center justify-center shrink-0 overflow-hidden p-1 rounded-sm">
                           {imageSrc ? (
                             <img src={imageSrc} alt="" className={`w-full h-full object-contain ${userBadge.unlocked_at ? '' : 'grayscale opacity-50'}`} />
                           ) : <Award size={18} />}
                         </div>
-                        <span>{badge.name}</span>
+                        <span className="truncate">{badge.name}</span>
                       </div>
-                      <div className="text-xs font-bold text-subtle mt-2 leading-snug">{badge.description}</div>
-                      <div className="h-3 border-2 border-main mt-3 bg-muted"><div className="h-full bg-c3" style={{ width: `${Math.min(progress, 100)}%` }} /></div>
-                      <div className="text-[10px] font-black uppercase mt-2">{userBadge.unlocked_at ? 'Unlocked' : `${userBadge.progress_current}/${badge.progress_target ?? 0}`}</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-subtle mt-2 leading-snug line-clamp-2">{badge.description}</div>
+                      <div className="h-3 border-2 border-main mt-3 bg-muted rounded-sm overflow-hidden"><div className="h-full bg-c3 rounded-sm" style={{ width: `${Math.min(progress, 100)}%` }} /></div>
+                      <div className="text-[10px] font-black uppercase mt-2">{userBadge.unlocked_at ? t('appPages.common.unlocked') : `${userBadge.progress_current}/${badge.progress_target ?? 0}`}</div>
                     </Link>
                   );
                 })}
-                {badges.length === 0 && <div className="p-4 font-black uppercase text-sm">No badge progress yet.</div>}
+                {badges.length === 0 && <div className="p-4 font-black uppercase text-sm">{t('ui.noBadgeProgress')}</div>}
               </div>
             </div>
 
-            <div className="w-full xl:w-[420px] bg-card flex flex-col">
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Identity
+            <div className="order-1 xl:order-2 w-full xl:w-[420px] bg-card flex flex-col border-b-4 xl:border-b-0 border-main">
+              <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">
+                {t('ui.identity')}
               </div>
-              <div className="p-5 bg-card flex flex-col gap-4 border-b-4 border-main">
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-3xl">{publicInitials}</div>
+              <div className="p-3 sm:p-5 bg-card flex flex-col gap-3 sm:gap-4 border-b-4 border-main">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0">{publicInitials}</div>
                   <div className="min-w-0">
-                    <div className="font-black text-3xl uppercase tracking-tighter text-main">{publicDisplayName}</div>
-                    <div className="font-black text-xs uppercase text-subtle break-all">@{profile.username}</div>
-                    <div className="font-bold text-sm text-subtle break-all">{profile.email ?? authUser.email}</div>
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-main leading-none truncate">{publicDisplayName}</div>
+                    <div className="font-black text-[10px] sm:text-xs uppercase text-subtle truncate">@{profile.username}</div>
+                    <div className="font-bold text-xs sm:text-sm text-subtle truncate">{profile.email ?? authUser.email}</div>
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
                       <RankBadge points={profile.points} size="sm" className="text-main" />
-                      <span className="border-2 border-main bg-c1 px-2 py-1 font-black uppercase text-xs flex items-center gap-1 text-main shadow-[2px_2px_0_var(--color-shadow)]">
+                      <span className="border-2 border-main bg-c1 px-2 py-1 font-black uppercase text-[10px] sm:text-xs flex items-center gap-1 text-main shadow-[2px_2px_0_var(--color-shadow)] rounded-sm">
                         <PointsCoin size="sm" />
-                        {profile.points.toLocaleString()} PTS
+                        {profile.points.toLocaleString()} {t('ui.pointsShort')}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="border-2 border-main p-3 flex flex-col gap-2">
-                  <label className="font-black uppercase text-[10px] text-subtle" htmlFor="display-name">Display name shown publicly</label>
-                  <div className="flex flex-col sm:flex-row gap-2">
+                <div className="border-2 border-main p-2.5 sm:p-3 flex flex-col gap-2 rounded-sm">
+                  <label className="font-black uppercase text-[10px] text-subtle" htmlFor="display-name">{t('ui.displayNamePublic')}</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
                     <input
                       id="display-name"
                       type="text"
@@ -318,52 +324,52 @@ export default function Profile({ themeControls }: ProfileProps) {
                       }}
                       maxLength={60}
                       placeholder={profile.username}
-                      className="min-w-0 flex-1 border-2 border-main bg-card px-3 py-2 font-bold text-sm text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none"
+                      className="min-w-0 border-2 border-main bg-card px-3 py-2 font-bold text-sm text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none rounded-sm"
                     />
                     <button
                       type="button"
                       onClick={() => void handleDisplayNameSave()}
                       disabled={displayNameStatus === 'saving'}
-                      className="bg-c2 text-inv border-2 border-main px-4 py-2 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60 disabled:cursor-wait"
+                      className="bg-c2 text-inv border-2 border-main px-4 py-2 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60 disabled:cursor-wait rounded-sm"
                     >
-                      {displayNameStatus === 'saving' ? 'Saving...' : 'Save'}
+                      {displayNameStatus === 'saving' ? t('ui.savingEllipsis') : t('ui.save')}
                     </button>
                   </div>
-                  <div className="font-bold text-[10px] uppercase text-subtle">Blank uses your stable username. Max 40 characters.</div>
-                  {displayNameStatus === 'saved' && <div className="font-black text-[10px] uppercase text-c3">Display name saved.</div>}
+                  <div className="font-bold text-[10px] uppercase text-subtle">{t('ui.displayNameHelp')}</div>
+                  {displayNameStatus === 'saved' && <div className="font-black text-[10px] uppercase text-c3">{t('ui.displayNameSaved')}</div>}
                   {displayNameError && <div className="font-black text-[10px] uppercase text-c5">{displayNameError}</div>}
                 </div>
-                <div className="grid grid-cols-2 border-2 border-main text-sm font-bold">
-                  <div className="p-3 border-r-2 border-main"><div className="text-[10px] uppercase text-subtle font-black">Fan team</div>{favoriteTeam?.name ?? 'Not set'}</div>
-                  <div className="p-3"><div className="text-[10px] uppercase text-subtle font-black">Joined</div>{formatDate(profile.created_at)}</div>
+                <div className="grid grid-cols-2 border-2 border-main text-xs sm:text-sm font-bold rounded-sm overflow-hidden">
+                  <div className="p-2.5 sm:p-3 border-r-2 border-main min-w-0"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.fanTeam')}</div><span className="truncate block">{favoriteTeam?.name ?? t('ui.notSet')}</span></div>
+                  <div className="p-2.5 sm:p-3"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.joined')}</div>{formatDate(profile.created_at)}</div>
                 </div>
               </div>
 
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Leagues
+              <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">
+                {t('ui.leagues')}
               </div>
-              <div className="flex flex-col bg-card border-b-4 border-main">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-col bg-card border-b-4 border-main">
                 {leagueMemberships.map((membership) => {
                   const league = membership.leagues;
                   if (!league) return null;
                   return (
-                    <Link key={membership.league_id} to={`/leagues/${league.id}`} className="p-4 border-b-2 border-line last:border-b-0 hover:bg-muted">
-                      <div className="font-black uppercase">{league.name}</div>
-                      <div className="text-xs font-bold text-subtle uppercase mt-1">{league.member_count.toLocaleString()} members • {league.visibility}</div>
+                    <Link key={membership.league_id} to={`/leagues/${league.id}`} className="p-3 sm:p-4 border-b-2 sm:border-r-2 xl:border-r-0 border-line last:border-b-0 hover:bg-muted min-w-0">
+                      <div className="font-black uppercase text-sm truncate">{league.name}</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-subtle uppercase mt-1 truncate">{t('ui.memberCount', { count: (leagueMemberCounts.get(league.id) ?? 0).toLocaleString() })} • {league.visibility}</div>
                     </Link>
                   );
                 })}
-                {leagueMemberships.length === 0 && <div className="p-4 font-black uppercase text-xs">No league memberships yet.</div>}
+                {leagueMemberships.length === 0 && <div className="p-3 sm:p-4 font-black uppercase text-xs">{t('ui.noLeagueMemberships')}</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-c2 text-inv">
-                <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                  Quick Links
+                <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">
+                  {t('ui.quickLinks')}
                 </div>
-                <div className="p-4 font-black uppercase flex flex-col gap-3">
-                  <Link to="/activity" className="bg-card text-main border-2 border-main p-3 flex items-center gap-3 hover:bg-muted"><Shield /> View Activity</Link>
-                  <Link to="/badges" className="bg-c1 text-main border-2 border-main p-3 flex items-center gap-3"><Shield /> {unlockedBadges.length} unlocked badges</Link>
-                  <Link to="/leagues" className="bg-main text-inv border-2 border-main p-3 flex items-center gap-3"><Users /> Browse leagues</Link>
+                <div className="p-3 sm:p-4 font-black uppercase grid grid-cols-1 sm:grid-cols-3 xl:flex xl:flex-col gap-2 sm:gap-3">
+                  <Link to="/activity" className="bg-card text-main border-2 border-main p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 hover:bg-muted text-xs sm:text-sm rounded-sm"><Shield size={18} /> {t('ui.viewActivity')}</Link>
+                  <Link to="/badges" className="bg-c1 text-main border-2 border-main p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm rounded-sm"><Shield size={18} /> {t('ui.unlockedBadgesCount', { count: unlockedBadges.length })}</Link>
+                  <Link to="/leagues" className="bg-main text-inv border-2 border-main p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm rounded-sm"><Users size={18} /> {t('ui.browseLeagues')}</Link>
                 </div>
               </div>
             </div>

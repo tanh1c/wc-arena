@@ -68,8 +68,8 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function getTeamShortName(teams: Map<string, TeamRow>, teamId: string) {
-  return teams.get(teamId)?.short_name ?? 'TBD';
+function getTeamShortName(teams: Map<string, TeamRow>, teamId: string, fallback: string) {
+  return teams.get(teamId)?.short_name ?? fallback;
 }
 
 export default function MyPredictions({ themeControls }: MyPredictionsProps) {
@@ -190,9 +190,9 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
               </div>
 
               <div className="flex flex-col bg-card">
-                {loading && <div className="p-6 font-black uppercase text-sm">Loading predictions...</div>}
+                {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingPredictions')}</div>}
                 {error && <div className="p-6 font-black uppercase text-sm bg-c5 text-main border-b-4 border-main">{error}</div>}
-                {!loading && !error && rows.length === 0 && <div className="p-6 font-black uppercase text-sm">No predictions submitted yet.</div>}
+                {!loading && !error && rows.length === 0 && <div className="p-6 font-black uppercase text-sm">{t('ui.noPredictions')}</div>}
                 {!loading && !error && rows.map(({ prediction, source, result, status, points }) => {
                   const match = source.matches!;
                   const homeTeam = teams.get(match.home_team_id);
@@ -207,7 +207,7 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                       </div>
                       <div className="p-3 lg:border-r-2 border-main text-left lg:text-center font-black">
                         <span className="lg:hidden text-[10px] uppercase text-subtle mr-2">{t('nav.items.picks')}</span>
-                        {formatPredictionPick(prediction, getTeamShortName(teams, match.home_team_id), getTeamShortName(teams, match.away_team_id))}
+                        {formatPredictionPick(prediction, getTeamShortName(teams, match.home_team_id, t('appPages.common.unknownTeam')), getTeamShortName(teams, match.away_team_id, t('appPages.common.unknownTeam')))}
                       </div>
                       <div className="p-3 lg:border-r-2 border-main text-left lg:text-center font-black">
                         <span className="lg:hidden text-[10px] uppercase text-subtle mr-2">{t('appPages.common.actual')}</span>

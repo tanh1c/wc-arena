@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, FileSearch, ShieldAlert, ShieldCheck, TriangleAlert } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
@@ -34,6 +35,7 @@ function getSeverityClass(severity: string) {
 }
 
 export default function AdminAudit({ themeControls }: AdminAuditProps) {
+  const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
   const [role, setRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
@@ -104,9 +106,9 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Admin Audit Log</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.adminAuditLog')}</h1>
           </div>
-          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">Loading admin access...</div>
+          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">{t('ui.loadingAdminAccess')}</div>
         </div>
       </AppShell>
     );
@@ -117,11 +119,11 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Admin Audit Log</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.adminAuditLog')}</h1>
           </div>
           <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm flex flex-col gap-3">
-            <span>Sign in to access admin audit logs.</span>
-            <Link to="/login" className="text-c2 underline">Go to login</Link>
+            <span>{t('ui.signInAudit')}</span>
+            <Link to="/login" className="text-c2 underline">{t('ui.goToLogin')}</Link>
           </div>
         </div>
       </AppShell>
@@ -133,9 +135,9 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
       <AppShell themeControls={themeControls}>
         <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
           <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">Admin Audit Log</h1>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">{t('ui.adminAuditLog')}</h1>
           </div>
-          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">Admin access required.</div>
+          <div className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm font-black uppercase text-sm">{t('ui.adminAccessRequired')}</div>
         </div>
       </AppShell>
     );
@@ -150,7 +152,7 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
       <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
           <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">
-            Admin Audit Log
+            {t('ui.adminAuditLog')}
           </h1>
         </div>
 
@@ -160,33 +162,33 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
             <div className="flex items-center gap-4 border-b-4 sm:border-r-4 xl:border-b-0 border-main p-4 lg:p-5 bg-c1 text-main">
               <div className="shrink-0"><FileSearch size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Audit Events</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.auditEvents')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{loading ? '—' : auditLogs.length}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Read-only log</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.readOnlyLog')}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-4 lg:p-5 bg-c2 text-inv">
               <div className="shrink-0"><TriangleAlert size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Warnings</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.warnings')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{warningCount}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Need review</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.needReview')}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-b-4 sm:border-b-0 sm:border-r-4 border-main p-4 lg:p-5 bg-c3 text-main">
               <div className="shrink-0"><ShieldCheck size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">Checklist</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.checklist')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{readyChecks}/{checklist.length}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Controls ready</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.controlsReady')}</div>
               </div>
             </div>
             <div className="flex items-center gap-4 border-main p-4 lg:p-5 bg-c4 text-main">
               <div className="shrink-0"><ShieldAlert size={36} strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center">
-                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">User Signals</div>
+                <div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.userSignals')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{reviewSignals}</div>
-                <div className="text-[10px] font-bold uppercase mt-1">Active review</div>
+                <div className="text-[10px] font-bold uppercase mt-1">{t('ui.activeReview')}</div>
               </div>
             </div>
           </div>
@@ -194,11 +196,11 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
           <div className="flex flex-col xl:flex-row flex-1">
             <div className="flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main flex justify-between items-center">
-                <span>Audit Events</span>
-                <Link to="/admin" className="text-[10px] opacity-80 hover:underline">Back to Admin</Link>
+                <span>{t('ui.auditEvents')}</span>
+                <Link to="/admin" className="text-[10px] opacity-80 hover:underline">{t('ui.backToAdmin')}</Link>
               </div>
               <div className="bg-card flex flex-col">
-                {loading && <div className="p-6 font-black uppercase text-sm">Loading audit logs...</div>}
+                {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingAuditLogs')}</div>}
                 {!loading && auditLogs.map((log) => (
                   <div key={log.id} className="grid grid-cols-1 md:grid-cols-[150px_1fr_150px_160px] border-b-4 border-main last:border-b-0 font-bold text-sm">
                     <div className="p-3 md:border-r-2 border-main flex items-center">
@@ -214,13 +216,13 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
                     <div className="p-3 text-xs text-subtle bg-muted">{formatDate(log.created_at)}</div>
                   </div>
                 ))}
-                {!loading && auditLogs.length === 0 && <div className="p-6 font-black uppercase text-sm">No audit logs yet.</div>}
+                {!loading && auditLogs.length === 0 && <div className="p-6 font-black uppercase text-sm">{t('ui.noAuditLogs')}</div>}
               </div>
             </div>
 
             <div className="w-full xl:w-[380px] bg-card flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Anti-Cheat Checklist
+                {t('ui.antiCheatChecklist')}
               </div>
               <div className="bg-card flex flex-col border-b-4 border-main">
                 {checklist.map((item) => (
@@ -234,16 +236,16 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
                     </div>
                   </div>
                 ))}
-                {!loading && checklist.length === 0 && <div className="p-4 font-black uppercase text-xs">No checklist items configured.</div>}
+                {!loading && checklist.length === 0 && <div className="p-4 font-black uppercase text-xs">{t('ui.noChecklistItems')}</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-c1 text-main">
                 <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                  Review Scope
+                  {t('ui.reviewScope')}
                 </div>
                 <div className="p-4 font-black uppercase text-xs leading-relaxed flex gap-3 flex-1">
                   <CheckCircle2 className="shrink-0" />
-                  <span>Phase 6 intentionally exposes review and preview surfaces only. No ban, delete, payout, or force-result mutation controls are available.</span>
+                  <span>{t('ui.reviewScopeBody')}</span>
                 </div>
               </div>
             </div>

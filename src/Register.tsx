@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, CheckSquare, ChevronDown, DollarSign, Eye, EyeOff, Flag, Globe, Lock, Mail, Shield, Trophy, User } from 'lucide-react';
+import { ArrowRight, CheckSquare, DollarSign, Eye, EyeOff, Globe, Lock, Mail, Shield, Trophy, User } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
 import GoogleIcon from './components/ui/GoogleIcon';
 import { supabase } from './lib/supabaseClient';
-import { updateCurrentProfile } from './services/profile';
 import { getAuthRedirectUrl } from './utils/authRedirect';
 import type { ThemeControls } from './App';
 
@@ -19,7 +18,6 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [countryCode, setCountryCode] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [formNotice, setFormNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -49,12 +47,12 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
     setFormNotice(null);
 
     if (!agree) {
-      setFormError('Please accept the rules and prize terms.');
+      setFormError(t('ui.acceptTerms'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setFormError('Passwords do not match.');
+      setFormError(t('ui.passwordsMismatch'));
       return;
     }
 
@@ -73,11 +71,11 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
 
     if (error || !data.user) {
       setSubmitting(false);
-      const message = error?.message ?? 'Unable to create account.';
+      const message = error?.message ?? t('ui.accountCreateError');
       if (message.toLowerCase().includes('redirect')) {
-        setFormError('This signup redirect is not allowed yet. Add this domain to Supabase Auth Redirect URLs, then try again.');
+        setFormError(t('ui.redirectNotAllowed'));
       } else if (message.toLowerCase().includes('email')) {
-        setFormError('Unable to send confirmation email. Check Supabase SMTP settings, then try again.');
+        setFormError(t('ui.confirmationEmailError'));
       } else {
         setFormError(message);
       }
@@ -86,22 +84,8 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
 
     if (!data.session) {
       setSubmitting(false);
-      setFormNotice('Account created. Check your email and confirm your account, then sign in here. If you do not see it within a minute, check Spam or Promotions.');
+      setFormNotice(t('ui.accountCreatedConfirmEmail'));
       return;
-    }
-
-    if (countryCode) {
-      try {
-        await updateCurrentProfile(data.user.id, {
-          country_code: countryCode,
-          fan_club_team_id: null,
-          avatar_url: null,
-        });
-      } catch (profileError) {
-        setSubmitting(false);
-        setFormError(profileError instanceof Error ? profileError.message : 'Account created, but profile setup failed.');
-        return;
-      }
     }
 
     setSubmitting(false);
@@ -128,19 +112,19 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
           </div>
         </header>
 
-        <main className="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_520px] gap-6 lg:gap-10 items-center w-full max-w-7xl mx-auto py-8 lg:py-12">
-          <section className="bg-card border-4 border-main p-6 lg:p-10 shadow-[8px_8px_0_var(--color-shadow)] max-w-3xl">
+        <main className="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_520px] gap-5 lg:gap-10 items-start xl:items-center w-full max-w-7xl mx-auto py-5 lg:py-12">
+          <section className="order-2 xl:order-1 bg-card border-4 border-main p-5 lg:p-10 shadow-[8px_8px_0_var(--color-shadow)] max-w-3xl">
             <div className="text-c2 font-black uppercase tracking-widest text-sm mb-3">{t('auth.heroEyebrow')}</div>
-            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.88] text-main">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.88] text-main">
               {t('auth.registerTitleLine1')}<br />{t('auth.registerTitleLine2')}
             </h1>
-            <p className="font-bold text-base lg:text-lg text-subtle mt-6 max-w-xl leading-snug">{t('auth.registerBody')}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 border-2 border-main mt-8 uppercase text-xs font-black overflow-hidden">
+            <p className="font-bold text-sm lg:text-lg text-subtle mt-4 lg:mt-6 max-w-xl leading-snug">{t('auth.registerBody')}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 border-2 border-main mt-5 lg:mt-8 uppercase text-xs font-black overflow-hidden">
               <div className="p-4 bg-c1 text-main sm:border-r-2 border-main flex items-center gap-3"><DollarSign size={20} /> {t('auth.features.freeTitle')}</div>
               <div className="p-4 bg-c2 text-inv sm:border-r-2 border-main flex items-center gap-3"><Globe size={20} /> {t('auth.features.globalTitle')}</div>
               <div className="p-4 bg-c4 text-main flex items-center gap-3"><Shield size={20} /> {t('auth.features.secureTitle')}</div>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 lg:mt-6">
               {[t('auth.steps.createAccount'), t('auth.steps.pickMatches'), t('auth.steps.earnPoints'), t('auth.steps.winPrizes')].map((step, index) => (
                 <div key={step} className="bg-card border-2 border-main p-3 shadow-[3px_3px_0_var(--color-shadow)] flex items-center gap-3">
                   <div className="w-8 h-8 bg-c3 border-2 border-main flex items-center justify-center font-black shrink-0">{index + 1}</div>
@@ -150,25 +134,25 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
             </div>
           </section>
 
-          <section className="bg-card border-4 border-main shadow-[8px_8px_0_var(--color-shadow)] overflow-hidden">
-            <div className="grid grid-cols-2 border-b-4 border-main text-sm font-black uppercase">
-              <button type="button" onClick={() => onNavigate('login')} className="bg-card text-main p-4 hover:bg-muted">{t('auth.signIn')}</button>
-              <div className="bg-c2 text-inv p-4 text-center">{t('auth.createAccount')}</div>
+          <section className="order-1 xl:order-2 bg-card border-4 border-main shadow-[8px_8px_0_var(--color-shadow)] overflow-hidden">
+            <div className="grid grid-cols-2 border-b-4 border-main text-xs sm:text-sm font-black uppercase">
+              <button type="button" onClick={() => onNavigate('login')} className="bg-card text-main p-3 sm:p-4 hover:bg-muted">{t('auth.signIn')}</button>
+              <div className="bg-c2 text-inv p-3 sm:p-4 text-center">{t('auth.createAccount')}</div>
             </div>
-            <div className="p-5 lg:p-6 bg-card flex flex-col gap-4">
+            <div className="p-4 sm:p-5 lg:p-6 bg-card flex flex-col gap-3.5 sm:gap-4">
               <button type="button" onClick={handleGoogleRegister} disabled={oauthSubmitting || submitting} className="group relative w-full overflow-hidden bg-gradient-to-r from-c1 via-card to-c3 text-main font-black uppercase py-4 border-4 border-main shadow-[6px_6px_0_0_var(--color-shadow)] hover:-translate-y-0.5 hover:shadow-[8px_8px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-3">
                 <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4285F4] via-[#34A853] via-[#FBBC05] to-[#EA4335]" />
                 <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-main bg-white shadow-[2px_2px_0_var(--color-shadow)] group-hover:rotate-[-6deg] transition-transform">
                   <GoogleIcon />
                 </span>
                 <span className="flex flex-col items-start leading-none">
-                  <span className="text-[10px] tracking-[0.22em] text-subtle">Fast signup</span>
-                  <span className="text-base">{oauthSubmitting ? 'Connecting...' : 'Continue with Google'}</span>
+                  <span className="text-[10px] tracking-[0.22em] text-subtle">{t('ui.fastSignup')}</span>
+                  <span className="text-base">{oauthSubmitting ? t('ui.connecting') : t('auth.continueWithGoogle')}</span>
                 </span>
               </button>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[10px] font-black uppercase text-subtle">
                 <div className="border-t-2 border-main" />
-                <span>Email fallback</span>
+                <span>{t('ui.emailFallback')}</span>
                 <div className="border-t-2 border-main" />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -191,7 +175,7 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
                   <div className="relative">
                     <Lock size={18} className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-main opacity-80 pointer-events-none" />
                     <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={t('auth.createPassword')} className="w-full border-2 border-main p-3 pl-10 pr-12 font-bold text-sm bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-[4px_4px_0_0_var(--color-shadow)] focus:ring-2 focus:ring-c2 transition-all outline-none" />
-                    <button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 border-2 border-transparent p-1 text-main opacity-80 hover:opacity-100 focus:border-main focus:bg-muted focus:outline-none">
+                    <button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? t('ui.hidePassword') : t('ui.showPassword')} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 border-2 border-transparent p-1 text-main opacity-80 hover:opacity-100 focus:border-main focus:bg-muted focus:outline-none">
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
@@ -201,23 +185,10 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
                   <div className="relative">
                     <Lock size={18} className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-main opacity-80 pointer-events-none" />
                     <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder={t('auth.confirmPasswordPlaceholder')} className="w-full border-2 border-main p-3 pl-10 pr-12 font-bold text-sm bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-[4px_4px_0_0_var(--color-shadow)] focus:ring-2 focus:ring-c2 transition-all outline-none" />
-                    <button type="button" onClick={() => setShowConfirmPassword((current) => !current)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 border-2 border-transparent p-1 text-main opacity-80 hover:opacity-100 focus:border-main focus:bg-muted focus:outline-none">
+                    <button type="button" onClick={() => setShowConfirmPassword((current) => !current)} aria-label={showConfirmPassword ? t('ui.hidePassword') : t('ui.showPassword')} className="absolute right-2 top-1/2 z-10 -translate-y-1/2 border-2 border-transparent p-1 text-main opacity-80 hover:opacity-100 focus:border-main focus:bg-muted focus:outline-none">
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="font-black uppercase text-xs">{t('auth.countryFanClub')}</label>
-                <div className="relative">
-                  <Flag size={18} className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-main opacity-80 pointer-events-none" />
-                  <select value={countryCode} onChange={(event) => setCountryCode(event.target.value)} className="w-full border-2 border-main p-3 pl-10 pr-10 font-bold text-sm bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-[4px_4px_0_0_var(--color-shadow)] focus:ring-2 focus:ring-c2 transition-all outline-none appearance-none cursor-pointer">
-                    <option value="">{t('auth.selectCountry')}</option>
-                    <option value="us">United States</option>
-                    <option value="br">Brazil</option>
-                    <option value="fr">France</option>
-                  </select>
-                  <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-main pointer-events-none" />
                 </div>
               </div>
               <label className="group flex items-center cursor-pointer gap-2 relative">
@@ -230,7 +201,7 @@ export default function Register({ onNavigate, ...themeControls }: RegisterProps
               {formError && <div className="border-2 border-main bg-c5 text-main p-3 font-black uppercase text-xs">{formError}</div>}
               {formNotice && <div className="border-2 border-main bg-c1 text-main p-3 font-black uppercase text-xs">{formNotice}</div>}
               <button type="button" onClick={handleRegister} disabled={submitting} className="w-full bg-c2 hover:opacity-90 text-inv font-black uppercase py-4 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-lg disabled:opacity-60 flex items-center justify-center gap-3">
-                {submitting ? 'Creating account...' : t('auth.createAccount')} <Trophy size={20} strokeWidth={3} />
+                {submitting ? t('ui.creatingAccount') : t('auth.createAccount')} <Trophy size={20} strokeWidth={3} />
               </button>
               <button type="button" onClick={() => onNavigate('login')} className="w-full bg-card hover:bg-muted text-main font-black uppercase py-3 border-2 border-main shadow-[4px_4px_0_0_var(--color-shadow)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-sm flex items-center justify-center gap-3">
                 {t('auth.signIn')} <ArrowRight size={18} strokeWidth={3} />

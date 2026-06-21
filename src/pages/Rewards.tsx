@@ -148,16 +148,16 @@ export default function Rewards({ themeControls }: RewardsProps) {
                     </div>
                   );
                 })}
-                {!loading && eligibilityChecks.length === 0 && <div className="p-4 font-black uppercase text-sm">No eligibility checks yet.</div>}
+                {!loading && eligibilityChecks.length === 0 && <div className="p-4 font-black uppercase text-sm">{t('ui.noEligibilityChecks')}</div>}
               </div>
 
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('appPages.rewards.rewardStatus')}
               </div>
               <div className="bg-card flex flex-col">
-                {loading && <div className="p-6 font-black uppercase text-sm">Loading rewards...</div>}
+                {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingRewards')}</div>}
                 {error && <div className="p-6 font-black uppercase text-sm bg-c5 text-main border-b-4 border-main">{error}</div>}
-                {!loading && !error && rewards.length === 0 && <div className="p-6 font-black uppercase text-sm">No reward reviews yet.</div>}
+                {!loading && !error && rewards.length === 0 && <div className="p-6 font-black uppercase text-sm">{t('ui.noRewards')}</div>}
                 {!loading && !error && rewards.map((reward) => {
                   const status = getRewardStatus(reward.status);
                   return (
@@ -205,7 +205,7 @@ export default function Rewards({ themeControls }: RewardsProps) {
                     <div className="text-xs font-bold text-subtle mt-1 leading-snug">{note.description}</div>
                   </div>
                 ))}
-                {!loading && trustNotes.length === 0 && <div className="p-4 font-black uppercase text-xs">No trust notes configured.</div>}
+                {!loading && trustNotes.length === 0 && <div className="p-4 font-black uppercase text-xs">{t('ui.noTrustNotes')}</div>}
               </div>
 
               <div className="flex flex-col flex-1 bg-c1 text-main">

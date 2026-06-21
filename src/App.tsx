@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 
 const Landing = lazy(() => import('./Landing'));
@@ -57,9 +58,11 @@ function LegacyRoute({ Component, themeControls }: LegacyRouteProps) {
 }
 
 function RouteFallback() {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-page text-main p-6 font-black uppercase">
-      Loading page...
+      {t('ui.loadingPage')}
     </div>
   );
 }
