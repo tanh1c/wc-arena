@@ -162,6 +162,8 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
   }, []);
 
   function updateDraft(matchId: string, key: 'homeScore' | 'awayScore', value: string) {
+    if (!/^\d*$/.test(value)) return;
+
     setDraftScores((current) => {
       const next = {
         predictionType: current[matchId]?.predictionType ?? 'exact_score',
@@ -401,9 +403,9 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                             </div>
                             {draft.predictionType === 'exact_score' && (
                               <div className="flex items-center gap-2">
-                                <input type="number" min="0" disabled={!editable || state?.loading} value={draft.homeScore} onChange={(event) => updateDraft(match.id, 'homeScore', event.target.value)} className="w-12 h-12 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-2xl sm:text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
+                                <input type="text" inputMode="numeric" pattern="[0-9]*" disabled={!editable || state?.loading} value={draft.homeScore} onChange={(event) => updateDraft(match.id, 'homeScore', event.target.value)} className="w-12 h-12 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-2xl sm:text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
                                 <div className="font-black text-xl">-</div>
-                                <input type="number" min="0" disabled={!editable || state?.loading} value={draft.awayScore} onChange={(event) => updateDraft(match.id, 'awayScore', event.target.value)} className="w-12 h-12 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-2xl sm:text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
+                                <input type="text" inputMode="numeric" pattern="[0-9]*" disabled={!editable || state?.loading} value={draft.awayScore} onChange={(event) => updateDraft(match.id, 'awayScore', event.target.value)} className="w-12 h-12 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-2xl sm:text-xl text-center bg-card shadow-[2px_2px_0_0_var(--color-shadow)] focus:shadow-none transition-all outline-none disabled:bg-muted" />
                               </div>
                             )}
                             <div className="grid grid-cols-3 border-2 border-main text-[8px] font-black uppercase overflow-hidden w-full max-w-[220px] sm:w-[180px]">
@@ -417,7 +419,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                                   type="button"
                                   disabled={!editable || state?.loading || draft.predictionType === 'exact_score'}
                                   onClick={() => updateOutcome(match.id, option.value)}
-                                  className={`${draft.predictedOutcome === option.value ? 'bg-c3 text-main' : 'bg-card hover:bg-elevated'} border-r-2 last:border-r-0 border-main py-1 disabled:bg-muted disabled:text-subtle`}
+                                  className={`${draft.predictedOutcome === option.value ? 'bg-c3 text-main' : 'bg-card hover:bg-elevated disabled:bg-muted disabled:text-subtle'} border-r-2 last:border-r-0 border-main py-1`}
                                 >
                                   {option.label}
                                 </button>
