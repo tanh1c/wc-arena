@@ -631,8 +631,8 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                         stadium: match.stadium,
                         city: match.city,
                       }}
-                      homeTeam={{ name: homeTeam.name, shortName: homeTeam.short_name, fifaRank: homeTeam.fifa_rank }}
-                      awayTeam={{ name: awayTeam.name, shortName: awayTeam.short_name, fifaRank: awayTeam.fifa_rank }}
+                      homeTeam={{ name: homeTeam.name, shortName: homeTeam.short_name, countryCode: homeTeam.country_code, fifaRank: homeTeam.fifa_rank }}
+                      awayTeam={{ name: awayTeam.name, shortName: awayTeam.short_name, countryCode: awayTeam.country_code, fifaRank: awayTeam.fifa_rank }}
                       playerName={authUser.email}
                       points={scoreBreakdown?.total}
                       variant="primary"
