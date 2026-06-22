@@ -222,9 +222,21 @@ function buildMatchStats(summary: EspnSummaryPayload): MatchStatRow[] {
   });
 }
 
-function getEventSide(event: EspnSummaryKeyEvent): 'home' | 'away' | null {
+function normalizeTeamText(value?: string | null) {
+  return (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function getEventSide(event: EspnSummaryKeyEvent, homeTeam?: TeamRow, awayTeam?: TeamRow): 'home' | 'away' | null {
   const side = event.team?.side?.toLowerCase();
   if (side === 'home' || side === 'away') return side;
+
+  const eventTeamName = normalizeTeamText(event.team?.name ?? event.team?.abbreviation);
+  if (!eventTeamName) return null;
+
+  const homeNames = [homeTeam?.name, homeTeam?.short_name].map(normalizeTeamText);
+  const awayNames = [awayTeam?.name, awayTeam?.short_name].map(normalizeTeamText);
+  if (homeNames.includes(eventTeamName)) return 'home';
+  if (awayNames.includes(eventTeamName)) return 'away';
   return null;
 }
 
@@ -238,31 +250,23 @@ function getParticipantName(event: EspnSummaryKeyEvent, type: string) {
   return event.participants?.find((participant) => participant.type?.toLowerCase().includes(normalizedType))?.name ?? null;
 }
 
-function getScoringEvents(summary: EspnSummaryPayload): ScoringEvent[] {
+function getScoringEvents(summary: EspnSummaryPayload, homeTeam?: TeamRow, awayTeam?: TeamRow): ScoringEvent[] {
   return (summary.keyEvents ?? []).flatMap((event, index) => {
-    const side = getEventSide(event);
+    const side = getEventSide(event, homeTeam, awayTeam);
     if (!side || !isGoalEvent(event)) return [];
     const scorer = getParticipantName(event, 'scorer') ?? event.participants?.[0]?.name ?? event.text ?? event.typeText;
     if (!scorer) return [];
+    const assist = getParticipantName(event, 'assist') ?? event.participants?.[1]?.name ?? event.text?.match(/Assisted by ([^.]+)\./i)?.[1] ?? null;
     return [{
       id: event.id ?? `goal-${index}`,
       side,
       minute: event.clock ?? '—',
       scorer,
-      assist: getParticipantName(event, 'assist'),
-      score: typeof event.homeScore === 'number' && typeof event.awayScore === 'number' ? `${event.homeScore}-${event.awayScore}` : null,
+      assist: assist === scorer ? null : assist,
+      score: typeof event.homeScore === 'number' && typeof event.awayScore === 'number' ? `${event.homeScore}-${event.awayScore}` : event.text?.match(/Goal!\s*([^.]*)\./i)?.[1] ?? null,
       typeText: event.typeText,
     }];
   });
-}
-
-function isTimelineEvent(event: EspnSummaryKeyEvent) {
-  const text = `${event.type ?? ''} ${event.typeText ?? ''} ${event.text ?? ''}`.toLowerCase();
-  return ['goal', 'card', 'substitution', 'halftime', 'half time', 'end regular time', 'full time'].some((term) => text.includes(term));
-}
-
-function formatAttendance(value?: number | null) {
-  return typeof value === 'number' ? value.toLocaleString() : null;
 }
 
 function StatComparisonRow({ stat }: { stat: MatchStatRow }) {
@@ -409,12 +413,9 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
   const displayStatus = getDisplayStatus(submittedPrediction, result);
   const espnSummary = match ? getEspnSummary(match) : {};
   const matchStats = buildMatchStats(espnSummary);
-  const scoringEvents = getScoringEvents(espnSummary);
+  const scoringEvents = getScoringEvents(espnSummary, homeTeam, awayTeam);
   const homeScoringEvents = scoringEvents.filter((event) => event.side === 'home');
   const awayScoringEvents = scoringEvents.filter((event) => event.side === 'away');
-  const timelineEvents = (espnSummary.keyEvents ?? []).filter(isTimelineEvent).slice(0, 18);
-  const referee = espnSummary.officials?.find((official) => official.role?.toLowerCase().includes('referee')) ?? espnSummary.officials?.[0];
-  const attendance = formatAttendance(espnSummary.attendance ?? match?.espn_attendance);
   const communityTotal = communitySignal?.total_predictions ?? 0;
   const communityHomePct = toPercent(communitySignal?.home_predictions ?? 0, communityTotal);
   const communityDrawPct = toPercent(communitySignal?.draw_predictions ?? 0, communityTotal);
@@ -592,10 +593,10 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                 <div className="uppercase text-subtle">{match.city}</div>
               </div>
 
-              {(scoringEvents.length > 0 || matchStats.length > 0 || timelineEvents.length > 0 || attendance || referee) && (
+              {(scoringEvents.length > 0 || matchStats.length > 0) && (
                 <div className="border-t-4 border-main bg-page">
                   <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">{t('ui.matchCenter')}</div>
-                  <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.2fr] border-b-4 border-main">
+                  <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.2fr]">
                     <div className="xl:border-r-4 border-main bg-card">
                       <div className="bg-c1 border-b-4 border-main px-4 py-3 font-black uppercase text-sm">{t('ui.goalsAndAssists')}</div>
                       <div className="grid grid-cols-1 sm:grid-cols-2">
@@ -633,38 +634,6 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                       </div>
                       {matchStats.map((stat) => <div key={stat.key}><StatComparisonRow stat={stat} /></div>)}
                       {matchStats.length === 0 && <div className="p-4 bg-muted font-bold text-xs text-subtle">{t('ui.noMatchStats')}</div>}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr]">
-                    <div className="xl:border-r-4 border-main bg-card">
-                      <div className="bg-c4 border-b-4 border-main px-4 py-3 font-black uppercase text-sm">{t('ui.keyMoments')}</div>
-                      <div className="p-4 flex flex-col gap-3">
-                        {timelineEvents.map((event, index) => {
-                          const side = getEventSide(event);
-                          return (
-                            <div key={event.id ?? `event-${index}`} className={`grid grid-cols-[54px_1fr] gap-3 ${side === 'away' ? 'xl:grid-cols-[1fr_54px]' : ''}`}>
-                              <div className={`${side === 'away' ? 'xl:order-2' : ''} bg-main text-inv border-2 border-main font-black text-xs uppercase flex items-center justify-center min-h-12`}>{event.clock ?? '—'}</div>
-                              <div className={`${side === 'away' ? 'xl:order-1 xl:text-right' : ''} bg-page border-2 border-main p-3 shadow-[2px_2px_0_var(--color-shadow)]`}>
-                                <div className="font-black uppercase text-xs flex items-center gap-2 xl:justify-start">{side === 'home' && <SmallTeamFlag team={homeTeam} />}{side === 'away' && <SmallTeamFlag team={awayTeam} />}{event.typeText ?? t('ui.keyMoment')}</div>
-                                <div className="font-bold text-xs text-subtle mt-1 leading-snug">{event.text ?? event.participants?.map((participant) => participant.name).filter(Boolean).join(' • ')}</div>
-                                {typeof event.homeScore === 'number' && typeof event.awayScore === 'number' && <div className="font-black text-[10px] uppercase mt-2">{event.homeScore}-{event.awayScore}</div>}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {timelineEvents.length === 0 && <div className="bg-muted border-2 border-main p-3 font-bold text-xs text-subtle">{t('ui.noKeyMoments')}</div>}
-                      </div>
-                    </div>
-
-                    <div className="bg-card">
-                      <div className="bg-main text-inv border-b-4 border-main px-4 py-3 font-black uppercase text-sm">{t('ui.matchInfo')}</div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 font-bold text-xs">
-                        <div className="p-4 border-b-2 border-line"><span className="font-black uppercase text-[10px] text-subtle block mb-1">{t('ui.venue')}</span>{espnSummary.venue?.name ?? match.stadium}</div>
-                        <div className="p-4 border-b-2 border-line"><span className="font-black uppercase text-[10px] text-subtle block mb-1">{t('ui.location')}</span>{espnSummary.venue?.city ?? match.city}{espnSummary.venue?.country ? `, ${espnSummary.venue.country}` : ''}</div>
-                        <div className="p-4 border-b-2 border-line"><span className="font-black uppercase text-[10px] text-subtle block mb-1">{t('ui.attendance')}</span>{attendance ?? t('ui.notListed')}</div>
-                        <div className="p-4"><span className="font-black uppercase text-[10px] text-subtle block mb-1">{t('ui.referee')}</span>{referee?.name ?? t('ui.notListed')}</div>
-                      </div>
                     </div>
                   </div>
                 </div>
