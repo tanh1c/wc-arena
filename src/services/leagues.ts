@@ -27,6 +27,7 @@ export async function listLeagues() {
   const { data, error } = await supabase
     .from('leagues')
     .select('*')
+    .eq('status', 'active')
     .order('created_at', { ascending: true });
 
   if (error) throw error;
@@ -84,7 +85,7 @@ export async function listCurrentUserLeagueMemberships() {
     .order('joined_at', { ascending: false });
 
   if (error) throw error;
-  return data as LeagueMemberRow[];
+  return (data as LeagueMemberRow[]).filter((membership) => membership.leagues?.status !== 'archived');
 }
 
 export async function listLeagueMembers(leagueId: string) {
@@ -132,4 +133,8 @@ export function updateLeague(input: { leagueId: string; name: string; descriptio
 
 export function kickLeagueMember(input: { leagueId: string; userId: string }) {
   return invokeLeagueAction<{ status: 'removed' }>({ action: 'kickLeagueMember', ...input });
+}
+
+export function archiveLeague(input: { leagueId: string; archiveReason?: string }) {
+  return invokeLeagueAction<{ league: LeagueRow; status: 'archived'; cancelledEvents: number; refunds: number }>({ action: 'archiveLeague', ...input });
 }

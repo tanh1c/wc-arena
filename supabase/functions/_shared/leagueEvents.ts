@@ -36,7 +36,7 @@ type PredictionScoreRow = {
   total: number;
   predictions: {
     user_id: string;
-    matches: { kickoff_at: string; matchday: number | null } | null;
+    matches: { id: string; kickoff_at: string; matchday: number | null } | null;
   } | null;
 };
 
@@ -131,17 +131,36 @@ export function calculatePayouts(entries: Array<{ user_id: string; rank: number;
   });
 }
 
-function scoreBelongsToEvent(score: PredictionScoreRow, event: LeagueEvent, joinedAt: string) {
+function scoreBelongsToEvent(score: PredictionScoreRow, event: LeagueEvent, joinedAt: string, selectedMatchIds: Set<string>) {
   const match = score.predictions?.matches;
   if (!match?.kickoff_at) return false;
   if (match.kickoff_at < joinedAt) return false;
   if (match.kickoff_at < event.starts_at || match.kickoff_at >= event.ends_at) return false;
+  if (selectedMatchIds.size > 0) return selectedMatchIds.has(match.id);
   return event.event_type !== 'matchday' || match.matchday === event.matchday;
+}
+
+async function getSelectedMatchIdsByEvent(supabase: SupabaseClient, eventIds: string[]) {
+  if (eventIds.length === 0) return new Map<string, Set<string>>();
+
+  const { data, error } = await supabase
+    .from('league_event_matches')
+    .select('event_id, match_id')
+    .in('event_id', eventIds);
+
+  if (error) throw error;
+  const byEvent = new Map<string, Set<string>>();
+  for (const row of data ?? []) {
+    const current = byEvent.get(row.event_id) ?? new Set<string>();
+    current.add(row.match_id);
+    byEvent.set(row.event_id, current);
+  }
+  return byEvent;
 }
 
 async function getLeagueIds(supabase: SupabaseClient, leagueIds?: string[]) {
   if (leagueIds?.length) return leagueIds;
-  const { data, error } = await supabase.from('leagues').select('id');
+  const { data, error } = await supabase.from('leagues').select('id').eq('status', 'active');
   if (error) throw error;
   return (data ?? []).map((league: { id: string }) => league.id);
 }
@@ -284,7 +303,7 @@ export async function settleEndedEvents(supabase: SupabaseClient) {
   return { settledEvents, settlementErrors: errors };
 }
 
-async function buildEventEntries(supabase: SupabaseClient, event: LeagueEvent, previousRanks: Map<string, number>) {
+async function buildEventEntries(supabase: SupabaseClient, event: LeagueEvent, previousRanks: Map<string, number>, selectedMatchIds: Set<string>) {
   const { data: entries, error: entriesError } = await supabase
     .from('league_event_entries')
     .select('event_id, user_id, stake')
@@ -307,7 +326,7 @@ async function buildEventEntries(supabase: SupabaseClient, event: LeagueEvent, p
 
   const { data: scores, error: scoresError } = await supabase
     .from('prediction_scores')
-    .select('outcome, total, predictions!inner(user_id, matches!inner(kickoff_at, matchday))')
+    .select('outcome, total, predictions!inner(user_id, matches!inner(id, kickoff_at, matchday))')
     .in('predictions.user_id', userIds);
 
   if (scoresError) throw scoresError;
@@ -318,7 +337,7 @@ async function buildEventEntries(supabase: SupabaseClient, event: LeagueEvent, p
     .filter((entry) => joinedAtByUser.has(entry.user_id))
     .map((entry) => {
       const joinedAt = joinedAtByUser.get(entry.user_id) ?? event.starts_at;
-      const eligibleScores = allScores.filter((score) => score.predictions?.user_id === entry.user_id && scoreBelongsToEvent(score, event, joinedAt));
+      const eligibleScores = allScores.filter((score) => score.predictions?.user_id === entry.user_id && scoreBelongsToEvent(score, event, joinedAt, selectedMatchIds));
       const points = eligibleScores.reduce((sum, score) => sum + score.total, 0);
       const exactScores = eligibleScores.filter((score) => score.outcome === 'exact').length;
       const correctScores = eligibleScores.filter((score) => score.outcome !== 'missed').length;
@@ -348,8 +367,11 @@ export async function refreshLeagueEventLeaderboards(supabase: SupabaseClient, e
   const { data: events, error: eventsError } = eventIds?.length ? await eventQuery.in('id', eventIds) : await eventQuery;
   if (eventsError) throw eventsError;
 
+  const leagueEvents = (events ?? []) as LeagueEvent[];
+  const selectedMatchIdsByEvent = await getSelectedMatchIdsByEvent(supabase, leagueEvents.map((event) => event.id));
+
   let writtenEntries = 0;
-  for (const event of (events ?? []) as LeagueEvent[]) {
+  for (const event of leagueEvents) {
     const { data: previousEntries, error: previousError } = await supabase
       .from('league_event_leaderboard_entries')
       .select('user_id, rank')
@@ -358,7 +380,7 @@ export async function refreshLeagueEventLeaderboards(supabase: SupabaseClient, e
     if (previousError) throw previousError;
     const previousRanks = new Map((previousEntries ?? []).map((entry: { user_id: string; rank: number }) => [entry.user_id, entry.rank]));
 
-    const rows = await buildEventEntries(supabase, event, previousRanks);
+    const rows = await buildEventEntries(supabase, event, previousRanks, selectedMatchIdsByEvent.get(event.id) ?? new Set<string>());
     const { error: deleteError } = await supabase.from('league_event_leaderboard_entries').delete().eq('event_id', event.id);
     if (deleteError) throw deleteError;
     if (rows.length === 0) continue;

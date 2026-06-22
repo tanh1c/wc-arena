@@ -8,6 +8,7 @@ export type LeagueEventProfile = Pick<Database['public']['Tables']['profiles']['
 export type LeagueEventLeaderboardEntryWithProfile = LeagueEventLeaderboardEntryRow & {
   profiles: LeagueEventProfile | null;
 };
+export type LeagueEventMatchRow = Database['public']['Tables']['league_event_matches']['Row'];
 export type CreateLeagueEventInput = {
   leagueId: string;
   name: string;
@@ -17,6 +18,7 @@ export type CreateLeagueEventInput = {
   maxStake: number;
   payoutCurve: PayoutCurve;
   rankShares?: number[];
+  matchIds?: string[];
 };
 
 async function invokeLeagueAction<T>(body: Record<string, unknown>) {
@@ -53,6 +55,17 @@ export async function listLeagueEventLeaderboard(eventId: string) {
 
   if (error) throw error;
   return data as LeagueEventLeaderboardEntryWithProfile[];
+}
+
+export async function listLeagueEventMatches(eventIds: string[]) {
+  if (eventIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('league_event_matches')
+    .select('*')
+    .in('event_id', eventIds);
+
+  if (error) throw error;
+  return data as LeagueEventMatchRow[];
 }
 
 export function createLeagueEvent(input: CreateLeagueEventInput) {

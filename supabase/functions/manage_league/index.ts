@@ -18,6 +18,7 @@ type LeagueRow = {
   invite_code: string;
   join_policy: JoinPolicy;
   description: string;
+  status: 'active' | 'archived';
 };
 
 type Body = {
@@ -40,6 +41,8 @@ type Body = {
   maxStake?: number;
   payoutCurve?: PayoutCurve;
   rankShares?: number[];
+  matchIds?: string[];
+  archiveReason?: string;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -130,6 +133,22 @@ function assertRankShares(payoutCurve: PayoutCurve, value: unknown) {
   return { rankShares: value as number[] };
 }
 
+function assertMatchIds(value: unknown) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error('Selected matches are invalid.');
+  const matchIds = [...new Set(value.map((item) => typeof item === 'string' ? item.trim() : ''))].filter(Boolean);
+  if (matchIds.length === 0) throw new Error('Select at least one match.');
+  if (matchIds.length > 16) throw new Error('Select up to 16 matches per pool.');
+  if (matchIds.some((matchId) => matchId.length > 80)) throw new Error('Selected matches are invalid.');
+  return matchIds;
+}
+
+function assertArchiveReason(value: unknown) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') throw new Error('Archive reason must be text.');
+  return value.trim().slice(0, 180) || null;
+}
+
 function makeInviteCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const bytes = crypto.getRandomValues(new Uint8Array(8));
@@ -170,6 +189,12 @@ async function getLeagueByIdOrInvite(supabase: ReturnType<typeof createClient>, 
   const { data, error } = await supabase.from('leagues').select('*').eq('invite_code', inviteCode).single();
   if (error) throw error;
   return data as LeagueRow;
+}
+
+async function requireActiveLeague(supabase: ReturnType<typeof createClient>, leagueId: string) {
+  const { data, error } = await supabase.from('leagues').select('status').eq('id', leagueId).single();
+  if (error) throw error;
+  if (data.status === 'archived') throw new Error('This league is archived.');
 }
 
 async function requireOwner(supabase: ReturnType<typeof createClient>, leagueId: string, userId: string) {
@@ -274,6 +299,7 @@ async function createLeague(supabase: ReturnType<typeof createClient>, userId: s
 async function joinLeague(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
   const league = await getLeagueByIdOrInvite(supabase, body);
   const inviteCode = normalizeInvite(body.inviteCode);
+  if (league.status === 'archived') throw new Error('This league is archived.');
 
   if (league.visibility === 'private' && inviteCode !== league.invite_code) {
     throw new Response(JSON.stringify({ error: 'Invalid invite code.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -323,6 +349,7 @@ async function joinLeague(supabase: ReturnType<typeof createClient>, userId: str
 async function approveJoinRequest(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
   if (!body.leagueId || !body.requestUserId) throw new Error('League and request user are required.');
   await requireOwner(supabase, body.leagueId, userId);
+  await requireActiveLeague(supabase, body.leagueId);
 
   const now = new Date().toISOString();
   const { data: request, error: requestError } = await supabase
@@ -356,6 +383,7 @@ async function approveJoinRequest(supabase: ReturnType<typeof createClient>, use
 async function rejectJoinRequest(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
   if (!body.leagueId || !body.requestUserId) throw new Error('League and request user are required.');
   await requireOwner(supabase, body.leagueId, userId);
+  await requireActiveLeague(supabase, body.leagueId);
 
   const { data: request, error } = await supabase
     .from('league_join_requests')
@@ -373,6 +401,7 @@ async function rejectJoinRequest(supabase: ReturnType<typeof createClient>, user
 async function updateLeague(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
   if (!body.leagueId) throw new Error('League is required.');
   await requireOwner(supabase, body.leagueId, userId);
+  await requireActiveLeague(supabase, body.leagueId);
 
   const name = assertName(body.name);
   const description = assertDescription(body.description);
@@ -392,6 +421,7 @@ async function kickLeagueMember(supabase: ReturnType<typeof createClient>, userI
   if (!body.leagueId || !body.userId) throw new Error('League and user are required.');
   if (body.userId === userId) throw new Error('Owner cannot kick themselves.');
   await requireOwner(supabase, body.leagueId, userId);
+  await requireActiveLeague(supabase, body.leagueId);
 
   const { error } = await supabase
     .from('league_members')
@@ -408,19 +438,43 @@ async function kickLeagueMember(supabase: ReturnType<typeof createClient>, userI
 async function createLeagueEvent(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
   if (!body.leagueId) throw new Error('League is required.');
   await requireOwner(supabase, body.leagueId, userId);
+  await requireActiveLeague(supabase, body.leagueId);
 
   const name = assertEventName(body.name);
-  const { startsAt, endsAt } = assertDateRange(body.startsAt, body.endsAt);
+  const matchIds = assertMatchIds(body.matchIds);
   const { minStake, maxStake } = assertStakeBounds(body.minStake, body.maxStake);
   const payoutCurve = assertPayoutCurve(body.payoutCurve);
   const payoutConfig = assertRankShares(payoutCurve, body.rankShares);
   const eventType = body.eventType ?? 'custom';
   if (eventType !== 'custom') throw new Error('Only custom events can be created here.');
 
+  let startsAt: string;
+  let endsAt: string;
+  if (matchIds.length > 0) {
+    const { data: selectedMatches, error: matchError } = await supabase
+      .from('matches')
+      .select('id, kickoff_at')
+      .in('id', matchIds);
+
+    if (matchError) throw matchError;
+    if ((selectedMatches ?? []).length !== matchIds.length) throw new Error('Some selected matches were not found.');
+    const kickoffs = (selectedMatches ?? []).map((match: { kickoff_at: string }) => match.kickoff_at).sort();
+    if (kickoffs.some((kickoff) => kickoff <= new Date().toISOString())) throw new Error('Selected matches must not have started.');
+    startsAt = kickoffs[0];
+    const endDate = new Date(kickoffs[kickoffs.length - 1]);
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+    endsAt = endDate.toISOString();
+  } else {
+    const dateRange = assertDateRange(body.startsAt, body.endsAt);
+    startsAt = dateRange.startsAt;
+    endsAt = dateRange.endsAt;
+  }
+
+  const eventId = `event-${body.leagueId}-custom-${crypto.randomUUID()}`;
   const { data: event, error } = await supabase
     .from('league_events')
     .insert({
-      id: `event-${body.leagueId}-custom-${crypto.randomUUID()}`,
+      id: eventId,
       league_id: body.leagueId,
       event_type: eventType,
       name,
@@ -432,12 +486,18 @@ async function createLeagueEvent(supabase: ReturnType<typeof createClient>, user
       max_stake: maxStake,
       payout_curve: payoutCurve,
       payout_config: payoutConfig,
-      metadata: { createdBy: userId },
+      metadata: matchIds.length > 0 ? { createdBy: userId, scope: 'selected_matches', matchIds } : { createdBy: userId },
     })
     .select('*')
     .single();
 
   if (error) throw error;
+  if (matchIds.length > 0) {
+    const { error: eventMatchesError } = await supabase
+      .from('league_event_matches')
+      .insert(matchIds.map((matchId) => ({ event_id: eventId, match_id: matchId })));
+    if (eventMatchesError) throw eventMatchesError;
+  }
   return { event, status: 'created' };
 }
 
@@ -445,6 +505,7 @@ async function enterLeagueEvent(supabase: ReturnType<typeof createClient>, userI
   if (!body.eventId) throw new Error('Event is required.');
   const { data: event, error: eventError } = await supabase.from('league_events').select('*').eq('id', body.eventId).single();
   if (eventError) throw eventError;
+  await requireActiveLeague(supabase, event.league_id);
   const now = new Date().toISOString();
   if (event.status !== 'open' || event.starts_at <= now || event.ends_at <= now) throw new Error('This event is not open for entries.');
 
@@ -500,6 +561,7 @@ async function settleEvent(supabase: ReturnType<typeof createClient>, userId: st
   const { data: event, error: eventError } = await supabase.from('league_events').select('id, league_id, status').eq('id', body.eventId).single();
   if (eventError) throw eventError;
   await requireOwner(supabase, event.league_id, userId);
+  await requireActiveLeague(supabase, event.league_id);
   if (event.status === 'settled') throw new Error('This event is already settled.');
   if (event.status === 'cancelled') throw new Error('This event is cancelled.');
 
@@ -512,8 +574,52 @@ async function cancelEvent(supabase: ReturnType<typeof createClient>, userId: st
   const { data: event, error: eventError } = await supabase.from('league_events').select('id, league_id, status').eq('id', body.eventId).single();
   if (eventError) throw eventError;
   await requireOwner(supabase, event.league_id, userId);
+  await requireActiveLeague(supabase, event.league_id);
   const result = await cancelLeagueEvent(supabase, event.id, userId);
   return { status: 'cancelled', ...result };
+}
+
+async function archiveLeague(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
+  if (!body.leagueId) throw new Error('League is required.');
+  await requireOwner(supabase, body.leagueId, userId);
+
+  const { data: league, error: leagueError } = await supabase.from('leagues').select('id, name, slug, status').eq('id', body.leagueId).single();
+  if (leagueError) throw leagueError;
+  if (league.status === 'archived') throw new Error('This league is already archived.');
+
+  const { data: activeEvents, error: eventsError } = await supabase
+    .from('league_events')
+    .select('id')
+    .eq('league_id', body.leagueId)
+    .in('status', ['open', 'locked']);
+
+  if (eventsError) throw eventsError;
+  let refunds = 0;
+  for (const event of activeEvents ?? []) {
+    const result = await cancelLeagueEvent(supabase, event.id, userId);
+    refunds += result.refunds;
+  }
+
+  const archivedAt = new Date().toISOString();
+  const archiveReason = assertArchiveReason(body.archiveReason);
+  const { data: archivedLeague, error: archiveError } = await supabase
+    .from('leagues')
+    .update({ status: 'archived', archived_at: archivedAt, archived_by: userId, archive_reason: archiveReason, updated_at: archivedAt })
+    .eq('id', body.leagueId)
+    .select('*')
+    .single();
+
+  if (archiveError) throw archiveError;
+  await supabase.from('activity_events').insert({
+    type: 'league_joined',
+    title: `Archived ${league.name}`,
+    description: 'The league was archived. Open pools were cancelled and refunded.',
+    user_id: userId,
+    league_id: body.leagueId,
+    href: `/leagues/${league.slug}`,
+  });
+
+  return { league: archivedLeague, status: 'archived', cancelledEvents: activeEvents?.length ?? 0, refunds };
 }
 
 Deno.serve(async (req) => {
@@ -540,6 +646,7 @@ Deno.serve(async (req) => {
     if (body.action === 'rejectJoinRequest') return jsonResponse(await rejectJoinRequest(supabase, userData.user.id, body));
     if (body.action === 'updateLeague') return jsonResponse(await updateLeague(supabase, userData.user.id, body));
     if (body.action === 'kickLeagueMember') return jsonResponse(await kickLeagueMember(supabase, userData.user.id, body));
+    if (body.action === 'archiveLeague') return jsonResponse(await archiveLeague(supabase, userData.user.id, body));
     if (body.action === 'createLeagueEvent') return jsonResponse(await createLeagueEvent(supabase, userData.user.id, body));
     if (body.action === 'enterLeagueEvent') return jsonResponse(await enterLeagueEvent(supabase, userData.user.id, body));
     if (body.action === 'settleLeagueEvent') return jsonResponse(await settleEvent(supabase, userData.user.id, body));

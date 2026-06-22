@@ -8,8 +8,8 @@ import StreakBadge from '../components/ui/StreakBadge';
 import { useAuth } from '../lib/auth';
 import { listLeagueActivity, type ActivityEventRow } from '../services/activity';
 import { listLeagueLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
-import { approveJoinRequest, getLeague, joinLeague, kickLeagueMember, listLeagueJoinRequests, listLeagueMembers, rejectJoinRequest, updateLeague, type LeagueJoinRequestRow, type LeagueMemberRow, type LeagueRow } from '../services/leagues';
-import { cancelLeagueEvent, createLeagueEvent, enterLeagueEvent, listLeagueEventLeaderboard, listLeagueEvents, settleLeagueEvent, type LeagueEventLeaderboardEntryWithProfile, type LeagueEventRow, type PayoutCurve } from '../services/leagueEvents';
+import { approveJoinRequest, archiveLeague, getLeague, joinLeague, kickLeagueMember, listLeagueJoinRequests, listLeagueMembers, rejectJoinRequest, updateLeague, type LeagueJoinRequestRow, type LeagueMemberRow, type LeagueRow } from '../services/leagues';
+import { cancelLeagueEvent, createLeagueEvent, enterLeagueEvent, listLeagueEventLeaderboard, listLeagueEventMatches, listLeagueEvents, settleLeagueEvent, type LeagueEventLeaderboardEntryWithProfile, type LeagueEventMatchRow, type LeagueEventRow, type PayoutCurve } from '../services/leagueEvents';
 import { getErrorMessage } from '../services/serviceTypes';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentProfile, type ProfileRow } from '../services/profile';
@@ -22,6 +22,8 @@ type LeagueDetailProps = {
   themeControls: ThemeControls;
 };
 
+type EventScopeMode = 'selected_matches' | 'date_range';
+
 type EventFormState = {
   name: string;
   startsAt: string;
@@ -30,6 +32,8 @@ type EventFormState = {
   maxStake: string;
   payoutCurve: PayoutCurve;
   rankShares: [string, string, string];
+  scopeMode: EventScopeMode;
+  matchIds: string[];
 };
 
 type PoolTab = 'joinable' | 'active' | 'closed';
@@ -42,15 +46,23 @@ const defaultEventForm: EventFormState = {
   maxStake: '100',
   payoutCurve: 'balanced_top3',
   rankShares: ['50', '30', '20'],
+  scopeMode: 'selected_matches',
+  matchIds: [],
 };
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
+function isSelectedMatchPool(event: LeagueEventRow) {
+  const metadata = event.metadata;
+  return Boolean(metadata && typeof metadata === 'object' && !Array.isArray(metadata) && 'scope' in metadata && metadata.scope === 'selected_matches');
+}
+
 function getEventTypeLabel(event: LeagueEventRow, t: (key: string) => string) {
   if (event.event_type === 'weekly') return t('ui.weeklyLeaderboard');
   if (event.event_type === 'matchday') return t('ui.matchdayLeaderboard');
+  if (isSelectedMatchPool(event)) return t('ui.customMatchPool');
   return t('ui.createCustomEvent');
 }
 
@@ -139,6 +151,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   const [leagueActivity, setLeagueActivity] = useState<ActivityEventRow[]>([]);
   const [events, setEvents] = useState<LeagueEventRow[]>([]);
   const [eventStandings, setEventStandings] = useState<Record<string, LeagueEventLeaderboardEntryWithProfile[]>>({});
+  const [eventMatches, setEventMatches] = useState<Record<string, string[]>>({});
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [availablePoints, setAvailablePoints] = useState<number | null>(null);
@@ -158,9 +171,12 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   const [enteringEventId, setEnteringEventId] = useState<string | null>(null);
   const [settlingEventId, setSettlingEventId] = useState<string | null>(null);
   const [cancellingEventId, setCancellingEventId] = useState<string | null>(null);
+  const [archivingLeague, setArchivingLeague] = useState(false);
+  const [archiveConfirmName, setArchiveConfirmName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const currentMembership = useMemo(() => members.find((member) => member.user_id === user?.id) ?? null, [members, user?.id]);
+  const isArchived = league?.status === 'archived';
   const groupedEvents = useMemo(() => groupEventsByPhase(events), [events]);
   const matchesByMatchday = useMemo(() => {
     const nextMatchesByMatchday = new Map<number, MatchRow[]>();
@@ -170,6 +186,10 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     }
     return new Map([...nextMatchesByMatchday.entries()].map(([matchday, matchdayMatches]) => [matchday, matchdayMatches.sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at))]));
   }, [matches]);
+  const matchesById = useMemo(() => new Map(matches.map((match) => [match.id, match])), [matches]);
+  const upcomingMatches = useMemo(() => matches.filter((match) => new Date(match.kickoff_at).getTime() > Date.now()).slice(0, 48), [matches]);
+  const selectedPoolMatches = useMemo(() => eventForm.matchIds.map((matchId) => matchesById.get(matchId)).filter((match): match is MatchRow => Boolean(match)), [eventForm.matchIds, matchesById]);
+  const selectedPoolWindow = selectedPoolMatches.length > 0 ? `${formatDate(selectedPoolMatches[0].kickoff_at)} - ${formatDate(selectedPoolMatches[selectedPoolMatches.length - 1].kickoff_at)}` : '';
   const poolTabs: Array<{ id: PoolTab; label: string; description: string; events: LeagueEventRow[] }> = [
     { id: 'joinable', label: t('ui.joinablePools'), description: t('ui.joinablePoolsBody'), events: groupedEvents.joinable },
     { id: 'active', label: t('ui.activePools'), description: t('ui.activePoolsBody'), events: groupedEvents.active },
@@ -206,7 +226,11 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
           getTeamMap().catch(() => new Map()),
           user ? getCurrentProfile(user.id).catch(() => null) : Promise.resolve(null),
         ]);
-        const nextEventStandings = Object.fromEntries(await Promise.all(nextEvents.map(async (event) => [event.id, await listLeagueEventLeaderboard(event.id).catch(() => [])])));
+        const [nextEventStandings, nextEventMatches] = await Promise.all([
+          Promise.all(nextEvents.map(async (event) => [event.id, await listLeagueEventLeaderboard(event.id).catch(() => [])] as const)).then(Object.fromEntries),
+          listLeagueEventMatches(nextEvents.map((event) => event.id)).catch(() => [] as LeagueEventMatchRow[]),
+        ]);
+        const nextEventMatchesByEvent = nextEventMatches.reduce<Record<string, string[]>>((byEvent, row) => ({ ...byEvent, [row.event_id]: [...(byEvent[row.event_id] ?? []), row.match_id] }), {});
         setLeague(nextLeague);
         setEditName(nextLeague.name);
         setEditDescription(nextLeague.description);
@@ -216,6 +240,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
         setLeagueActivity(nextActivity);
         setEvents(nextEvents);
         setEventStandings(nextEventStandings);
+        setEventMatches(nextEventMatchesByEvent);
         setMatches(nextMatches);
         setTeams(nextTeams);
         setAvailablePoints(currentProfile?.points ?? null);
@@ -228,6 +253,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
         setLeagueActivity([]);
         setEvents([]);
         setEventStandings({});
+        setEventMatches({});
         setMatches([]);
         setTeams(new Map());
         setAvailablePoints(null);
@@ -310,6 +336,10 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
       setError(t('ui.sharesMustTotal100'));
       return;
     }
+    if (eventForm.scopeMode === 'selected_matches' && eventForm.matchIds.length === 0) {
+      setError(t('ui.selectMatchesForPool'));
+      return;
+    }
 
     setSavingEvent(true);
     setError(null);
@@ -317,12 +347,13 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
       await createLeagueEvent({
         leagueId: league.id,
         name: eventForm.name,
-        startsAt: new Date(eventForm.startsAt).toISOString(),
-        endsAt: new Date(eventForm.endsAt).toISOString(),
+        startsAt: eventForm.scopeMode === 'date_range' ? new Date(eventForm.startsAt).toISOString() : undefined,
+        endsAt: eventForm.scopeMode === 'date_range' ? new Date(eventForm.endsAt).toISOString() : undefined,
         minStake: Number(eventForm.minStake),
         maxStake: Number(eventForm.maxStake),
         payoutCurve: eventForm.payoutCurve,
         rankShares,
+        matchIds: eventForm.scopeMode === 'selected_matches' ? eventForm.matchIds : undefined,
       });
       setEventForm(defaultEventForm);
       setShowCreateEvent(false);
@@ -398,11 +429,34 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     }
   }
 
+  async function handleArchiveLeague() {
+    if (!league || archiveConfirmName !== league.name) return;
+    setArchivingLeague(true);
+    setError(null);
+    try {
+      await archiveLeague({ leagueId: league.id });
+      setArchiveConfirmName('');
+      loadLeague();
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setArchivingLeague(false);
+    }
+  }
+
+  function toggleEventMatch(matchId: string) {
+    setEventForm((value) => ({
+      ...value,
+      matchIds: value.matchIds.includes(matchId) ? value.matchIds.filter((id) => id !== matchId) : [...value.matchIds, matchId],
+    }));
+  }
+
   function renderEventCard(event: LeagueEventRow) {
     const rows = eventStandings[event.id] ?? [];
-    const eventMatches = event.event_type === 'matchday' && event.matchday !== null ? matchesByMatchday.get(event.matchday) ?? [] : [];
+    const selectedMatchRows = (eventMatches[event.id] ?? []).map((matchId) => matchesById.get(matchId)).filter((match): match is MatchRow => Boolean(match));
+    const eventMatchRows = selectedMatchRows.length > 0 ? selectedMatchRows : event.event_type === 'matchday' && event.matchday !== null ? matchesByMatchday.get(event.matchday) ?? [] : [];
     const alreadyEntered = rows.some((row) => row.user_id === user?.id);
-    const enterable = isEventEnterable(event);
+    const enterable = !isArchived && isEventEnterable(event);
     const phase = getEventPhase(event);
     const phaseClass = getEventPhaseClass(phase);
 
@@ -423,11 +477,11 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
             <div className="border-2 border-main bg-page p-2 rounded-sm"><div className="font-black uppercase text-[9px] text-subtle">{t('ui.payoutCurve')}</div>{getPayoutCurveLabel(event.payout_curve, t)}</div>
           </div>
         </div>
-        {eventMatches.length > 0 && (
+        {eventMatchRows.length > 0 && (
           <div className="p-3 border-b-2 border-main bg-card flex flex-col gap-2">
-            <div className="font-black uppercase text-[10px] text-subtle tracking-wider">{eventMatches.length} {t('ui.matches')}</div>
+            <div className="font-black uppercase text-[10px] text-subtle tracking-wider">{eventMatchRows.length} {t('ui.matches')}</div>
             <div className="grid grid-cols-1 gap-1.5">
-              {eventMatches.map((match) => (
+              {eventMatchRows.map((match) => (
                 <Link key={match.id} to={`/matches/${match.id}`} className="relative grid items-center border-2 border-line bg-page px-2.5 py-2 text-[10px] font-black uppercase hover:bg-muted rounded-sm min-h-[46px]">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-subtle leading-tight w-[72px]">{formatDate(match.kickoff_at)}</span>
                   <span className="grid grid-cols-[minmax(0,1fr)_34px_minmax(0,1fr)] items-center gap-2 min-w-0 w-full pl-[82px] sm:pl-0">
@@ -466,7 +520,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
           ))}
           {rows.length === 0 && <div className="p-3 font-black uppercase text-xs">{phase === 'joinable' ? t('ui.noPoolEntriesYet') : t('ui.noPoolStandingsYet')}</div>}
         </div>
-        {isOwner && event.status !== 'settled' && event.status !== 'cancelled' && rows.length > 0 && (
+        {isOwner && !isArchived && event.status !== 'settled' && event.status !== 'cancelled' && rows.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 border-t-4 border-main">
             <button onClick={() => handleSettleEvent(event.id)} disabled={settlingEventId === event.id} className="bg-c4 px-3 py-2.5 font-black uppercase text-xs disabled:opacity-60 sm:border-r-4 border-main">
               {settlingEventId === event.id ? t('ui.saving') : t('ui.settleEvent')}
@@ -550,6 +604,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   <div className="border-2 border-main bg-c3 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{league.visibility}</div>
                   <div className="border-2 border-main bg-c1 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{league.join_policy}</div>
+                  {isArchived && <div className="border-2 border-main bg-c5 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{t('ui.archivedLeague')}</div>}
                   {isOwner && <div className="border-2 border-main bg-c4 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{t('ui.owner')}</div>}
                 </div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-main leading-none truncate">{league.name}</h1>
@@ -561,6 +616,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
 
         <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
           {error && <div className="bg-c5 border-2 border-main p-3 font-black uppercase text-xs rounded-sm">{error}</div>}
+          {isArchived && <div className="bg-c5 border-2 border-main p-3 font-black uppercase text-xs rounded-sm">{t('ui.archivedLeagueBody')}</div>}
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 lg:gap-4">
             <div className="border-4 border-main bg-card p-3 sm:p-4 flex flex-col gap-3 rounded-sm">
@@ -576,7 +632,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
                   {t('ui.login')}
                 </Link>
               )}
-              {!isMember && league.visibility === 'public' && user && (
+              {!isArchived && !isMember && league.visibility === 'public' && user && (
                 <button onClick={handleJoin} disabled={joining} className="bg-c2 hover:bg-main text-inv border-2 border-main px-4 py-3 font-black uppercase text-sm shadow-[3px_3px_0_var(--color-shadow)] disabled:opacity-60 rounded-sm">
                   {joining ? t('ui.joiningLeague') : league.join_policy === 'approval' ? t('ui.requestToJoin') : t('ui.joinLeague')}
                 </button>
@@ -600,7 +656,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
             </div>
           </div>
 
-          {isOwner && league.join_policy === 'approval' && (
+          {isOwner && !isArchived && league.join_policy === 'approval' && (
             <div className="border-4 border-main bg-card rounded-sm overflow-hidden">
               <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
                 <span>{t('ui.pendingRequests')}</span>
@@ -624,32 +680,69 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
               <span>{t('ui.miniLeaderboards')}</span>
               {user && <span className="bg-c1 text-main border-2 border-main px-2 py-0.5 text-[10px] inline-flex items-center gap-1">{t('ui.availablePoints')}: {availablePoints ?? t('ui.notSet')} {t('ui.pointsShort')}</span>}
             </div>
-            {isOwner && (
+            {isOwner && !isArchived && (
               <div className="p-3 sm:p-4 border-b-4 border-main bg-page">
                 <button type="button" onClick={() => setShowCreateEvent((value) => !value)} className="bg-c1 border-2 border-main px-3 py-2 font-black uppercase text-xs rounded-sm shadow-[3px_3px_0_var(--color-shadow)]">
                   {t('ui.createCustomEvent')}
                 </button>
                 {showCreateEvent && (
-                  <form onSubmit={handleCreateEvent} className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 text-xs font-bold">
-                    <input required minLength={3} maxLength={64} value={eventForm.name} onChange={(item) => setEventForm((value) => ({ ...value, name: item.target.value }))} placeholder={t('ui.eventName')} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm xl:col-span-2" />
-                    <input required type="datetime-local" value={eventForm.startsAt} onChange={(item) => setEventForm((value) => ({ ...value, startsAt: item.target.value }))} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" aria-label={t('ui.startsAt')} />
-                    <input required type="datetime-local" value={eventForm.endsAt} onChange={(item) => setEventForm((value) => ({ ...value, endsAt: item.target.value }))} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" aria-label={t('ui.endsAt')} />
-                    <input required type="number" min={1} value={eventForm.minStake} onChange={(item) => setEventForm((value) => ({ ...value, minStake: item.target.value }))} placeholder={t('ui.minStake')} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" />
-                    <input required type="number" min={1} value={eventForm.maxStake} onChange={(item) => setEventForm((value) => ({ ...value, maxStake: item.target.value }))} placeholder={t('ui.maxStake')} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" />
-                    <select value={eventForm.payoutCurve} onChange={(item) => setEventForm((value) => ({ ...value, payoutCurve: item.target.value as PayoutCurve }))} className="bg-card border-2 border-main p-2.5 font-black rounded-sm md:col-span-2">
-                      <option value="balanced_top3">{t('ui.balancedTop3')}</option>
-                      <option value="winner_take_all">{t('ui.winnerTakeAll')}</option>
-                      <option value="flat_top3">{t('ui.flatTop3')}</option>
-                      <option value="custom_top3">{t('ui.customTop3')}</option>
-                    </select>
-                    {eventForm.payoutCurve === 'custom_top3' && eventForm.rankShares.map((share, index) => (
-                      <input key={index} required type="number" min={0} max={100} value={share} onChange={(item) => setEventForm((value) => {
-                        const rankShares = [...value.rankShares] as [string, string, string];
-                        rankShares[index] = item.target.value;
-                        return { ...value, rankShares };
-                      })} placeholder={t(`ui.top${index + 1}Share`)} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" />
-                    ))}
-                    <button disabled={savingEvent} className="bg-c2 text-inv border-2 border-main px-3 py-2.5 font-black uppercase disabled:opacity-60 rounded-sm md:col-span-2 xl:col-span-4">{savingEvent ? t('ui.saving') : t('ui.createCustomEvent')}</button>
+                  <form onSubmit={handleCreateEvent} className="mt-3 flex flex-col gap-3 text-xs font-bold">
+                    <div className="grid grid-cols-2 border-2 border-main rounded-sm overflow-hidden">
+                      {(['selected_matches', 'date_range'] as EventScopeMode[]).map((mode) => (
+                        <button key={mode} type="button" onClick={() => setEventForm((value) => ({ ...value, scopeMode: mode }))} className={`p-2.5 font-black uppercase border-r-2 border-main last:border-r-0 ${eventForm.scopeMode === mode ? 'bg-c2 text-inv' : 'bg-card'}`}>
+                          {mode === 'selected_matches' ? t('ui.selectedMatches') : t('ui.dateRange')}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                      <input required minLength={3} maxLength={64} value={eventForm.name} onChange={(item) => setEventForm((value) => ({ ...value, name: item.target.value }))} placeholder={t('ui.eventName')} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm xl:col-span-2" />
+                      {eventForm.scopeMode === 'date_range' && (
+                        <>
+                          <input required type="datetime-local" value={eventForm.startsAt} onChange={(item) => setEventForm((value) => ({ ...value, startsAt: item.target.value }))} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" aria-label={t('ui.startsAt')} />
+                          <input required type="datetime-local" value={eventForm.endsAt} onChange={(item) => setEventForm((value) => ({ ...value, endsAt: item.target.value }))} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" aria-label={t('ui.endsAt')} />
+                        </>
+                      )}
+                      <input required type="number" min={1} value={eventForm.minStake} onChange={(item) => setEventForm((value) => ({ ...value, minStake: item.target.value }))} placeholder={t('ui.minStake')} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" />
+                      <input required type="number" min={1} value={eventForm.maxStake} onChange={(item) => setEventForm((value) => ({ ...value, maxStake: item.target.value }))} placeholder={t('ui.maxStake')} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" />
+                      <select value={eventForm.payoutCurve} onChange={(item) => setEventForm((value) => ({ ...value, payoutCurve: item.target.value as PayoutCurve }))} className="bg-card border-2 border-main p-2.5 font-black rounded-sm md:col-span-2">
+                        <option value="balanced_top3">{t('ui.balancedTop3')}</option>
+                        <option value="winner_take_all">{t('ui.winnerTakeAll')}</option>
+                        <option value="flat_top3">{t('ui.flatTop3')}</option>
+                        <option value="custom_top3">{t('ui.customTop3')}</option>
+                      </select>
+                      {eventForm.payoutCurve === 'custom_top3' && eventForm.rankShares.map((share, index) => (
+                        <input key={index} required type="number" min={0} max={100} value={share} onChange={(item) => setEventForm((value) => {
+                          const rankShares = [...value.rankShares] as [string, string, string];
+                          rankShares[index] = item.target.value;
+                          return { ...value, rankShares };
+                        })} placeholder={t(`ui.top${index + 1}Share`)} className="bg-card border-2 border-main p-2.5 font-bold rounded-sm" />
+                      ))}
+                    </div>
+                    {eventForm.scopeMode === 'selected_matches' && (
+                      <div className="border-2 border-main bg-card rounded-sm p-2.5 flex flex-col gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                          <div className="font-black uppercase text-xs">{t('ui.selectMatchesForPool')}</div>
+                          <div className="font-black uppercase text-[10px] text-subtle">{t('ui.selectedMatchCount', { count: eventForm.matchIds.length })}</div>
+                        </div>
+                        {selectedPoolWindow && <div className="bg-c1 border-2 border-main px-2 py-1 font-black uppercase text-[10px] w-fit">{t('ui.poolWindowPreview')}: {selectedPoolWindow}</div>}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2 max-h-[360px] overflow-y-auto pr-1">
+                          {upcomingMatches.map((match) => {
+                            const selected = eventForm.matchIds.includes(match.id);
+                            return (
+                              <button key={match.id} type="button" onClick={() => toggleEventMatch(match.id)} className={`border-2 border-main p-2 text-left rounded-sm ${selected ? 'bg-c3' : 'bg-page hover:bg-muted'}`}>
+                                <div className="font-black uppercase text-[9px] text-subtle mb-1">{formatDate(match.kickoff_at)} · {t('ui.matchday')} {match.matchday ?? '-'}</div>
+                                <span className="grid grid-cols-[minmax(0,1fr)_34px_minmax(0,1fr)] items-center gap-2 min-w-0 w-full text-[10px] font-black uppercase">
+                                  <CompactTeam team={teams.get(match.home_team_id)} fallback={match.home_team_id} align="right" />
+                                  <span className="text-subtle text-center">vs</span>
+                                  <CompactTeam team={teams.get(match.away_team_id)} fallback={match.away_team_id} />
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <button disabled={savingEvent} className="bg-c2 text-inv border-2 border-main px-3 py-2.5 font-black uppercase disabled:opacity-60 rounded-sm">{savingEvent ? t('ui.saving') : t('ui.createCustomEvent')}</button>
                   </form>
                 )}
               </div>
@@ -701,14 +794,14 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
                   {members.map((member) => (
                     <div key={member.user_id} className="p-3 border-b-2 border-line last:border-b-0 grid grid-cols-[1fr_auto] items-center gap-3 font-bold text-xs sm:text-sm">
                       <div className="min-w-0"><div className="font-black uppercase truncate">{getPublicDisplayName(member.profiles, member.user_id)} {member.role === 'owner' ? `· ${t('ui.owner')}` : ''}</div><div className="text-[10px] text-subtle uppercase">{member.profiles?.points ?? 0} {t('ui.pointsShort')}</div></div>
-                      {isOwner && member.role !== 'owner' && <button onClick={() => handleKickMember(member.user_id)} className="bg-c5 border-2 border-main p-2 rounded-sm"><UserMinus size={14} /></button>}
+                      {isOwner && !isArchived && member.role !== 'owner' && <button onClick={() => handleKickMember(member.user_id)} className="bg-c5 border-2 border-main p-2 rounded-sm"><UserMinus size={14} /></button>}
                     </div>
                   ))}
                   {members.length === 0 && <div className="p-3 font-black uppercase text-xs">{t('ui.noMembers')}</div>}
                 </div>
               </div>
 
-              {isOwner && (
+              {isOwner && !isArchived && (
                 <form onSubmit={handleSaveLeague} className="border-4 border-main bg-card rounded-sm overflow-hidden flex flex-col">
                   <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">{t('ui.editLeague')}</div>
                   <div className="p-3 flex flex-col gap-3">
@@ -717,6 +810,19 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
                     <button disabled={saving} className="bg-c2 text-inv border-2 border-main px-3 py-2.5 font-black uppercase disabled:opacity-60 rounded-sm">{saving ? t('ui.saving') : t('ui.save')}</button>
                   </div>
                 </form>
+              )}
+
+              {isOwner && !isArchived && (
+                <div className="border-4 border-main bg-card rounded-sm overflow-hidden flex flex-col">
+                  <div className="bg-c5 font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">{t('ui.archiveLeagueTitle')}</div>
+                  <div className="p-3 flex flex-col gap-3">
+                    <div className="font-bold text-xs text-subtle uppercase leading-snug">{t('ui.archiveLeagueBody')}</div>
+                    <input value={archiveConfirmName} onChange={(event) => setArchiveConfirmName(event.target.value)} placeholder={league.name} className="bg-page border-2 border-main p-2.5 font-bold text-sm rounded-sm" />
+                    <button type="button" onClick={handleArchiveLeague} disabled={archiveConfirmName !== league.name || archivingLeague} className="bg-c5 border-2 border-main px-3 py-2.5 font-black uppercase disabled:opacity-60 rounded-sm">
+                      {archivingLeague ? t('ui.saving') : t('ui.archiveLeague')}
+                    </button>
+                  </div>
+                </div>
               )}
 
               <div className="border-4 border-main bg-card rounded-sm overflow-hidden">

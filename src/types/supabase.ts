@@ -406,6 +406,39 @@ export type Database = {
           },
         ]
       }
+      league_event_matches: {
+        Row: {
+          created_at: string
+          event_id: string
+          match_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          match_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_event_matches_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "league_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_event_matches_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_events: {
         Row: {
           cancelled_at: string | null
@@ -574,6 +607,9 @@ export type Database = {
       }
       leagues: {
         Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           creator_id: string | null
           description: string
@@ -585,10 +621,14 @@ export type Database = {
           prize_mode: string
           scoring_mode: string
           slug: string
+          status: string
           updated_at: string
           visibility: string
         }
         Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           creator_id?: string | null
           description?: string
@@ -600,10 +640,14 @@ export type Database = {
           prize_mode?: string
           scoring_mode?: string
           slug: string
+          status?: string
           updated_at?: string
           visibility: string
         }
         Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           creator_id?: string | null
           description?: string
@@ -615,10 +659,18 @@ export type Database = {
           prize_mode?: string
           scoring_mode?: string
           slug?: string
+          status?: string
           updated_at?: string
           visibility?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leagues_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leagues_creator_id_fkey"
             columns: ["creator_id"]
