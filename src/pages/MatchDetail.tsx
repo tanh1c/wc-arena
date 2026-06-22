@@ -84,7 +84,6 @@ type ScoringEvent = {
   minute: string;
   scorer: string;
   assist?: string | null;
-  score?: string | null;
   typeText?: string | null;
 };
 
@@ -276,7 +275,6 @@ function getScoringEvents(summary: EspnSummaryPayload, homeTeam?: TeamRow, awayT
       minute: event.clock ?? '—',
       scorer,
       assist: assist === scorer ? null : assist,
-      score: typeof event.homeScore === 'number' && typeof event.awayScore === 'number' ? `${event.homeScore}-${event.awayScore}` : event.text?.match(/Goal!\s*([^.]*)\./i)?.[1] ?? null,
       typeText: event.typeText,
     }];
   });
@@ -619,7 +617,6 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                             <div key={event.id} className="bg-page border-2 border-main p-3 shadow-[2px_2px_0_var(--color-shadow)]">
                               <div className="flex items-start justify-between gap-3 font-black text-sm"><span>{event.scorer}</span><span className="text-c2 shrink-0">{event.minute}</span></div>
                               <div className="font-bold text-[10px] uppercase text-subtle mt-1">{event.assist ? t('ui.assistedBy', { player: event.assist }) : event.typeText ?? t('ui.goal')}</div>
-                              {event.score && <div className="font-black text-[10px] uppercase mt-2 bg-main text-inv inline-flex px-2 py-1">{event.score}</div>}
                             </div>
                           ))}
                           {homeScoringEvents.length === 0 && <div className="bg-muted border-2 border-main p-3 font-bold text-xs text-subtle">{t('ui.noGoalsListed')}</div>}
@@ -630,7 +627,6 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                             <div key={event.id} className="bg-page border-2 border-main p-3 shadow-[2px_2px_0_var(--color-shadow)]">
                               <div className="flex items-start justify-between gap-3 font-black text-sm"><span>{event.scorer}</span><span className="text-c2 shrink-0">{event.minute}</span></div>
                               <div className="font-bold text-[10px] uppercase text-subtle mt-1">{event.assist ? t('ui.assistedBy', { player: event.assist }) : event.typeText ?? t('ui.goal')}</div>
-                              {event.score && <div className="font-black text-[10px] uppercase mt-2 bg-main text-inv inline-flex px-2 py-1">{event.score}</div>}
                             </div>
                           ))}
                           {awayScoringEvents.length === 0 && <div className="bg-muted border-2 border-main p-3 font-bold text-xs text-subtle">{t('ui.noGoalsListed')}</div>}
