@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { refreshLeagueLeaderboards } from '../_shared/leagueLeaderboards.ts';
+import { refreshLeagueEventLeaderboards, settleLeagueEvent } from '../_shared/leagueEvents.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +26,8 @@ type Body = {
   inviteCode?: string;
   requestUserId?: string;
   userId?: string;
+  eventId?: string;
+  stake?: number;
   name?: string;
   description?: string;
   visibility?: LeagueVisibility;
@@ -129,6 +132,96 @@ async function requireOwner(supabase: ReturnType<typeof createClient>, leagueId:
   if (error || data?.role !== 'owner') throw new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
+async function requireMember(supabase: ReturnType<typeof createClient>, leagueId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('league_members')
+    .select('user_id')
+    .eq('league_id', leagueId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) throw new Response(JSON.stringify({ error: 'Join this league before entering the pool.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+async function createDefaultLeagueEvents(supabase: ReturnType<typeof createClient>, leagueId: string) {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + mondayOffset));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+  const events = [{
+    id: `event-${leagueId}-weekly-1`,
+    league_id: leagueId,
+    event_type: 'weekly',
+    name: 'Weekly #1',
+    starts_at: weekStart.toISOString(),
+    ends_at: weekEnd.toISOString(),
+    min_stake: 1,
+    max_stake: 100,
+  }];
+
+  const { data: matchday } = await supabase
+    .from('matches')
+    .select('matchday, kickoff_at')
+    .not('matchday', 'is', null)
+    .order('kickoff_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (matchday?.matchday && matchday.kickoff_at) {
+    const startsAt = new Date(matchday.kickoff_at);
+    const endsAt = new Date(startsAt);
+    endsAt.setUTCDate(endsAt.getUTCDate() + 1);
+    events.push({
+      id: `event-${leagueId}-matchday-${matchday.matchday}`,
+      league_id: leagueId,
+      event_type: 'matchday',
+      name: `Matchday ${matchday.matchday}`,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      matchday: matchday.matchday,
+      min_stake: 1,
+      max_stake: 100,
+    } as typeof events[number] & { matchday: number });
+  }
+
+  const { error } = await supabase.from('league_events').upsert(events, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+function assertStake(value: unknown, minStake: number, maxStake: number) {
+  if (!Number.isInteger(value)) throw new Error('Stake must be a whole number.');
+  const stake = value as number;
+  if (stake < minStake || stake > maxStake) throw new Error(`Stake must be between ${minStake} and ${maxStake} points.`);
+  return stake;
+}
+
+async function ensureWallet(supabase: ReturnType<typeof createClient>, userId: string) {
+  const { data: existing, error: existingError } = await supabase.from('point_wallets').select('*').eq('user_id', userId).maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return existing;
+
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('points').eq('id', userId).single();
+  if (profileError) throw profileError;
+
+  const balance = Math.max(0, profile.points ?? 0);
+  const { data: wallet, error: walletError } = await supabase.from('point_wallets').insert({ user_id: userId, balance }).select('*').single();
+  if (walletError) throw walletError;
+
+  const { error: transactionError } = await supabase.from('point_transactions').insert({
+    user_id: userId,
+    type: 'initial',
+    amount: balance,
+    balance_after: balance,
+    description: 'Initial wallet balance from current profile points',
+  });
+  if (transactionError) throw transactionError;
+
+  return wallet;
+}
+
 async function createLeague(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
   const name = assertName(body.name);
   const description = assertDescription(body.description);
@@ -169,6 +262,7 @@ async function createLeague(supabase: ReturnType<typeof createClient>, userId: s
     league_id: id,
     href: `/leagues/${slug}`,
   });
+  await createDefaultLeagueEvents(supabase, id);
   await refreshLeagueLeaderboards(supabase, [id]);
 
   return { league };
@@ -308,6 +402,78 @@ async function kickLeagueMember(supabase: ReturnType<typeof createClient>, userI
   return { status: 'removed' };
 }
 
+async function enterLeagueEvent(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
+  if (!body.eventId) throw new Error('Event is required.');
+  const { data: event, error: eventError } = await supabase.from('league_events').select('*').eq('id', body.eventId).single();
+  if (eventError) throw eventError;
+  if (event.status !== 'open') throw new Error('This event is not open for entries.');
+
+  await requireMember(supabase, event.league_id, userId);
+  const stake = assertStake(body.stake, event.min_stake, event.max_stake);
+
+  const { data: existingEntry, error: existingError } = await supabase
+    .from('league_event_entries')
+    .select('event_id')
+    .eq('event_id', event.id)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existingEntry) throw new Error('You already entered this event.');
+
+  const wallet = await ensureWallet(supabase, userId);
+  if (wallet.balance < stake) throw new Error('Not enough wallet points.');
+
+  const balanceAfter = wallet.balance - stake;
+  const { data: entry, error: entryError } = await supabase
+    .from('league_event_entries')
+    .insert({ event_id: event.id, user_id: userId, stake })
+    .select('*')
+    .single();
+
+  if (entryError) throw entryError;
+
+  const { data: updatedWallet, error: walletError } = await supabase
+    .from('point_wallets')
+    .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .select('*')
+    .single();
+
+  if (walletError) throw walletError;
+
+  const { error: transactionError } = await supabase.from('point_transactions').insert({
+    user_id: userId,
+    league_id: event.league_id,
+    event_id: event.id,
+    type: 'stake',
+    amount: -stake,
+    balance_after: balanceAfter,
+    description: `Entered ${event.name}`,
+  });
+  if (transactionError) throw transactionError;
+
+  const { error: poolError } = await supabase
+    .from('league_events')
+    .update({ prize_pool: event.prize_pool + stake, updated_at: new Date().toISOString() })
+    .eq('id', event.id);
+
+  if (poolError) throw poolError;
+  await refreshLeagueEventLeaderboards(supabase, [event.id]);
+  return { entry, wallet: updatedWallet, status: 'entered' };
+}
+
+async function settleEvent(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
+  if (!body.eventId) throw new Error('Event is required.');
+  const { data: event, error: eventError } = await supabase.from('league_events').select('id, league_id, status').eq('id', body.eventId).single();
+  if (eventError) throw eventError;
+  await requireOwner(supabase, event.league_id, userId);
+  if (event.status === 'settled') throw new Error('This event is already settled.');
+
+  const result = await settleLeagueEvent(supabase, event.id);
+  return { status: 'settled', ...result };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -332,6 +498,8 @@ Deno.serve(async (req) => {
     if (body.action === 'rejectJoinRequest') return jsonResponse(await rejectJoinRequest(supabase, userData.user.id, body));
     if (body.action === 'updateLeague') return jsonResponse(await updateLeague(supabase, userData.user.id, body));
     if (body.action === 'kickLeagueMember') return jsonResponse(await kickLeagueMember(supabase, userData.user.id, body));
+    if (body.action === 'enterLeagueEvent') return jsonResponse(await enterLeagueEvent(supabase, userData.user.id, body));
+    if (body.action === 'settleLeagueEvent') return jsonResponse(await settleEvent(supabase, userData.user.id, body));
     return jsonResponse({ error: 'Unknown action.' }, 400);
   } catch (error) {
     if (error instanceof Response) return error;

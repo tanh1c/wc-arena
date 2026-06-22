@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Activity, ArrowLeft, Check, Copy, Crown, Shield, Trophy, UserMinus, Users, X } from 'lucide-react';
+import { Activity, ArrowLeft, Check, Copy, Crown, Shield, Trophy, UserMinus, Users, Wallet, X } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import RankBadge from '../components/ui/RankBadge';
 import StreakBadge from '../components/ui/StreakBadge';
@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth';
 import { listLeagueActivity, type ActivityEventRow } from '../services/activity';
 import { listLeagueLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { approveJoinRequest, getLeague, joinLeague, kickLeagueMember, listLeagueJoinRequests, listLeagueMembers, rejectJoinRequest, updateLeague, type LeagueJoinRequestRow, type LeagueMemberRow, type LeagueRow } from '../services/leagues';
+import { enterLeagueEvent, getCurrentPointWallet, listLeagueEventLeaderboard, listLeagueEvents, settleLeagueEvent, type LeagueEventLeaderboardEntryWithProfile, type LeagueEventRow } from '../services/leagueEvents';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getCurrentProfile, type ProfileRow } from '../services/profile';
 import { getPublicDisplayName } from '../utils/displayName';
@@ -32,12 +33,18 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   const [members, setMembers] = useState<LeagueMemberRow[]>([]);
   const [joinRequests, setJoinRequests] = useState<LeagueJoinRequestRow[]>([]);
   const [leagueActivity, setLeagueActivity] = useState<ActivityEventRow[]>([]);
+  const [events, setEvents] = useState<LeagueEventRow[]>([]);
+  const [eventStandings, setEventStandings] = useState<Record<string, LeagueEventLeaderboardEntryWithProfile[]>>({});
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [stakeByEventId, setStakeByEventId] = useState<Record<string, string>>({});
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [enteringEventId, setEnteringEventId] = useState<string | null>(null);
+  const [settlingEventId, setSettlingEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const currentMembership = useMemo(() => members.find((member) => member.user_id === user?.id) ?? null, [members, user?.id]);
@@ -58,12 +65,15 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
 
     getLeague(leagueId)
       .then(async (nextLeague) => {
-        const [nextStandings, nextCreator, nextMembers, nextActivity] = await Promise.all([
+        const [nextStandings, nextCreator, nextMembers, nextActivity, nextEvents, nextWallet] = await Promise.all([
           listLeagueLeaderboard(nextLeague.id).catch(() => []),
           nextLeague.creator_id ? getCurrentProfile(nextLeague.creator_id).catch(() => null) : Promise.resolve(null),
           listLeagueMembers(nextLeague.id).catch(() => []),
           listLeagueActivity(nextLeague.id).catch(() => []),
+          listLeagueEvents(nextLeague.id).catch(() => []),
+          user ? getCurrentPointWallet().catch(() => null) : Promise.resolve(null),
         ]);
+        const nextEventStandings = Object.fromEntries(await Promise.all(nextEvents.map(async (event) => [event.id, await listLeagueEventLeaderboard(event.id).catch(() => [])])));
         setLeague(nextLeague);
         setEditName(nextLeague.name);
         setEditDescription(nextLeague.description);
@@ -71,6 +81,9 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
         setCreator(nextCreator);
         setMembers(nextMembers);
         setLeagueActivity(nextActivity);
+        setEvents(nextEvents);
+        setEventStandings(nextEventStandings);
+        setWalletBalance(nextWallet?.balance ?? null);
       })
       .catch((nextError) => {
         setError(getErrorMessage(nextError));
@@ -78,6 +91,9 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
         setStandings([]);
         setMembers([]);
         setLeagueActivity([]);
+        setEvents([]);
+        setEventStandings({});
+        setWalletBalance(null);
       })
       .finally(() => setLoading(false));
   }
@@ -154,6 +170,33 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
+    }
+  }
+
+  async function handleEnterEvent(event: LeagueEventRow) {
+    const stake = Number(stakeByEventId[event.id] || event.min_stake);
+    setEnteringEventId(event.id);
+    setError(null);
+    try {
+      await enterLeagueEvent({ eventId: event.id, stake });
+      loadLeague();
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setEnteringEventId(null);
+    }
+  }
+
+  async function handleSettleEvent(eventId: string) {
+    setSettlingEventId(eventId);
+    setError(null);
+    try {
+      await settleLeagueEvent({ eventId });
+      loadLeague();
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setSettlingEventId(null);
     }
   }
 
@@ -260,6 +303,60 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
               ))}
             </div>
           )}
+
+          <div className="border-4 border-main bg-card rounded-sm overflow-hidden">
+            <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
+              <span>{t('ui.miniLeaderboards')}</span>
+              {user && <span className="bg-c1 text-main border-2 border-main px-2 py-0.5 text-[10px] inline-flex items-center gap-1"><Wallet size={12} /> {walletBalance ?? t('ui.notSet')} {t('ui.pointsShort')}</span>}
+            </div>
+            {events.length === 0 && <div className="p-4 font-black uppercase text-xs">{t('ui.noStandings')}</div>}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 sm:p-4">
+              {events.map((event) => {
+                const rows = eventStandings[event.id] ?? [];
+                const alreadyEntered = rows.some((row) => row.user_id === user?.id);
+                return (
+                  <div key={event.id} className="border-4 border-main bg-page rounded-sm overflow-hidden flex flex-col">
+                    <div className="p-3 border-b-4 border-main bg-card flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-black uppercase text-[10px] text-subtle tracking-wider">{event.event_type === 'weekly' ? t('ui.weeklyLeaderboard') : t('ui.matchdayLeaderboard')}</div>
+                        <div className="font-black uppercase text-lg truncate">{event.name}</div>
+                        <div className="font-bold text-[10px] text-subtle uppercase">{formatDate(event.starts_at)} - {formatDate(event.ends_at)}</div>
+                      </div>
+                      <div className="bg-c3 border-2 border-main px-2 py-1 font-black text-xs whitespace-nowrap">{event.prize_pool} {t('ui.pointsShort')}</div>
+                    </div>
+                    <div className="p-3 grid grid-cols-3 border-b-2 border-main text-xs font-bold">
+                      <div><div className="font-black uppercase text-[9px] text-subtle">{t('ui.prizePoolPoints')}</div>{event.prize_pool}</div>
+                      <div><div className="font-black uppercase text-[9px] text-subtle">{t('ui.stakePoints')}</div>{event.min_stake}-{event.max_stake}</div>
+                      <div><div className="font-black uppercase text-[9px] text-subtle">{t('ui.status')}</div>{event.status}</div>
+                    </div>
+                    {isMember && event.status === 'open' && (
+                      <div className="p-3 border-b-2 border-main flex gap-2">
+                        <input type="number" min={event.min_stake} max={event.max_stake} value={stakeByEventId[event.id] ?? String(event.min_stake)} onChange={(item) => setStakeByEventId((values) => ({ ...values, [event.id]: item.target.value }))} disabled={alreadyEntered} className="bg-card border-2 border-main px-3 py-2 font-black w-24 rounded-sm" />
+                        <button onClick={() => handleEnterEvent(event)} disabled={alreadyEntered || enteringEventId === event.id} className="bg-c2 text-inv border-2 border-main px-3 py-2 font-black uppercase text-xs flex-1 disabled:opacity-60 rounded-sm">
+                          {alreadyEntered ? t('ui.alreadyEntered') : enteringEventId === event.id ? t('ui.saving') : t('ui.enterPool')}
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex flex-col bg-card">
+                      {rows.slice(0, 3).map((row) => (
+                        <div key={row.user_id} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 p-3 border-b-2 border-line last:border-b-0 text-xs font-bold">
+                          <div className="font-black text-base">#{row.rank}</div>
+                          <div className="min-w-0"><div className="font-black uppercase truncate">{getPublicDisplayName(row.profiles, row.user_id)}</div><div className="text-[10px] text-subtle uppercase">{row.stake} {t('ui.pointsShort')} · {row.points} {t('ui.pointsShort')}</div></div>
+                          <div className="font-black text-right">+{row.payout || 0}</div>
+                        </div>
+                      ))}
+                      {rows.length === 0 && <div className="p-3 font-black uppercase text-xs">{t('ui.noStandings')}</div>}
+                    </div>
+                    {isOwner && event.status !== 'settled' && rows.length > 0 && (
+                      <button onClick={() => handleSettleEvent(event.id)} disabled={settlingEventId === event.id} className="bg-c4 border-t-4 border-main px-3 py-2.5 font-black uppercase text-xs disabled:opacity-60">
+                        {settlingEventId === event.id ? t('ui.saving') : t('ui.settleEvent')}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-3 lg:gap-4">
             <div className="border-4 border-main bg-card rounded-sm overflow-hidden min-w-0">

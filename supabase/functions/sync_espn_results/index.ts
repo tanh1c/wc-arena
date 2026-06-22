@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { refreshLeagueLeaderboards } from '../_shared/leagueLeaderboards.ts';
+import { refreshLeagueEventLeaderboards } from '../_shared/leagueEvents.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -922,7 +923,8 @@ async function recalculateScores(supabase: ReturnType<typeof createClient>) {
   }
 
   const leagueRefresh = await refreshLeagueLeaderboards(supabase);
-  return { predictionScores: calculatedScores.length, leaderboardEntries: aggregates.length, ...leagueRefresh };
+  const eventRefresh = await refreshLeagueEventLeaderboards(supabase);
+  return { predictionScores: calculatedScores.length, leaderboardEntries: aggregates.length, ...leagueRefresh, ...eventRefresh };
 }
 
 Deno.serve(async (req) => {

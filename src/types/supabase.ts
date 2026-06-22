@@ -313,6 +313,158 @@ export type Database = {
           },
         ]
       }
+      league_event_entries: {
+        Row: {
+          entered_at: string
+          event_id: string
+          stake: number
+          user_id: string
+        }
+        Insert: {
+          entered_at?: string
+          event_id: string
+          stake: number
+          user_id: string
+        }
+        Update: {
+          entered_at?: string
+          event_id?: string
+          stake?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_event_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "league_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_event_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_event_leaderboard_entries: {
+        Row: {
+          accuracy: number
+          event_id: string
+          exact_scores: number
+          payout: number
+          payout_factor: number
+          points: number
+          previous_rank: number | null
+          rank: number
+          stake: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number
+          event_id: string
+          exact_scores?: number
+          payout?: number
+          payout_factor?: number
+          points?: number
+          previous_rank?: number | null
+          rank: number
+          stake?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number
+          event_id?: string
+          exact_scores?: number
+          payout?: number
+          payout_factor?: number
+          points?: number
+          previous_rank?: number | null
+          rank?: number
+          stake?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_event_leaderboard_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "league_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_event_leaderboard_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_events: {
+        Row: {
+          created_at: string
+          ends_at: string
+          event_type: string
+          id: string
+          league_id: string
+          matchday: number | null
+          max_stake: number
+          min_stake: number
+          name: string
+          prize_pool: number
+          settled_at: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          event_type: string
+          id: string
+          league_id: string
+          matchday?: number | null
+          max_stake?: number
+          min_stake?: number
+          name: string
+          prize_pool?: number
+          settled_at?: string | null
+          starts_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          event_type?: string
+          id?: string
+          league_id?: string
+          matchday?: number | null
+          max_stake?: number
+          min_stake?: number
+          name?: string
+          prize_pool?: number
+          settled_at?: string | null
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_events_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_join_requests: {
         Row: {
           league_id: string
@@ -638,6 +790,90 @@ export type Database = {
             columns: ["prediction_id"]
             isOneToOne: true
             referencedRelation: "predictions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      point_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          description: string
+          event_id: string | null
+          id: string
+          league_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          description?: string
+          event_id?: string | null
+          id?: string
+          league_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          description?: string
+          event_id?: string | null
+          id?: string
+          league_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "point_transactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "league_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_transactions_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      point_wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "point_wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
