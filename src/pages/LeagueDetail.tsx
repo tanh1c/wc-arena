@@ -34,8 +34,6 @@ type EventFormState = {
 
 type PoolTab = 'joinable' | 'active' | 'closed';
 
-const POOL_EVENTS_PER_PAGE = 3;
-
 const defaultEventForm: EventFormState = {
   name: '',
   startsAt: '',
@@ -150,6 +148,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   const [eventForm, setEventForm] = useState<EventFormState>(defaultEventForm);
   const [activePoolTab, setActivePoolTab] = useState<PoolTab>('joinable');
   const [poolPageByTab, setPoolPageByTab] = useState<Record<PoolTab, number>>({ joinable: 1, active: 1, closed: 1 });
+  const [poolEventsPerPage, setPoolEventsPerPage] = useState(1);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -177,9 +176,9 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     { id: 'closed', label: t('ui.closedPools'), description: t('ui.closedPoolsBody'), events: groupedEvents.closed },
   ];
   const activePool = poolTabs.find((tab) => tab.id === activePoolTab) ?? poolTabs[0];
-  const activePoolTotalPages = Math.max(1, Math.ceil(activePool.events.length / POOL_EVENTS_PER_PAGE));
+  const activePoolTotalPages = Math.max(1, Math.ceil(activePool.events.length / poolEventsPerPage));
   const activePoolPage = Math.min(poolPageByTab[activePoolTab], activePoolTotalPages);
-  const activePoolEvents = activePool.events.slice((activePoolPage - 1) * POOL_EVENTS_PER_PAGE, activePoolPage * POOL_EVENTS_PER_PAGE);
+  const activePoolEvents = activePool.events.slice((activePoolPage - 1) * poolEventsPerPage, activePoolPage * poolEventsPerPage);
   const isOwner = currentMembership?.role === 'owner';
   const isMember = Boolean(currentMembership);
   const inviteLink = league ? `${window.location.origin}/leagues/join/${league.invite_code}` : '';
@@ -237,6 +236,22 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   }
 
   useEffect(loadLeague, [leagueId]);
+
+  useEffect(() => {
+    const updatePoolEventsPerPage = () => {
+      if (window.matchMedia('(min-width: 1536px)').matches) setPoolEventsPerPage(3);
+      else if (window.matchMedia('(min-width: 1024px)').matches) setPoolEventsPerPage(2);
+      else setPoolEventsPerPage(1);
+    };
+
+    updatePoolEventsPerPage();
+    window.addEventListener('resize', updatePoolEventsPerPage);
+    return () => window.removeEventListener('resize', updatePoolEventsPerPage);
+  }, []);
+
+  useEffect(() => {
+    setPoolPageByTab({ joinable: 1, active: 1, closed: 1 });
+  }, [poolEventsPerPage]);
 
   useEffect(() => {
     if (!league?.id || !isOwner) {
