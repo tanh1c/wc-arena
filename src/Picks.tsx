@@ -27,7 +27,7 @@ type PicksProps = {
 
 type PredictionOutcome = 'home' | 'draw' | 'away';
 type PredictionType = 'exact_score' | 'outcome_only';
-type DraftPick = { predictionType: PredictionType; homeScore: string; awayScore: string; predictedOutcome: PredictionOutcome | '' };
+type DraftPick = { predictionType: PredictionType; homeScore: string; awayScore: string; predictedOutcome: PredictionOutcome | ''; isRiskPick: boolean };
 type DraftScores = Record<string, DraftPick>;
 type SubmitState = Record<string, { loading?: boolean; error?: string; success?: string }>;
 type StatusFilter = 'all' | 'open' | 'locked' | 'submitted';
@@ -146,6 +146,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
           homeScore: typeof prediction.home_score === 'number' ? String(prediction.home_score) : '',
           awayScore: typeof prediction.away_score === 'number' ? String(prediction.away_score) : '',
           predictedOutcome: prediction.predicted_outcome as PredictionOutcome,
+          isRiskPick: prediction.is_risk_pick,
         }])));
       })
       .catch((nextError) => {
@@ -170,6 +171,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
         homeScore: current[matchId]?.homeScore ?? '',
         awayScore: current[matchId]?.awayScore ?? '',
         predictedOutcome: current[matchId]?.predictedOutcome ?? '',
+        isRiskPick: current[matchId]?.isRiskPick ?? false,
         [key]: value,
       };
 
@@ -194,6 +196,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
           homeScore,
           awayScore,
           predictedOutcome: predictionType === 'exact_score' ? getOutcomeFromScores(homeScore, awayScore) : current[matchId]?.predictedOutcome ?? '',
+          isRiskPick: current[matchId]?.isRiskPick ?? false,
         },
       };
     });
@@ -207,6 +210,20 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
         homeScore: current[matchId]?.homeScore ?? '',
         awayScore: current[matchId]?.awayScore ?? '',
         predictedOutcome,
+        isRiskPick: current[matchId]?.isRiskPick ?? false,
+      },
+    }));
+  }
+
+  function updateRiskPick(matchId: string, isRiskPick: boolean) {
+    setDraftScores((current) => ({
+      ...current,
+      [matchId]: {
+        predictionType: current[matchId]?.predictionType ?? 'exact_score',
+        homeScore: current[matchId]?.homeScore ?? '',
+        awayScore: current[matchId]?.awayScore ?? '',
+        predictedOutcome: current[matchId]?.predictedOutcome ?? '',
+        isRiskPick,
       },
     }));
   }
@@ -242,7 +259,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
     setSubmitState((current) => ({ ...current, [match.id]: { loading: true } }));
 
     try {
-      await submitPrediction({ matchId: match.id, predictionType, homeScore, awayScore, predictedOutcome });
+      await submitPrediction({ matchId: match.id, predictionType, homeScore, awayScore, predictedOutcome, isRiskPick: draft?.isRiskPick ?? false });
       const nextPredictions = await listCurrentUserPredictions();
       setPredictions(nextPredictions);
       setSubmitState((current) => ({ ...current, [match.id]: { success: t('ui.saved') } }));
@@ -347,6 +364,7 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                     homeScore: typeof prediction?.home_score === 'number' ? String(prediction.home_score) : '',
                     awayScore: typeof prediction?.away_score === 'number' ? String(prediction.away_score) : '',
                     predictedOutcome: (prediction?.predicted_outcome as PredictionOutcome | undefined) ?? '',
+                    isRiskPick: prediction?.is_risk_pick ?? false,
                   };
                   const editable = isMatchEditable(match);
                   const state = submitState[match.id];
@@ -425,6 +443,10 @@ export default function Picks({ onNavigate, isVintage, setIsVintage, isDark, set
                                 </button>
                               ))}
                             </div>
+                            <label className="flex items-center gap-1.5 border-2 border-main bg-card px-2 py-1 text-[8px] font-black uppercase shadow-[1px_1px_0_0_var(--color-shadow)]">
+                              <input type="checkbox" checked={draft.isRiskPick} disabled={!editable || state?.loading} onChange={(event) => updateRiskPick(match.id, event.target.checked)} className="accent-current" />
+                              {t('ui.riskPick')}
+                            </label>
                             <div className="absolute -bottom-1 sm:-bottom-5 w-full max-w-[220px] sm:w-[180px] text-center text-[8px] md:text-[9px] font-bold text-faint uppercase tracking-wider">
                               {state?.error ?? state?.success ?? (draft.predictionType === 'exact_score' ? t('ui.exactScorePoints', { points: 5 }) : t('ui.outcomePoints', { points: 2 }))}
                             </div>
