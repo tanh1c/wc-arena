@@ -5,6 +5,7 @@ import { BarChart3, Goal, ListOrdered, Shield, Trophy, Users } from 'lucide-reac
 import AppShell from '../components/layout/AppShell';
 import { buildGroupStandings } from '../lib/groupStandings';
 import { listMatchesWithSummaries, type MatchRow } from '../services/matches';
+import { getStatisticsCoverage, listTeamTournamentStats, listTopScorers, type StatisticsCoverage, type TeamTournamentStatRow, type TopScorerStatRow } from '../services/statistics';
 import { getTeamMap, listTeams, type TeamRow } from '../services/teams';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamFlag } from '../utils/teamFlags';
@@ -198,6 +199,34 @@ function buildTeamStats(matches: MatchRow[], teams: Map<string, TeamRow>): TeamS
     .slice(0, 12);
 }
 
+function mapNormalizedTopScorers(rows: TopScorerStatRow[], teams: Map<string, TeamRow>): TopScorerRow[] {
+  return rows.map((row) => {
+    const team = row.team_id ? teams.get(row.team_id) : undefined;
+    return {
+      name: row.player_name,
+      teamId: row.team_id,
+      teamName: team?.short_name ?? team?.name ?? row.team_id ?? '—',
+      goals: row.goals,
+      assists: row.assists,
+      latestMinute: row.latest_clock ?? '—',
+    };
+  });
+}
+
+function mapNormalizedTeamStats(rows: TeamTournamentStatRow[], teams: Map<string, TeamRow>): TeamStatRow[] {
+  return rows.map((row) => {
+    const team = teams.get(row.team_id);
+    return {
+      teamId: row.team_id,
+      teamName: team?.short_name ?? team?.name ?? row.team_id,
+      statKey: row.stat_key,
+      label: row.label,
+      total: row.total_numeric,
+      matches: row.matches_sampled,
+    };
+  });
+}
+
 function TeamFlag({ team }: { team?: TeamRow }) {
   const Flag = getTeamFlag(team?.country_code, team?.short_name);
   if (!Flag) return <span className="font-black text-[10px]">{team?.short_name?.slice(0, 2) ?? '—'}</span>;
@@ -209,6 +238,9 @@ export default function Statistics({ themeControls }: StatisticsProps) {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [teamMap, setTeamMap] = useState<Map<string, TeamRow>>(new Map());
+  const [normalizedTopScorers, setNormalizedTopScorers] = useState<TopScorerStatRow[]>([]);
+  const [normalizedTeamStats, setNormalizedTeamStats] = useState<TeamTournamentStatRow[]>([]);
+  const [coverage, setCoverage] = useState<StatisticsCoverage>({ normalizedMatches: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -217,12 +249,15 @@ export default function Statistics({ themeControls }: StatisticsProps) {
     setLoading(true);
     setError(null);
 
-    Promise.all([listMatchesWithSummaries(), listTeams(), getTeamMap()])
-      .then(([nextMatches, nextTeams, nextTeamMap]) => {
+    Promise.all([listMatchesWithSummaries(), listTeams(), getTeamMap(), listTopScorers(), listTeamTournamentStats(), getStatisticsCoverage()])
+      .then(([nextMatches, nextTeams, nextTeamMap, nextTopScorers, nextTeamStats, nextCoverage]) => {
         if (!active) return;
         setMatches(nextMatches);
         setTeams(nextTeams);
         setTeamMap(nextTeamMap);
+        setNormalizedTopScorers(nextTopScorers);
+        setNormalizedTeamStats(nextTeamStats);
+        setCoverage(nextCoverage);
       })
       .catch((nextError) => {
         if (!active) return;
@@ -243,9 +278,13 @@ export default function Statistics({ themeControls }: StatisticsProps) {
     group,
     rows: buildGroupStandings(matches, group, teams.filter((team) => team.group_code === group)),
   })), [groups, matches, teams]);
-  const topScorers = useMemo(() => buildTopScorers(completedMatches, teamMap), [completedMatches, teamMap]);
-  const teamStats = useMemo(() => buildTeamStats(completedMatches, teamMap), [completedMatches, teamMap]);
-  const summaryMatches = matches.filter((match) => match.espn_summary_updated_at).length;
+  const fallbackTopScorers = useMemo(() => buildTopScorers(completedMatches, teamMap), [completedMatches, teamMap]);
+  const fallbackTeamStats = useMemo(() => buildTeamStats(completedMatches, teamMap), [completedMatches, teamMap]);
+  const normalizedScorers = useMemo(() => mapNormalizedTopScorers(normalizedTopScorers, teamMap), [normalizedTopScorers, teamMap]);
+  const normalizedStats = useMemo(() => mapNormalizedTeamStats(normalizedTeamStats, teamMap), [normalizedTeamStats, teamMap]);
+  const topScorers = normalizedScorers.length ? normalizedScorers : fallbackTopScorers;
+  const teamStats = normalizedStats.length ? normalizedStats : fallbackTeamStats;
+  const summaryMatches = coverage.normalizedMatches || matches.filter((match) => match.espn_summary_updated_at).length;
 
   return (
     <AppShell themeControls={themeControls}>
@@ -274,7 +313,7 @@ export default function Statistics({ themeControls }: StatisticsProps) {
               <div className="min-w-0">
                 <div className="text-[10px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 truncate">{t('appPages.statistics.topScorers')}</div>
                 <div className="text-2xl sm:text-3xl font-black leading-none">{topScorers.length}</div>
-                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{t('appPages.statistics.fromKeyEvents')}</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{normalizedScorers.length ? t('appPages.statistics.normalizedStats') : t('appPages.statistics.fromKeyEvents')}</div>
               </div>
             </div>
             <div className="flex items-center gap-3 sm:gap-4 border-main p-3 sm:p-4 lg:p-5 bg-c3 text-main min-w-0">

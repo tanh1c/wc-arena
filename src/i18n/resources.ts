@@ -1096,6 +1096,7 @@ export const resources = {
           groupsTracked: 'Groups tracked',
           topScorers: 'Top Scorers',
           fromKeyEvents: 'From keyEvents',
+          normalizedStats: 'Normalized stats',
           espnSummaries: 'ESPN summaries',
           groupTables: 'Group Tables',
           teamStats: 'Team Stats',
@@ -1103,7 +1104,7 @@ export const resources = {
           matchesSampled: '{{count}} matches',
           noTopScorers: 'No scoring events available yet.',
           noTeamStats: 'No ESPN team stats available yet.',
-          phaseOneNote: 'Phase 1 uses normalized group data plus ESPN summary key events; deeper player stats need a later normalized sync.',
+          phaseOneNote: 'Statistics prefer normalized ESPN event and team-stat tables, with raw ESPN summaries kept as fallback data.',
         },
       },
       prizePool: {
@@ -2234,6 +2235,7 @@ export const resources = {
           groupsTracked: 'Bảng đang theo dõi',
           topScorers: 'Top ghi bàn',
           fromKeyEvents: 'Từ keyEvents',
+          normalizedStats: 'Dữ liệu chuẩn hóa',
           espnSummaries: 'Tóm tắt ESPN',
           groupTables: 'BXH bảng đấu',
           teamStats: 'Thông số đội',
@@ -2241,7 +2243,7 @@ export const resources = {
           matchesSampled: '{{count}} trận',
           noTopScorers: 'Chưa có sự kiện ghi bàn.',
           noTeamStats: 'Chưa có thông số đội từ ESPN.',
-          phaseOneNote: 'Phase 1 dùng dữ liệu bảng đã chuẩn hóa và ESPN key events; thống kê cầu thủ sâu hơn cần sync chuẩn hóa ở phase sau.',
+          phaseOneNote: 'Trang thống kê ưu tiên bảng ESPN event và team-stat đã chuẩn hóa, đồng thời giữ ESPN summary thô làm dữ liệu fallback.',
         },
       },
       prizePool: {

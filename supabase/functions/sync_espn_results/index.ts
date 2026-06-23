@@ -4,6 +4,7 @@ import { refreshLeagueLeaderboards } from '../_shared/leagueLeaderboards.ts';
 import { refreshLeagueEventLeaderboards } from '../_shared/leagueEvents.ts';
 import { acquireLock, releaseLock } from '../_shared/redis.ts';
 import { buildCommunityDistributions, calculatePredictionScores, type CalculatedScore, type PredictionScoringRow, type TeamSignalRow } from '../_shared/scoringRules.ts';
+import { buildNormalizedStatistics, buildPlayerTournamentStats, buildTeamTournamentStats, type EspnSummaryPayload, type NormalizedEventParticipant, type NormalizedMatchEvent, type NormalizedMatchTeamStat, type StatisticsTeamRow } from '../_shared/espnStatistics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -573,7 +574,8 @@ function sanitizeParticipants(value: unknown) {
     const athlete = isRecord(participant.athlete) ? participant.athlete : undefined;
     const type = isRecord(participant.type) ? neutralText(participant.type.displayName ?? participant.type.name) : neutralText(participant.type);
     const name = neutralText(athlete?.displayName ?? participant.displayName ?? participant.name);
-    const entry = { name, type };
+    const sourcePlayerId = neutralText(athlete?.id ?? participant.athleteId ?? participant.id);
+    const entry = { name, type, sourcePlayerId };
     return Object.values(entry).some(Boolean) ? [entry] : [];
   }).slice(0, 6);
 }
@@ -738,6 +740,104 @@ function getBestStreak(scores: CalculatedScore[]) {
     best = Math.max(best, current);
   }
   return best;
+}
+
+type NormalizationCounters = {
+  normalizedMatches: number;
+  normalizedEvents: number;
+  normalizedParticipants: number;
+  normalizedTeamStats: number;
+  playerAggregateRows: number;
+  teamAggregateRows: number;
+};
+
+function emptyNormalizationCounters(): NormalizationCounters {
+  return {
+    normalizedMatches: 0,
+    normalizedEvents: 0,
+    normalizedParticipants: 0,
+    normalizedTeamStats: 0,
+    playerAggregateRows: 0,
+    teamAggregateRows: 0,
+  };
+}
+
+async function normalizeMatchStatistics(supabase: ReturnType<typeof createClient>, match: MatchRow, summary: Json, teamMap: Map<string, StatisticsTeamRow>) {
+  const now = new Date().toISOString();
+  const normalized = buildNormalizedStatistics(match, summary as EspnSummaryPayload, teamMap, now);
+
+  if (normalized.players.length) {
+    const { error } = await supabase.from('espn_players').upsert(normalized.players, { onConflict: 'id' });
+    if (error) throw error;
+  }
+
+  const { error: deleteParticipantsError } = await supabase.from('espn_match_event_participants').delete().eq('match_id', match.id);
+  if (deleteParticipantsError) throw deleteParticipantsError;
+  const { error: deleteEventsError } = await supabase.from('espn_match_events').delete().eq('match_id', match.id);
+  if (deleteEventsError) throw deleteEventsError;
+  const { error: deleteTeamStatsError } = await supabase.from('espn_match_team_stats').delete().eq('match_id', match.id);
+  if (deleteTeamStatsError) throw deleteTeamStatsError;
+
+  if (normalized.events.length) {
+    const { error } = await supabase.from('espn_match_events').insert(normalized.events);
+    if (error) throw error;
+  }
+
+  if (normalized.participants.length) {
+    const { error } = await supabase.from('espn_match_event_participants').insert(normalized.participants);
+    if (error) throw error;
+  }
+
+  if (normalized.teamStats.length) {
+    const { error } = await supabase.from('espn_match_team_stats').insert(normalized.teamStats);
+    if (error) throw error;
+  }
+
+  const { error: markerError } = await supabase
+    .from('matches')
+    .update({ espn_stats_normalized_at: now })
+    .eq('id', match.id);
+  if (markerError) throw markerError;
+
+  return {
+    normalizedMatches: 1,
+    normalizedEvents: normalized.events.length,
+    normalizedParticipants: normalized.participants.length,
+    normalizedTeamStats: normalized.teamStats.length,
+  };
+}
+
+async function rebuildStatisticsAggregates(supabase: ReturnType<typeof createClient>) {
+  const [eventsResult, participantsResult, teamStatsResult] = await Promise.all([
+    supabase.from('espn_match_events').select('match_id, event_key, team_id, clock, scoring_play'),
+    supabase.from('espn_match_event_participants').select('match_id, event_key, role, player_id, player_name'),
+    supabase.from('espn_match_team_stats').select('match_id, team_id, stat_key, label, numeric_value'),
+  ]);
+
+  if (eventsResult.error) throw eventsResult.error;
+  if (participantsResult.error) throw participantsResult.error;
+  if (teamStatsResult.error) throw teamStatsResult.error;
+
+  const now = new Date().toISOString();
+  const playerAggregates = buildPlayerTournamentStats((eventsResult.data ?? []) as NormalizedMatchEvent[], (participantsResult.data ?? []) as NormalizedEventParticipant[], now);
+  const teamAggregates = buildTeamTournamentStats((teamStatsResult.data ?? []) as NormalizedMatchTeamStat[], now);
+
+  const { error: deletePlayerError } = await supabase.from('espn_player_tournament_stats').delete().neq('player_id', '');
+  if (deletePlayerError) throw deletePlayerError;
+  const { error: deleteTeamError } = await supabase.from('espn_team_tournament_stats').delete().neq('team_id', '');
+  if (deleteTeamError) throw deleteTeamError;
+
+  if (playerAggregates.length) {
+    const { error } = await supabase.from('espn_player_tournament_stats').insert(playerAggregates);
+    if (error) throw error;
+  }
+
+  if (teamAggregates.length) {
+    const { error } = await supabase.from('espn_team_tournament_stats').insert(teamAggregates);
+    if (error) throw error;
+  }
+
+  return { playerAggregateRows: playerAggregates.length, teamAggregateRows: teamAggregates.length };
 }
 
 function buildAggregates(scores: CalculatedScore[], rewardPointsByUser: Map<string, number>, pointAdjustmentsByUser: Map<string, number>): UserAggregate[] {
@@ -934,6 +1034,7 @@ Deno.serve(async (req) => {
     let updatedMatches = 0;
     let finishedMatches = 0;
     let signalUpdates = 0;
+    const normalization = emptyNormalizationCounters();
 
     for (const plan of plans) {
       const { error } = await supabase.from('matches').update(plan.update).eq('id', plan.match.id);
@@ -941,6 +1042,20 @@ Deno.serve(async (req) => {
       updatedMatches += 1;
       if (plan.candidate.predictionSignal) signalUpdates += 1;
       if (plan.willFinish) finishedMatches += 1;
+
+      if (plan.update.espn_summary) {
+        const counts = await normalizeMatchStatistics(supabase, plan.match, plan.update.espn_summary, teamMap);
+        normalization.normalizedMatches += counts.normalizedMatches;
+        normalization.normalizedEvents += counts.normalizedEvents;
+        normalization.normalizedParticipants += counts.normalizedParticipants;
+        normalization.normalizedTeamStats += counts.normalizedTeamStats;
+      }
+    }
+
+    if (normalization.normalizedMatches > 0) {
+      const aggregateCounts = await rebuildStatisticsAggregates(supabase);
+      normalization.playerAggregateRows = aggregateCounts.playerAggregateRows;
+      normalization.teamAggregateRows = aggregateCounts.teamAggregateRows;
     }
 
     const scoring = finishedMatches > 0 ? await recalculateScores(supabase) : { predictionScores: 0, leaderboardEntries: 0 };
@@ -963,12 +1078,12 @@ Deno.serve(async (req) => {
         action: 'espn_result_sync_completed',
         entity_type: 'system',
         entity_id: 'espn-result-sync',
-        description: `Synced ${updatedMatches} ESPN match updates, ${signalUpdates} signal updates, finished ${finishedMatches} matches, recalculated ${scoring.predictionScores} prediction scores and ${scoring.leagueLeaderboardEntries} league leaderboard entries.`,
+        description: `Synced ${updatedMatches} ESPN match updates, ${signalUpdates} signal updates, finished ${finishedMatches} matches, normalized ${normalization.normalizedMatches} matches with ${normalization.normalizedEvents} events and ${normalization.normalizedTeamStats} team stat rows, rebuilt ${normalization.playerAggregateRows} player aggregate rows and ${normalization.teamAggregateRows} team aggregate rows, recalculated ${scoring.predictionScores} prediction scores and ${scoring.leagueLeaderboardEntries} league leaderboard entries.`,
         severity: 'info',
       });
     }
 
-    return jsonResponse({ updatedMatches, signalUpdates, finishedMatches, ...scoring, diagnostic });
+    return jsonResponse({ updatedMatches, signalUpdates, finishedMatches, ...normalization, ...scoring, diagnostic });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await supabase.from('admin_audit_logs').insert({
