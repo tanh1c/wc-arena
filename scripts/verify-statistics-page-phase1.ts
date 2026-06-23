@@ -19,6 +19,9 @@ assert.match(statisticsPage, /grid grid-cols-1 sm:grid-cols-3 border-b-4 border-
 assert.match(statisticsPage, /buildGroupStandings/, 'Statistics page must use the existing group standings utility.');
 assert.match(statisticsPage, /keyEvents/, 'Statistics page must derive top scorers from ESPN keyEvents.');
 assert.match(statisticsPage, /teamStatDefinitions/, 'Statistics page must include team stats derived from ESPN summaries.');
+assert.match(statisticsPage, /function getTeamAliases/, 'Statistics top scorers must map ESPN team names to DB teams.');
+assert.match(statisticsPage, /function getGoalTeamNameFromText/, 'Statistics top scorers must parse goal team names from event text.');
+assert.match(statisticsPage, /getEventTeamId\(event, match, teams\)/, 'Top scorer mapping must use the team map when resolving event teams.');
 assert.doesNotMatch(statisticsPage, /bg-page[^\n]*relative z-10 flex flex-col/, 'Statistics page wrapper must not hide AppShell background with bg-page.');
 
 console.log('Statistics page Phase 1 verified.');

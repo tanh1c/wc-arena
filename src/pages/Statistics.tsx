@@ -104,13 +104,39 @@ function isGoalEvent(event: EspnSummaryKeyEvent) {
   return event.scoringPlay || text.includes('goal');
 }
 
-function getEventTeamId(event: EspnSummaryKeyEvent, match: MatchRow) {
+function normalizeTeamText(value?: string | null) {
+  return (value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function getTeamAliases(team?: TeamRow) {
+  if (!team) return [];
+  const aliases = [team.id, team.name, team.short_name, team.country_code].map(normalizeTeamText).filter(Boolean) as string[];
+  if (team.country_code === 'CPV') aliases.push('capeverde');
+  return aliases;
+}
+
+function getGoalTeamNameFromText(text?: string | null) {
+  const match = text?.match(/Goal!\s*[^.]+\.\s*[^()]+\(([^)]+)\)/i);
+  return normalizeTeamText(match?.[1]);
+}
+
+function getEventTeamId(event: EspnSummaryKeyEvent, match: MatchRow, teams: Map<string, TeamRow>) {
   const side = event.team?.side?.toLowerCase();
   if (side === 'home') return match.home_team_id;
   if (side === 'away') return match.away_team_id;
   const eventId = event.team?.id;
   if (eventId === match.home_team_id || event.team?.abbreviation === match.home_team_id) return match.home_team_id;
   if (eventId === match.away_team_id || event.team?.abbreviation === match.away_team_id) return match.away_team_id;
+
+  const homeAliases = getTeamAliases(teams.get(match.home_team_id));
+  const awayAliases = getTeamAliases(teams.get(match.away_team_id));
+  const eventTeamName = normalizeTeamText(event.team?.name ?? event.team?.abbreviation);
+  const goalTeamName = getGoalTeamNameFromText(event.text);
+
+  if (eventTeamName && homeAliases.includes(eventTeamName)) return match.home_team_id;
+  if (eventTeamName && awayAliases.includes(eventTeamName)) return match.away_team_id;
+  if (goalTeamName && homeAliases.includes(goalTeamName)) return match.home_team_id;
+  if (goalTeamName && awayAliases.includes(goalTeamName)) return match.away_team_id;
   return null;
 }
 
@@ -123,7 +149,7 @@ function buildTopScorers(matches: MatchRow[], teams: Map<string, TeamRow>): TopS
       if (!isGoalEvent(event)) return;
       const scorer = getParticipantName(event, 'scorer') ?? event.participants?.[0]?.name;
       if (!scorer) return;
-      const teamId = getEventTeamId(event, match);
+      const teamId = getEventTeamId(event, match, teams);
       const teamName = teamId ? teams.get(teamId)?.short_name ?? teams.get(teamId)?.name ?? teamId : event.team?.abbreviation ?? event.team?.name ?? '—';
       const key = `${scorer}|${teamId ?? teamName}`;
       const current = rows.get(key) ?? { name: scorer, teamId, teamName, goals: 0, assists: 0, latestMinute: '—' };
