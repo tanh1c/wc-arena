@@ -79,9 +79,15 @@ export async function getLeague(identifier: string) {
 }
 
 export async function listCurrentUserLeagueMemberships() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('league_members')
     .select('*, leagues(*)')
+    .eq('user_id', user.id)
     .order('joined_at', { ascending: false });
 
   if (error) throw error;

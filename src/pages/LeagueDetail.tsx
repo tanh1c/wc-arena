@@ -815,12 +815,22 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
 
             <div className="flex flex-col gap-3 lg:gap-4 min-w-0">
               <div className="border-4 border-main bg-card rounded-sm overflow-hidden">
-                <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">{t('ui.membersPreview')}</div>
+                <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
+                  <span>{t('ui.membersList')}</span>
+                  <span className="bg-c1 text-main border-2 border-main px-2 py-0.5 text-[10px]">{members.length}/{league.member_count}</span>
+                </div>
                 <div className="bg-card flex flex-col">
                   {members.map((member) => (
                     <div key={member.user_id} className="p-3 border-b-2 border-line last:border-b-0 grid grid-cols-[1fr_auto] items-center gap-3 font-bold text-xs sm:text-sm">
-                      <div className="min-w-0"><div className="font-black uppercase truncate">{getPublicDisplayName(member.profiles, member.user_id)} {member.role === 'owner' ? `· ${t('ui.owner')}` : ''}</div><div className="text-[10px] text-subtle uppercase">{member.profiles?.points ?? 0} {t('ui.pointsShort')}</div></div>
-                      {isOwner && !isArchived && member.role !== 'owner' && <button onClick={() => handleKickMember(member.user_id)} className="bg-c5 border-2 border-main p-2 rounded-sm"><UserMinus size={14} /></button>}
+                      <div className="min-w-0">
+                        <div className="font-black uppercase truncate">{getPublicDisplayName(member.profiles, member.user_id)}</div>
+                        <div className="text-[10px] text-subtle uppercase flex flex-wrap items-center gap-1.5">
+                          <span>{member.role === 'owner' ? t('ui.owner') : t('ui.member')}</span>
+                          <span>·</span>
+                          <span>{member.profiles?.points ?? 0} {t('ui.pointsShort')}</span>
+                        </div>
+                      </div>
+                      {isOwner && !isArchived && member.role !== 'owner' && <button onClick={() => handleKickMember(member.user_id)} className="bg-c5 border-2 border-main p-2 rounded-sm" aria-label={t('ui.removeMember')}><UserMinus size={14} /></button>}
                     </div>
                   ))}
                   {members.length === 0 && <div className="p-3 font-black uppercase text-xs">{t('ui.noMembers')}</div>}
