@@ -77,7 +77,7 @@ export function enterLeagueEvent(input: { eventId: string; stake: number }) {
 }
 
 export function settleLeagueEvent(input: { eventId: string }) {
-  return invokeLeagueAction<{ status: 'settled'; leagueEventLeaderboardEntries: number; pointSplits: number; payouts: number }>({ action: 'settleLeagueEvent', ...input });
+  return invokeLeagueAction<{ status: 'settled'; leagueEventLeaderboardEntries: number; pointSplits: number; payouts: number; points: number }>({ action: 'settleLeagueEvent', ...input });
 }
 
 export function cancelLeagueEvent(input: { eventId: string }) {

@@ -729,7 +729,8 @@ async function settleEvent(supabase: ReturnType<typeof createClient>, userId: st
   if (event.status === 'cancelled') throw new Error('This event is cancelled.');
 
   const result = await settleLeagueEvent(supabase, event.id);
-  return { status: 'settled', ...result };
+  const points = await getUserPoints(supabase, userId);
+  return { status: 'settled', ...result, points };
 }
 
 async function cancelEvent(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {

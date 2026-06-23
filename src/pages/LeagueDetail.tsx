@@ -455,7 +455,9 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     setSettlingEventId(eventId);
     setError(null);
     try {
-      await settleLeagueEvent({ eventId });
+      const result = await settleLeagueEvent({ eventId });
+      window.dispatchEvent(new CustomEvent('wc26:profile-points-changed', { detail: { points: result.points } }));
+      setAvailablePoints(result.points);
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -589,8 +591,17 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
           {rows.slice(0, 3).map((row) => (
             <div key={row.user_id} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 p-3 border-b-2 border-line last:border-b-0 text-xs font-bold">
               <div className="font-black text-base">#{row.rank}</div>
-              <div className="min-w-0"><div className="font-black uppercase truncate">{getPublicDisplayName(row.profiles, row.user_id)}</div><div className="text-[10px] text-subtle uppercase">{row.stake} {t('ui.pointsShort')} · {row.points} {t('ui.pointsShort')}</div></div>
-              <div className="font-black text-right">+{getLeaderboardPointSplit(row)}</div>
+              <div className="min-w-0 flex flex-col gap-1">
+                <div className="font-black uppercase truncate">{getPublicDisplayName(row.profiles, row.user_id)}</div>
+                <div className="flex flex-wrap gap-1.5 text-[9px] uppercase">
+                  <span className="border border-line bg-page px-1.5 py-0.5 font-black text-subtle">{t('ui.stakePoints')}: {row.stake} {t('ui.pointsShort')}</span>
+                  <span className="border border-line bg-page px-1.5 py-0.5 font-black text-subtle">{t('ui.poolScorePoints')}: {row.points} {t('ui.pointsShort')}</span>
+                </div>
+              </div>
+              <div className="font-black text-right flex flex-col items-end leading-tight">
+                <span className="text-[9px] uppercase text-subtle">{t('ui.poolPointsReceived')}</span>
+                <span className="text-sm">+{getLeaderboardPointSplit(row)} {t('ui.pointsShort')}</span>
+              </div>
             </div>
           ))}
           {rows.length === 0 && <div className="p-3 font-black uppercase text-xs">{phase === 'joinable' ? t('ui.noPoolEntriesYet') : t('ui.noPoolStandingsYet')}</div>}
