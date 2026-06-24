@@ -28,6 +28,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const Rewards = lazy(() => import('./pages/Rewards'));
 const Statistics = lazy(() => import('./pages/Statistics'));
+const SquadGallery = lazy(() => import('./pages/SquadGallery'));
 
 export type ThemeControls = {
   isVintage: boolean;
@@ -123,6 +124,7 @@ export default function App() {
           <Route path="/achievements" element={<Achievements themeControls={themeControls} />} />
           <Route path="/leagues" element={<Leagues themeControls={themeControls} />} />
           <Route path="/stats" element={<Statistics themeControls={themeControls} />} />
+          <Route path="/squad-gallery" element={<SquadGallery themeControls={themeControls} />} />
           <Route path="/leagues/create" element={<LeagueCreate themeControls={themeControls} />} />
           <Route path="/leagues/join/:inviteCode" element={<JoinLeague themeControls={themeControls} />} />
           <Route path="/leagues/:leagueId" element={<LeagueDetail themeControls={themeControls} />} />

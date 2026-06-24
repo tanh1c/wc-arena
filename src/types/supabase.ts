@@ -1144,6 +1144,125 @@ export type Database = {
           },
         ]
       }
+      player_provider_aliases: {
+        Row: {
+          alias: string
+          alias_key: string
+          confidence: number
+          created_at: string
+          id: string
+          normalized_alias: string
+          player_id: string
+          provider: string
+          provider_player_id: string | null
+          source: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          alias: string
+          alias_key: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          normalized_alias: string
+          player_id: string
+          provider: string
+          provider_player_id?: string | null
+          source?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alias?: string
+          alias_key?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          normalized_alias?: string
+          player_id?: string
+          provider?: string
+          provider_player_id?: string | null
+          source?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_provider_aliases_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_provider_aliases_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          club: string | null
+          created_at: string
+          date_of_birth: string | null
+          display_name: string
+          id: string
+          image_url: string | null
+          normalized_name: string
+          primary_position: string | null
+          primary_team_id: string | null
+          slug: string
+          source: string
+          source_payload: Json | null
+          source_player_name: string
+          updated_at: string
+        }
+        Insert: {
+          club?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          display_name: string
+          id: string
+          image_url?: string | null
+          normalized_name: string
+          primary_position?: string | null
+          primary_team_id?: string | null
+          slug: string
+          source?: string
+          source_payload?: Json | null
+          source_player_name: string
+          updated_at?: string
+        }
+        Update: {
+          club?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          display_name?: string
+          id?: string
+          image_url?: string | null
+          normalized_name?: string
+          primary_position?: string | null
+          primary_team_id?: string | null
+          slug?: string
+          source?: string
+          source_payload?: Json | null
+          source_player_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_primary_team_id_fkey"
+            columns: ["primary_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       point_transactions: {
         Row: {
           amount: number
@@ -1559,6 +1678,78 @@ export type Database = {
           short_name?: string
         }
         Relationships: []
+      }
+      tournament_squad_players: {
+        Row: {
+          caps: number | null
+          captain: boolean
+          club: string | null
+          coach_name: string | null
+          created_at: string
+          group_code: string | null
+          international_goals: number | null
+          player_id: string
+          position: string
+          source: string
+          source_payload: Json | null
+          source_scraped_at: string | null
+          squad_number: number | null
+          team_id: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          caps?: number | null
+          captain?: boolean
+          club?: string | null
+          coach_name?: string | null
+          created_at?: string
+          group_code?: string | null
+          international_goals?: number | null
+          player_id: string
+          position: string
+          source?: string
+          source_payload?: Json | null
+          source_scraped_at?: string | null
+          squad_number?: number | null
+          team_id: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Update: {
+          caps?: number | null
+          captain?: boolean
+          club?: string | null
+          coach_name?: string | null
+          created_at?: string
+          group_code?: string | null
+          international_goals?: number | null
+          player_id?: string
+          position?: string
+          source?: string
+          source_payload?: Json | null
+          source_scraped_at?: string | null
+          squad_number?: number | null
+          team_id?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_squad_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_squad_players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_badges: {
         Row: {
