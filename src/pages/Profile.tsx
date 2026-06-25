@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Award, BarChart2, Shield, Star, Trophy, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
+import AvatarPicker from '../components/AvatarPicker';
 import PointsCoin from '../components/ui/PointsCoin';
 import RankBadge from '../components/ui/RankBadge';
 import StatusPill from '../components/ui/StatusPill';
@@ -16,7 +17,7 @@ import { ensureCurrentProfile, updateCurrentProfile, type ProfileRow } from '../
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
 import { getBadgeImageSrc } from '../utils/badgeImages';
-import { getPublicDisplayName, getPublicInitials } from '../utils/displayName';
+import { getPublicAvatarUrl, getPublicDisplayName, getPublicInitials } from '../utils/displayName';
 import { formatPredictionPick } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
 import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
@@ -187,6 +188,7 @@ export default function Profile({ themeControls }: ProfileProps) {
 
   const publicDisplayName = getPublicDisplayName(profile, authUser.id);
   const publicInitials = getPublicInitials(profile, authUser.id);
+  const publicAvatarUrl = getPublicAvatarUrl(profile);
 
   return (
     <AppShell themeControls={themeControls}>
@@ -293,7 +295,9 @@ export default function Profile({ themeControls }: ProfileProps) {
               </div>
               <div className="p-3 sm:p-5 bg-card flex flex-col gap-3 sm:gap-4 border-b-4 border-main">
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0">{publicInitials}</div>
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 overflow-hidden">
+                    {publicAvatarUrl ? <img src={publicAvatarUrl} alt={publicDisplayName} className="w-full h-full object-cover" /> : publicInitials}
+                  </div>
                   <div className="min-w-0">
                     <div className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-main leading-none truncate">{publicDisplayName}</div>
                     <div className="font-black text-[10px] sm:text-xs uppercase text-subtle truncate">@{profile.username}</div>
@@ -336,6 +340,11 @@ export default function Profile({ themeControls }: ProfileProps) {
                   {displayNameStatus === 'saved' && <div className="font-black text-[10px] uppercase text-c3">{t('ui.displayNameSaved')}</div>}
                   {displayNameError && <div className="font-black text-[10px] uppercase text-c5">{displayNameError}</div>}
                 </div>
+                <AvatarPicker
+                  userId={authUser.id}
+                  currentUrl={publicAvatarUrl}
+                  onSaved={(avatarUrl) => setProfile((prev) => (prev ? { ...prev, avatar_url: avatarUrl } : prev))}
+                />
                 <div className="grid grid-cols-2 border-2 border-main text-xs sm:text-sm font-bold rounded-sm overflow-hidden">
                   <div className="p-2.5 sm:p-3 border-r-2 border-main min-w-0"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.fanTeam')}</div><span className="truncate block">{favoriteTeam?.name ?? t('ui.notSet')}</span></div>
                   <div className="p-2.5 sm:p-3"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.joined')}</div>{formatDate(profile.created_at)}</div>

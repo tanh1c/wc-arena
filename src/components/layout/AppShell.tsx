@@ -11,6 +11,7 @@ import { getCurrentProfile, type ProfileRow } from '../../services/profile';
 import PointsCoin from '../ui/PointsCoin';
 import RankBadge from '../ui/RankBadge';
 import StreakBadge from '../ui/StreakBadge';
+import { getPublicAvatarUrl } from '../../utils/displayName';
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -310,7 +311,12 @@ export default function AppShell({ children, themeControls, fullHeight = false }
             {user && <HeaderUserStats profile={profile} />}
             <ThemeSettings themeControls={themeControls} />
             <Link to={user ? '/profile' : '/login'} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
-              <User size={18} strokeWidth={2.5} />
+              {(() => {
+                const avatarUrl = user ? getPublicAvatarUrl(profile) : null;
+                return avatarUrl
+                  ? <img src={avatarUrl} alt="" className="w-[18px] h-[18px] rounded-full object-cover border border-inv shrink-0" />
+                  : <User size={18} strokeWidth={2.5} />;
+              })()}
               <div className="flex-col items-start leading-[1.1] hidden sm:flex">
                 <span className="text-[10px] uppercase font-bold opacity-80">{t('common.account')}</span>
                 <span className="text-sm">{user ? t('common.profile') : t('auth.signIn')}</span>

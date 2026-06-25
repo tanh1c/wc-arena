@@ -1,0 +1,89 @@
+export type AvatarOption = {
+  name: string;
+  url: string;
+};
+
+// Custom football-themed avatars hosted on a CDN.
+export const CUSTOM_AVATAR_OPTIONS: AvatarOption[] = [
+  { name: 'Pepsi 1', url: 'https://s6.imgcdn.dev/Yee9jT.png' },
+  { name: 'Pepsi 2', url: 'https://s6.imgcdn.dev/YeeV99.png' },
+  { name: 'Pepsi 3', url: 'https://s6.imgcdn.dev/Yem6Tg.png' },
+  { name: 'Pepsi WC', url: 'https://s6.imgcdn.dev/Yemwwn.png' },
+  { name: 'GOAT', url: 'https://s6.imgcdn.dev/YeefJy.png' },
+  { name: 'Haramsi', url: 'https://s6.imgcdn.dev/YeeWk8.png' },
+  { name: 'CryMessi', url: 'https://s6.imgcdn.dev/Yeedv2.png' },
+  { name: 'Neymar', url: 'https://s6.imgcdn.dev/Yee3Fi.jpg' },
+  { name: 'Penaldo 1', url: 'https://s6.imgcdn.dev/Yeeb4H.png' },
+  { name: 'Penaldo 2', url: 'https://s6.imgcdn.dev/Yeee0S.png' },
+  { name: 'Ronaldo', url: 'https://s6.imgcdn.dev/YeeFje.png' },
+  { name: 'Ronaldo 2', url: 'https://s6.imgcdn.dev/Yee8nl.png' },
+  { name: 'Ronaldo Mex', url: 'https://s6.imgcdn.dev/Yem4nq.png' },
+  { name: 'Sister', url: 'https://s6.imgcdn.dev/YeeHT0.png' },
+  { name: 'Siuu', url: 'https://s6.imgcdn.dev/YeeXRM.png' },
+  { name: 'Dictator', url: 'https://s6.imgcdn.dev/YemDCK.png' },
+  { name: 'Haaland', url: 'https://s6.imgcdn.dev/Yemh3O.png' },
+  { name: 'Mix', url: 'https://s6.imgcdn.dev/YemMRv.png' },
+  { name: 'Along', url: 'https://s6.imgcdn.dev/YemCxB.jpg' },
+  { name: 'Vini', url: 'https://s6.imgcdn.dev/YemIHu.png' },
+];
+
+// World Cup team flags, self-hosted under public/flags/<iso2>.svg.
+// iso2 here is the lowercased filename (GB-ENG -> gb_eng) matching the copied SVGs.
+const FLAG_TEAMS: { name: string; iso2: string }[] = [
+  { name: 'Argentina', iso2: 'ar' },
+  { name: 'Australia', iso2: 'au' },
+  { name: 'Austria', iso2: 'at' },
+  { name: 'Belgium', iso2: 'be' },
+  { name: 'Bosnia & Herzegovina', iso2: 'ba' },
+  { name: 'Brazil', iso2: 'br' },
+  { name: 'Canada', iso2: 'ca' },
+  { name: "Côte d'Ivoire", iso2: 'ci' },
+  { name: 'Colombia', iso2: 'co' },
+  { name: 'Cape Verde', iso2: 'cv' },
+  { name: 'Costa Rica', iso2: 'cr' },
+  { name: 'Croatia', iso2: 'hr' },
+  { name: 'Curaçao', iso2: 'cw' },
+  { name: 'Czechia', iso2: 'cz' },
+  { name: 'DR Congo', iso2: 'cd' },
+  { name: 'Ecuador', iso2: 'ec' },
+  { name: 'Egypt', iso2: 'eg' },
+  { name: 'England', iso2: 'gb_eng' },
+  { name: 'France', iso2: 'fr' },
+  { name: 'Germany', iso2: 'de' },
+  { name: 'Ghana', iso2: 'gh' },
+  { name: 'Haiti', iso2: 'ht' },
+  { name: 'Iran', iso2: 'ir' },
+  { name: 'Iraq', iso2: 'iq' },
+  { name: 'Japan', iso2: 'jp' },
+  { name: 'Jordan', iso2: 'jo' },
+  { name: 'Mexico', iso2: 'mx' },
+  { name: 'Morocco', iso2: 'ma' },
+  { name: 'Netherlands', iso2: 'nl' },
+  { name: 'New Zealand', iso2: 'nz' },
+  { name: 'Norway', iso2: 'no' },
+  { name: 'Panama', iso2: 'pa' },
+  { name: 'Paraguay', iso2: 'py' },
+  { name: 'Portugal', iso2: 'pt' },
+  { name: 'Qatar', iso2: 'qa' },
+  { name: 'Saudi Arabia', iso2: 'sa' },
+  { name: 'Scotland', iso2: 'gb_sct' },
+  { name: 'Senegal', iso2: 'sn' },
+  { name: 'South Africa', iso2: 'za' },
+  { name: 'South Korea', iso2: 'kr' },
+  { name: 'Spain', iso2: 'es' },
+  { name: 'Sweden', iso2: 'se' },
+  { name: 'Switzerland', iso2: 'ch' },
+  { name: 'Tunisia', iso2: 'tn' },
+  { name: 'Turkey', iso2: 'tr' },
+  { name: 'Algeria', iso2: 'dz' },
+  { name: 'United States', iso2: 'us' },
+  { name: 'Uruguay', iso2: 'uy' },
+  { name: 'Uzbekistan', iso2: 'uz' },
+];
+
+export const FLAG_AVATAR_OPTIONS: AvatarOption[] = FLAG_TEAMS.map((team) => ({
+  name: team.name,
+  url: `/flags/${team.iso2}.svg`,
+}));
+
+export const AVATAR_OPTIONS: AvatarOption[] = [...CUSTOM_AVATAR_OPTIONS, ...FLAG_AVATAR_OPTIONS];
