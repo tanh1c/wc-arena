@@ -1,0 +1,24 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	memory_retrieve(memory_retrieve)
+	intent_router(intent_router)
+	data_gather(data_gather)
+	analysis(analysis)
+	safety_review(safety_review)
+	memory_write(memory_write)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> memory_retrieve;
+	analysis --> safety_review;
+	data_gather --> analysis;
+	intent_router --> data_gather;
+	memory_retrieve --> intent_router;
+	safety_review --> memory_write;
+	memory_write --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

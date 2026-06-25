@@ -1,0 +1,20 @@
+[project]
+name = "we-speak-football-agent"
+version = "0.1.0"
+description = "FastAPI agent service for Predict 2026 football analysis."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pydantic-settings",
+  "httpx",
+  "supabase",
+  "langgraph",
+  "langchain-openai",
+  "mem0ai",
+  "python-dotenv",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
