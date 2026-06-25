@@ -75,6 +75,7 @@ export default function Profile({ themeControls }: ProfileProps) {
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [displayNameStatus, setDisplayNameStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [displayNameError, setDisplayNameError] = useState<string | null>(null);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const userPredictions = predictions.map((source) => ({ source, prediction: toPrediction(source), result: getMatchResult(source) }));
   const scoredItems = userPredictions.map(({ prediction, result }) => ({ prediction, result }));
   const accuracy = calculateAccuracy(scoredItems);
@@ -295,9 +296,14 @@ export default function Profile({ themeControls }: ProfileProps) {
               </div>
               <div className="p-3 sm:p-5 bg-card flex flex-col gap-3 sm:gap-4 border-b-4 border-main">
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setAvatarPickerOpen(true)}
+                    className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 overflow-hidden hover:opacity-85 transition-opacity focus:outline-none focus:ring-4 focus:ring-c2"
+                    aria-label={t('ui.changeAvatar')}
+                  >
                     {publicAvatarUrl ? <img src={publicAvatarUrl} alt={publicDisplayName} className="w-full h-full object-cover" /> : publicInitials}
-                  </div>
+                  </button>
                   <div className="min-w-0">
                     <div className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-main leading-none truncate">{publicDisplayName}</div>
                     <div className="font-black text-[10px] sm:text-xs uppercase text-subtle truncate">@{profile.username}</div>
@@ -308,6 +314,13 @@ export default function Profile({ themeControls }: ProfileProps) {
                         <PointsCoin size="sm" />
                         {profile.points.toLocaleString()} {t('ui.pointsShort')}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setAvatarPickerOpen(true)}
+                        className="border-2 border-main bg-card px-2 py-1 font-black uppercase text-[10px] sm:text-xs text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-muted rounded-sm"
+                      >
+                        {t('ui.changeAvatar')}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -340,11 +353,6 @@ export default function Profile({ themeControls }: ProfileProps) {
                   {displayNameStatus === 'saved' && <div className="font-black text-[10px] uppercase text-c3">{t('ui.displayNameSaved')}</div>}
                   {displayNameError && <div className="font-black text-[10px] uppercase text-c5">{displayNameError}</div>}
                 </div>
-                <AvatarPicker
-                  userId={authUser.id}
-                  currentUrl={publicAvatarUrl}
-                  onSaved={(avatarUrl) => setProfile((prev) => (prev ? { ...prev, avatar_url: avatarUrl } : prev))}
-                />
                 <div className="grid grid-cols-2 border-2 border-main text-xs sm:text-sm font-bold rounded-sm overflow-hidden">
                   <div className="p-2.5 sm:p-3 border-r-2 border-main min-w-0"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.fanTeam')}</div><span className="truncate block">{favoriteTeam?.name ?? t('ui.notSet')}</span></div>
                   <div className="p-2.5 sm:p-3"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.joined')}</div>{formatDate(profile.created_at)}</div>
@@ -382,6 +390,13 @@ export default function Profile({ themeControls }: ProfileProps) {
           </div>
         </div>
       </div>
+      <AvatarPicker
+        open={avatarPickerOpen}
+        onClose={() => setAvatarPickerOpen(false)}
+        userId={authUser.id}
+        currentUrl={publicAvatarUrl}
+        onSaved={(avatarUrl) => setProfile((prev) => (prev ? { ...prev, avatar_url: avatarUrl } : prev))}
+      />
     </AppShell>
   );
 }
