@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X } from 'lucide-react';
 import { CLUB_AVATAR_OPTIONS, CUSTOM_AVATAR_OPTIONS, FLAG_AVATAR_OPTIONS, type AvatarOption } from '../constants/avatars';
@@ -75,6 +75,10 @@ export default function AvatarPickerModal({ open, onClose, userId, currentUrl, c
     void saveAvatar(option, null);
   }
 
+  function handleClubColorPreview(nextColor: string) {
+    setClubBgColor(normalizeAvatarBgColor(nextColor));
+  }
+
   function handleClubColorSave(nextColor: string) {
     if (!selectedClubOption) return;
     const normalized = normalizeAvatarBgColor(nextColor);
@@ -108,7 +112,8 @@ export default function AvatarPickerModal({ open, onClose, userId, currentUrl, c
                 <input
                   type="color"
                   value={clubBgColor}
-                  onChange={(event) => handleClubColorSave(event.target.value)}
+                  onChange={(event) => handleClubColorPreview(event.target.value)}
+                  onBlur={(event) => handleClubColorSave(event.target.value)}
                   className="w-10 h-8 border-2 border-main bg-card cursor-pointer"
                   aria-label={t('ui.avatarCustomBackground')}
                 />
@@ -169,7 +174,7 @@ function AvatarGroup({ label, options, currentUrl, currentBgColor, pendingUrl, o
               className={`relative aspect-square border-2 overflow-hidden rounded-sm bg-card transition-transform active:scale-95 ${isSelected ? 'border-c2 shadow-[2px_2px_0_var(--color-shadow)]' : 'border-main hover:bg-muted'} ${isPending ? 'opacity-60' : ''}`}
               style={isClub ? { backgroundColor: previewBgColor } : undefined}
             >
-              <img src={option.url} alt={option.name} loading="lazy" className={isClub ? 'w-full h-full object-contain p-1.5' : 'w-full h-full object-cover'} />
+              <LazyAvatarImage option={option} isClub={isClub} />
               {isSelected && (
                 <span className="absolute inset-0 flex items-center justify-center bg-c2/70">
                   <Check size={16} className="text-inv" strokeWidth={3} />
@@ -180,5 +185,47 @@ function AvatarGroup({ label, options, currentUrl, currentBgColor, pendingUrl, o
         })}
       </div>
     </div>
+  );
+}
+
+function LazyAvatarImage({ option, isClub }: { option: AvatarOption; isClub: boolean }) {
+  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (shouldLoad) return;
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    if (!('IntersectionObserver' in window)) {
+      setShouldLoad(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setShouldLoad(true);
+        observer.disconnect();
+      },
+      { rootMargin: '160px' },
+    );
+
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  return (
+    <span ref={wrapperRef} className="block w-full h-full bg-muted">
+      {shouldLoad && (
+        <img
+          src={option.url}
+          alt={option.name}
+          loading="lazy"
+          decoding="async"
+          className={isClub ? 'w-full h-full object-contain p-1.5' : 'w-full h-full object-cover'}
+        />
+      )}
+    </span>
   );
 }

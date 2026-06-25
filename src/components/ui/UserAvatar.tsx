@@ -25,7 +25,7 @@ export default function UserAvatar({ avatarUrl, avatarBgColor, displayName, init
 
   return (
     <div className={`${className} ${isClub ? '' : 'bg-elevated'} overflow-hidden flex items-center justify-center`} style={style}>
-      {avatarUrl ? <img src={avatarUrl} alt={displayName} className={imgClassName} loading="lazy" /> : initials}
+      {avatarUrl ? <img src={avatarUrl} alt={displayName} className={imgClassName} loading="lazy" decoding="async" /> : initials}
     </div>
   );
 }
