@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarClock, Lock, MapPin, Save, ShieldCheck, Target, Trophy } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarClock, Lock, MapPin, Save, ShieldCheck, Target, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import PredictionShareButton from '../components/PredictionShareButton';
 import StatusPill from '../components/ui/StatusPill';
@@ -852,6 +852,9 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                 {t('ui.actions')}
               </div>
               <div className="p-4 bg-card flex flex-col gap-3">
+                <Link to={`/agent?match_id=${encodeURIComponent(match.id)}`} className="text-center bg-c3 hover:bg-c1 text-main font-black uppercase py-3 px-4 border-2 border-main shadow-[3px_3px_0_var(--color-shadow)] text-xs flex items-center justify-center gap-2">
+                  <Bot size={16} strokeWidth={3} /> Ask Agent About This Match
+                </Link>
                 <Link to="/my-predictions" className="text-center bg-card hover:bg-muted text-main font-black uppercase py-3 px-4 border-2 border-main shadow-[3px_3px_0_var(--color-shadow)] text-xs">{t('ui.myPredictions')}</Link>
                 {submittedPrediction && (
                   <>

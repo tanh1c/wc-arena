@@ -187,6 +187,75 @@
   button {
     color: inherit;
   }
+
+  .agent-markdown {
+    overflow-wrap: anywhere;
+  }
+
+  .agent-markdown > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .agent-markdown h2,
+  .agent-markdown h3,
+  .agent-markdown h4 {
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 1.15;
+  }
+
+  .agent-markdown h2 {
+    font-size: 1.125rem;
+  }
+
+  .agent-markdown h3,
+  .agent-markdown h4 {
+    font-size: 1rem;
+  }
+
+  .agent-markdown ul,
+  .agent-markdown ol {
+    padding-left: 1.25rem;
+  }
+
+  .agent-markdown ul {
+    list-style: square;
+  }
+
+  .agent-markdown ol {
+    list-style: decimal;
+  }
+
+  .agent-markdown li + li {
+    margin-top: 0.35rem;
+  }
+
+  .agent-markdown code {
+    border: 2px solid var(--c-line-strong);
+    background: var(--bg-muted);
+    padding: 0.05rem 0.35rem;
+    font-weight: 900;
+  }
+
+  .agent-markdown pre {
+    border: 2px solid var(--c-line-strong);
+    background: var(--bg-muted);
+    padding: 0.75rem;
+    overflow-x: auto;
+  }
+
+  .agent-markdown pre code {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    white-space: pre;
+  }
+
+  .agent-markdown a {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
 }
 
 @layer utilities {
