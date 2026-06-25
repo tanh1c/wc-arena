@@ -29,6 +29,7 @@ async def _run_agent(payload: AgentChatRequest, request: Request, user: Authenti
             match_id=payload.match_id,
             user_id=user.user_id,
             email=user.email,
+            access_token=user.access_token,
             request_metadata={
                 "client_host": request.client.host if request.client else None,
                 "user_agent": request.headers.get("user-agent"),

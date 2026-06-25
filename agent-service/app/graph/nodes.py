@@ -91,7 +91,12 @@ async def data_gather(state: AgentState) -> AgentState:
 
     if match_id and intent in ("match_preview", "prediction_help", "team_context"):
         include_user = intent == "prediction_help"
-        tool_results, used_tools = await gather_match_context(match_id, state.get("user_id", ""), include_user=include_user)
+        tool_results, used_tools = await gather_match_context(
+            match_id,
+            state.get("user_id", ""),
+            state.get("access_token", ""),
+            include_user=include_user,
+        )
 
     return {**state, "tool_results": tool_results, "used_tools": used_tools}
 

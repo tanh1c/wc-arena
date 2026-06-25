@@ -8,6 +8,7 @@ class AgentState(TypedDict, total=False):
     messages: list[dict[str, str]]
     user_id: str
     email: str | None
+    access_token: str
     session_id: str
     match_id: str | None
     intent: AgentIntent
