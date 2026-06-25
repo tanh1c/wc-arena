@@ -5,6 +5,32 @@ export type AvatarOption = {
 
 // Custom football-themed avatars hosted on a CDN.
 export const CUSTOM_AVATAR_OPTIONS: AvatarOption[] = [
+  { name: 'Yamal', url: 'https://s6.imgcdn.dev/YeqwGi.png' },
+  { name: 'Mbappe', url: 'https://s6.imgcdn.dev/Yeq6bH.png' },
+  { name: 'Messi', url: 'https://s6.imgcdn.dev/YeqcMS.png' },
+  { name: 'Ronaldo', url: 'https://s6.imgcdn.dev/YequzC.png' },
+  { name: 'Neymar', url: 'https://s6.imgcdn.dev/Yeq4fe.png' },
+  { name: 'Haaland', url: 'https://s6.imgcdn.dev/YeqID0.png' },
+  { name: 'Salah', url: 'https://s6.imgcdn.dev/YeqN5M.png' },
+  { name: 'Son', url: 'https://s6.imgcdn.dev/Yeqigl.png' },
+  { name: 'Vinicius', url: 'https://s6.imgcdn.dev/YeqnQh.png' },
+  { name: 'Dembele', url: 'https://s6.imgcdn.dev/YeqsGV.png' },
+  { name: 'Modric', url: 'https://s6.imgcdn.dev/YeqyeK.png' },
+  { name: 'Havertz', url: 'https://s6.imgcdn.dev/YeqKMo.png' },
+  { name: 'Van Dijk', url: 'https://s6.imgcdn.dev/YeqPzO.png' },
+  { name: 'Gyokeres', url: 'https://s6.imgcdn.dev/YeqTtn.png' },
+  { name: 'Kevin', url: 'https://s6.imgcdn.dev/YeqlDg.png' },
+  { name: 'Nunez', url: 'https://s6.imgcdn.dev/YeqaON.png' },
+  { name: 'Olise', url: 'https://s6.imgcdn.dev/Yeq7QB.png' },
+  { name: 'Bruno', url: 'https://s6.imgcdn.dev/YeqGeL.jpg' },
+  { name: 'Kane', url: 'https://s6.imgcdn.dev/Yeqrca.png' },
+  { name: 'Jude', url: 'https://s6.imgcdn.dev/Yeqvaw.png' },
+  { name: 'Rice', url: 'https://s6.imgcdn.dev/Yeqxtt.png' },
+  { name: 'Alvarez', url: 'https://s6.imgcdn.dev/YeqZO9.png' },
+  { name: 'Mane', url: 'https://s6.imgcdn.dev/Yeq9Ey.png' },
+];
+
+export const HIDDEN_CUSTOM_AVATAR_OPTIONS: AvatarOption[] = [
   { name: 'Pepsi 1', url: 'https://s6.imgcdn.dev/Yee9jT.png' },
   { name: 'Pepsi 2', url: 'https://s6.imgcdn.dev/YeeV99.png' },
   { name: 'Pepsi 3', url: 'https://s6.imgcdn.dev/Yem6Tg.png' },
@@ -12,19 +38,19 @@ export const CUSTOM_AVATAR_OPTIONS: AvatarOption[] = [
   { name: 'GOAT', url: 'https://s6.imgcdn.dev/YeefJy.png' },
   { name: 'Haramsi', url: 'https://s6.imgcdn.dev/YeeWk8.png' },
   { name: 'CryMessi', url: 'https://s6.imgcdn.dev/Yeedv2.png' },
-  { name: 'Neymar', url: 'https://s6.imgcdn.dev/Yee3Fi.jpg' },
+  { name: 'Neymar Legacy', url: 'https://s6.imgcdn.dev/Yee3Fi.jpg' },
   { name: 'Penaldo 1', url: 'https://s6.imgcdn.dev/Yeeb4H.png' },
   { name: 'Penaldo 2', url: 'https://s6.imgcdn.dev/Yeee0S.png' },
-  { name: 'Ronaldo', url: 'https://s6.imgcdn.dev/YeeFje.png' },
-  { name: 'Ronaldo 2', url: 'https://s6.imgcdn.dev/Yee8nl.png' },
+  { name: 'Ronaldo Legacy', url: 'https://s6.imgcdn.dev/YeeFje.png' },
+  { name: 'Ronaldo 2 Legacy', url: 'https://s6.imgcdn.dev/Yee8nl.png' },
   { name: 'Ronaldo Mex', url: 'https://s6.imgcdn.dev/Yem4nq.png' },
   { name: 'Sister', url: 'https://s6.imgcdn.dev/YeeHT0.png' },
   { name: 'Siuu', url: 'https://s6.imgcdn.dev/YeeXRM.png' },
   { name: 'Dictator', url: 'https://s6.imgcdn.dev/YemDCK.png' },
-  { name: 'Haaland', url: 'https://s6.imgcdn.dev/Yemh3O.png' },
+  { name: 'Haaland Legacy', url: 'https://s6.imgcdn.dev/Yemh3O.png' },
   { name: 'Mix', url: 'https://s6.imgcdn.dev/YemMRv.png' },
   { name: 'Along', url: 'https://s6.imgcdn.dev/YemCxB.jpg' },
-  { name: 'Vini', url: 'https://s6.imgcdn.dev/YemIHu.png' },
+  { name: 'Vini Legacy', url: 'https://s6.imgcdn.dev/YemIHu.png' },
 ];
 
 // World Cup team flags, self-hosted under public/flags/<iso2>.svg.
