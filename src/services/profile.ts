@@ -4,10 +4,10 @@ import type { Database } from '../types/supabase';
 export type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 export type PublicProfileRow = Omit<ProfileRow, 'email' | 'role'>;
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
-export type ProfileUpdate = Partial<Pick<ProfileRow, 'username' | 'display_name' | 'country_code' | 'fan_club_team_id' | 'avatar_url'>>;
+export type ProfileUpdate = Partial<Pick<ProfileRow, 'username' | 'display_name' | 'country_code' | 'fan_club_team_id' | 'avatar_url' | 'avatar_bg_color'>>;
 
-const PROFILE_FIELDS = 'id, username, display_name, email, avatar_url, country_code, fan_club_team_id, role, points, rank, accuracy, exact_scores, current_streak, best_streak, created_at';
-export const PUBLIC_PROFILE_FIELDS = 'id, username, display_name, avatar_url, country_code, fan_club_team_id, points, rank, accuracy, exact_scores, current_streak, best_streak, created_at';
+const PROFILE_FIELDS = 'id, username, display_name, email, avatar_url, avatar_bg_color, country_code, fan_club_team_id, role, points, rank, accuracy, exact_scores, current_streak, best_streak, created_at';
+export const PUBLIC_PROFILE_FIELDS = 'id, username, display_name, avatar_url, avatar_bg_color, country_code, fan_club_team_id, points, rank, accuracy, exact_scores, current_streak, best_streak, created_at';
 
 export async function getCurrentProfile(userId: string) {
   const { data, error } = await supabase

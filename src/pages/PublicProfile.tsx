@@ -6,6 +6,7 @@ import PointsCoin from '../components/ui/PointsCoin';
 import RankBadge from '../components/ui/RankBadge';
 import StatusPill from '../components/ui/StatusPill';
 import StreakBadge from '../components/ui/StreakBadge';
+import UserAvatar from '../components/ui/UserAvatar';
 import { getPublicUserPredictionHistory, type PublicPredictionHistory, type PublicPredictionHistoryRow } from '../services/publicPredictions';
 import { getPublicProfile, type PublicProfileRow } from '../services/profile';
 import { getErrorMessage } from '../services/serviceTypes';
@@ -171,9 +172,13 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm overflow-hidden">
           <div className="flex flex-col lg:flex-row border-b-4 border-main bg-card">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 lg:p-6 flex-1 border-b-4 lg:border-b-0 lg:border-r-4 border-main min-w-0">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-main bg-elevated overflow-hidden flex items-center justify-center font-black text-2xl shrink-0 shadow-[4px_4px_0_var(--color-shadow)]">
-                {profile.avatar_url ? <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" /> : initials}
-              </div>
+              <UserAvatar
+                avatarUrl={profile.avatar_url}
+                avatarBgColor={profile.avatar_bg_color}
+                displayName={displayName}
+                initials={initials}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-main font-black text-2xl shrink-0 shadow-[4px_4px_0_var(--color-shadow)]"
+              />
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] sm:text-xs uppercase font-black tracking-widest text-subtle">Prediction history viewer</div>
                 <div className="font-black uppercase text-2xl sm:text-3xl tracking-tight text-main truncate">{displayName}</div>

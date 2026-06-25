@@ -4,7 +4,7 @@ import type { Database } from '../types/supabase';
 export type PointSplitCurve = 'balanced_top3' | 'winner_take_all' | 'flat_top3' | 'custom_top3';
 export type LeagueEventRow = Database['public']['Tables']['league_events']['Row'];
 export type LeagueEventLeaderboardEntryRow = Database['public']['Tables']['league_event_leaderboard_entries']['Row'];
-export type LeagueEventProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'display_name' | 'avatar_url' | 'country_code'>;
+export type LeagueEventProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'display_name' | 'avatar_url' | 'avatar_bg_color' | 'country_code'>;
 export type LeagueEventLeaderboardEntryWithProfile = LeagueEventLeaderboardEntryRow & {
   profiles: LeagueEventProfile | null;
 };
@@ -22,7 +22,7 @@ export type CreateLeagueEventInput = {
 };
 
 const LEAGUE_EVENT_FIELDS = 'id, league_id, event_type, name, starts_at, ends_at, min_stake, max_stake, recognition_pool, prize_pool, point_split_curve, payout_curve, point_split_config, payout_config, matchday, status, settled_at, cancelled_at, cancelled_by, metadata, created_at, updated_at';
-const LEAGUE_EVENT_LEADERBOARD_FIELDS = 'event_id, user_id, rank, previous_rank, points, exact_scores, accuracy, stake, point_split, point_split_factor, payout, payout_factor, updated_at, profiles:user_id(username, display_name, avatar_url, country_code)';
+const LEAGUE_EVENT_LEADERBOARD_FIELDS = 'event_id, user_id, rank, previous_rank, points, exact_scores, accuracy, stake, point_split, point_split_factor, payout, payout_factor, updated_at, profiles:user_id(username, display_name, avatar_url, avatar_bg_color, country_code)';
 const LEAGUE_EVENT_MATCH_FIELDS = 'event_id, match_id, created_at';
 
 async function invokeLeagueAction<T>(body: Record<string, unknown>) {

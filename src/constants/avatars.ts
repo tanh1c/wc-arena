@@ -1,6 +1,8 @@
 export type AvatarOption = {
   name: string;
   url: string;
+  kind?: 'image' | 'flag' | 'club';
+  suggestedBgColors?: string[];
 };
 
 // Custom football-themed avatars hosted on a CDN.
@@ -51,6 +53,37 @@ export const HIDDEN_CUSTOM_AVATAR_OPTIONS: AvatarOption[] = [
   { name: 'Mix', url: 'https://s6.imgcdn.dev/YemMRv.png' },
   { name: 'Along', url: 'https://s6.imgcdn.dev/YemCxB.jpg' },
   { name: 'Vini Legacy', url: 'https://s6.imgcdn.dev/YemIHu.png' },
+];
+
+export const CLUB_AVATAR_OPTIONS: AvatarOption[] = [
+  { name: 'AC Milan', url: '/clubs/ac-milan.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE0E0', '#111111', '#FB090B'] },
+  { name: 'Al Hilal', url: '/clubs/al-hilal-saudi.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DDEBFF', '#0055A4', '#BFD7FF'] },
+  { name: 'Arsenal', url: '/clubs/arsenal-fc.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE3E3', '#EF0107', '#063672'] },
+  { name: 'AS Monaco', url: '/clubs/as-monaco.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE3E3', '#C8102E', '#F4F4F4'] },
+  { name: 'AS Roma', url: '/clubs/as-roma.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFF0D0', '#8E1F2F', '#F0BC42'] },
+  { name: 'Aston Villa', url: '/clubs/aston-villa-football-club.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DDEBFF', '#95BFE5', '#670E36'] },
+  { name: 'Atletico Madrid', url: '/clubs/atletico-madrid.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE3E3', '#CB3524', '#272E61'] },
+  { name: 'Bayer Leverkusen', url: '/clubs/bayer-04-leverkusen.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE0E0', '#E32221', '#111111'] },
+  { name: 'Borussia Dortmund', url: '/clubs/borussia-dortmund.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFF3B0', '#FDE100', '#111111'] },
+  { name: 'Chelsea', url: '/clubs/chelsea-fc.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DFE8FF', '#034694', '#EEF3FF'] },
+  { name: 'Como 1907', url: '/clubs/como-1907.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DFF3FF', '#0057A8', '#E7F6FF'] },
+  { name: 'FC Barcelona', url: '/clubs/fc-barcelona.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#F6D5D8', '#A50044', '#004D98'] },
+  { name: 'Bayern München', url: '/clubs/fc-bayern-munchen.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE1E1', '#DC052D', '#0066B2'] },
+  { name: 'Inter Milan', url: '/clubs/fc-inter-milan.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#E0ECFF', '#0068A8', '#111111'] },
+  { name: 'Al Ittihad', url: '/clubs/ittihad-saudi-arabian-club.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFF4C2', '#111111', '#F6C800'] },
+  { name: 'Juventus', url: '/clubs/juventus-fc.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#F2F2F2', '#111111', '#FFE3EF'] },
+  { name: 'Liverpool', url: '/clubs/liverpool-football-club.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE1DF', '#C8102E', '#E8FFF4'] },
+  { name: 'Manchester City', url: '/clubs/manchester-city.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DFF3FF', '#6CABDD', '#1C2C5B'] },
+  { name: 'Manchester United', url: '/clubs/manchester-united-football-club.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFE0D6', '#DA291C', '#FFF3C4'] },
+  { name: 'Newcastle United', url: '/clubs/newcastle-united-football-club.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#F2F2F2', '#111111', '#DDEBFF'] },
+  { name: 'Marseille', url: '/clubs/olympique-de-marseille.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DFF5FF', '#009CDC', '#EEF7FF'] },
+  { name: 'Lyon', url: '/clubs/olympique-lyonnais.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#E6EDFF', '#DA291C', '#003D8F'] },
+  { name: 'PSG', url: '/clubs/paris-saint-germain.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#E6EDFF', '#004170', '#DA291C'] },
+  { name: 'Real Madrid', url: '/clubs/real-madrid-cf.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#F8F1D6', '#FEBE10', '#552583'] },
+  { name: 'Al Nassr', url: '/clubs/riyadh-nassr.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#FFF3B0', '#FDE100', '#0057B8'] },
+  { name: 'Lazio', url: '/clubs/ss-lazio.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#E3F5FF', '#87D8F7', '#DDEBFF'] },
+  { name: 'Napoli', url: '/clubs/ssc-napoli.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#DFF5FF', '#12A0D7', '#003C7A'] },
+  { name: 'Tottenham Hotspur', url: '/clubs/tottenham-hotspur-football-club.svg', kind: 'club', suggestedBgColors: ['#FFFFFF', '#EEF3FF', '#132257', '#F2F2F2'] },
 ];
 
 // World Cup team flags, self-hosted under public/flags/<iso2>.svg.
@@ -110,6 +143,7 @@ const FLAG_TEAMS: { name: string; iso2: string }[] = [
 export const FLAG_AVATAR_OPTIONS: AvatarOption[] = FLAG_TEAMS.map((team) => ({
   name: team.name,
   url: `/flags/${team.iso2}.svg`,
+  kind: 'flag',
 }));
 
-export const AVATAR_OPTIONS: AvatarOption[] = [...CUSTOM_AVATAR_OPTIONS, ...FLAG_AVATAR_OPTIONS];
+export const AVATAR_OPTIONS: AvatarOption[] = [...CUSTOM_AVATAR_OPTIONS, ...FLAG_AVATAR_OPTIONS, ...CLUB_AVATAR_OPTIONS];

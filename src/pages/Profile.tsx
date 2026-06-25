@@ -8,6 +8,7 @@ import PointsCoin from '../components/ui/PointsCoin';
 import RankBadge from '../components/ui/RankBadge';
 import StatusPill from '../components/ui/StatusPill';
 import StreakBadge from '../components/ui/StreakBadge';
+import UserAvatar from '../components/ui/UserAvatar';
 import { useAuth } from '../lib/auth';
 import { listCurrentUserBadges, type UserBadgeWithBadge } from '../services/badges';
 import { listCurrentUserLeagueMemberships, type LeagueMemberRow } from '../services/leagues';
@@ -299,10 +300,16 @@ export default function Profile({ themeControls }: ProfileProps) {
                   <button
                     type="button"
                     onClick={() => setAvatarPickerOpen(true)}
-                    className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0 overflow-hidden hover:opacity-85 transition-opacity focus:outline-none focus:ring-4 focus:ring-c2"
+                    className="shrink-0 hover:opacity-85 transition-opacity focus:outline-none focus:ring-4 focus:ring-c2 rounded-full"
                     aria-label={t('ui.changeAvatar')}
                   >
-                    {publicAvatarUrl ? <img src={publicAvatarUrl} alt={publicDisplayName} className="w-full h-full object-cover" /> : publicInitials}
+                    <UserAvatar
+                      avatarUrl={publicAvatarUrl}
+                      avatarBgColor={profile.avatar_bg_color}
+                      displayName={publicDisplayName}
+                      initials={publicInitials}
+                      className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-main rounded-full bg-c1 font-black text-2xl sm:text-3xl"
+                    />
                   </button>
                   <div className="min-w-0">
                     <div className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-main leading-none truncate">{publicDisplayName}</div>
@@ -395,7 +402,8 @@ export default function Profile({ themeControls }: ProfileProps) {
         onClose={() => setAvatarPickerOpen(false)}
         userId={authUser.id}
         currentUrl={publicAvatarUrl}
-        onSaved={(avatarUrl) => setProfile((prev) => (prev ? { ...prev, avatar_url: avatarUrl } : prev))}
+        currentBgColor={profile.avatar_bg_color}
+        onSaved={(avatarUrl, avatarBgColor) => setProfile((prev) => (prev ? { ...prev, avatar_url: avatarUrl, avatar_bg_color: avatarBgColor } : prev))}
       />
     </AppShell>
   );

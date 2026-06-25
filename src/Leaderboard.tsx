@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Medal, Star, Trophy, User, Users } from 'lucide-react';
+import { Medal, Star, Trophy, Users } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
 import PointsCoin from './components/ui/PointsCoin';
 import RankBadge from './components/ui/RankBadge';
 import StreakBadge from './components/ui/StreakBadge';
+import UserAvatar from './components/ui/UserAvatar';
 import { useAuth } from './lib/auth';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
 import { getCurrentProfile, type ProfileRow } from './services/profile';
@@ -55,18 +56,14 @@ function getRankChange(entry: LeaderboardEntryWithProfile) {
 }
 
 function Avatar({ entry, size = 'w-8 h-8' }: { entry?: LeaderboardEntryWithProfile; size?: string }) {
-  if (entry?.profiles?.avatar_url) {
-    return (
-      <div className={`${size} rounded-full border-2 border-main overflow-hidden bg-elevated mr-3 flex-shrink-0`}>
-        <img src={entry.profiles.avatar_url} alt={getDisplayName(entry)} className="w-full h-full object-cover" />
-      </div>
-    );
-  }
-
   return (
-    <div className={`${size} rounded-full border-2 border-main bg-elevated mr-3 flex items-center justify-center flex-shrink-0 font-black text-xs uppercase`}>
-      {entry ? getInitials(entry) : <User size={18} />}
-    </div>
+    <UserAvatar
+      avatarUrl={entry?.profiles?.avatar_url}
+      avatarBgColor={entry?.profiles?.avatar_bg_color}
+      displayName={entry ? getDisplayName(entry) : '—'}
+      initials={entry ? getInitials(entry) : ''}
+      className={`${size} rounded-full border-2 border-main mr-3 flex-shrink-0 font-black text-xs uppercase`}
+    />
   );
 }
 
@@ -78,9 +75,13 @@ function PodiumCard({ item, heightClass, primary, t }: { item?: PodiumItem; heig
       <div className={`${primary ? 'absolute -top-7 w-14 h-14 text-3xl bg-c1' : 'absolute -top-6 w-12 h-12 text-xl bg-card'} rounded-full border-4 border-main flex items-center justify-center font-black text-main shadow-[2px_2px_0_0_var(--color-shadow)]`}>
         {rank || '—'}
       </div>
-      <div className={`${primary ? 'w-20 h-20 md:w-24 md:h-24' : 'w-16 h-16 md:w-20 md:h-20'} rounded-full border-4 border-main overflow-hidden bg-elevated mb-3 flex-shrink-0 shadow-[2px_2px_0_0_var(--color-shadow)] flex items-center justify-center font-black text-main text-xl`}>
-        {item?.profiles?.avatar_url ? <img src={item.profiles.avatar_url} alt={getDisplayName(item)} className="w-full h-full object-cover" /> : getInitials(item)}
-      </div>
+      <UserAvatar
+        avatarUrl={item?.profiles?.avatar_url}
+        avatarBgColor={item?.profiles?.avatar_bg_color}
+        displayName={item ? getDisplayName(item) : '—'}
+        initials={item ? getInitials(item) : '—'}
+        className={`${primary ? 'w-20 h-20 md:w-24 md:h-24' : 'w-16 h-16 md:w-20 md:h-20'} rounded-full border-4 border-main mb-3 flex-shrink-0 shadow-[2px_2px_0_0_var(--color-shadow)] font-black text-main text-xl`}
+      />
       <RankBadge points={item?.points ?? 0} size={primary ? 'lg' : 'md'} showPoints className="mb-3 bg-card text-main border-2 border-main px-2 py-1 shadow-[2px_2px_0_0_var(--color-shadow)]" />
       <div className={`${primary ? 'font-bold text-base md:text-xl' : 'font-bold text-sm md:text-lg'} leading-tight truncate w-full text-center`}>{getDisplayName(item)}</div>
       <div className={`${primary ? 'font-black text-3xl md:text-4xl text-main' : 'font-black text-2xl md:text-3xl'} mb-4 flex items-center justify-center gap-2`}><PointsCoin size={primary ? 'lg' : 'md'} />{formatPoints(item?.points)} <span className="text-sm md:text-lg">{t('ui.pointsShort')}</span></div>

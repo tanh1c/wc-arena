@@ -3,13 +3,13 @@ import type { Database } from '../types/supabase';
 import { cached } from './cache';
 
 export type LeaderboardEntryRow = Database['public']['Tables']['leaderboard_entries']['Row'];
-export type LeaderboardProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'display_name' | 'avatar_url' | 'country_code'>;
+export type LeaderboardProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'display_name' | 'avatar_url' | 'avatar_bg_color' | 'country_code'>;
 export type LeaderboardEntryWithProfile = LeaderboardEntryRow & {
   profiles: LeaderboardProfile | null;
 };
 
 const LEADERBOARD_ENTRY_FIELDS = 'id, scope, league_id, user_id, rank, previous_rank, points, exact_scores, accuracy, streak, updated_at';
-const LEADERBOARD_WITH_PROFILE_FIELDS = `${LEADERBOARD_ENTRY_FIELDS}, profiles:user_id(username, display_name, avatar_url, country_code)`;
+const LEADERBOARD_WITH_PROFILE_FIELDS = `${LEADERBOARD_ENTRY_FIELDS}, profiles:user_id(username, display_name, avatar_url, avatar_bg_color, country_code)`;
 
 export async function listGlobalLeaderboard() {
   return cached('leaderboard:global', 60_000, async () => {

@@ -9,6 +9,7 @@ export type PublicPredictionHistory = {
     username: string;
     display_name: string | null;
     avatar_url: string | null;
+    avatar_bg_color: string | null;
     country_code: string | null;
     fan_club_team_id: string | null;
     points: number;
@@ -39,6 +40,7 @@ export async function getPublicUserPredictionHistory(userId: string, limit = 64)
       username: first.profile_username,
       display_name: first.profile_display_name,
       avatar_url: first.profile_avatar_url,
+      avatar_bg_color: null,
       country_code: first.profile_country_code,
       fan_club_team_id: first.profile_fan_club_team_id,
       points: first.profile_points,

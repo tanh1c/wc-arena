@@ -1469,6 +1469,7 @@ export type Database = {
       profiles: {
         Row: {
           accuracy: number | null
+          avatar_bg_color: string | null
           avatar_url: string | null
           best_streak: number
           country_code: string | null
@@ -1486,6 +1487,7 @@ export type Database = {
         }
         Insert: {
           accuracy?: number | null
+          avatar_bg_color?: string | null
           avatar_url?: string | null
           best_streak?: number
           country_code?: string | null
@@ -1503,6 +1505,7 @@ export type Database = {
         }
         Update: {
           accuracy?: number | null
+          avatar_bg_color?: string | null
           avatar_url?: string | null
           best_streak?: number
           country_code?: string | null

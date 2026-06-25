@@ -11,6 +11,7 @@ import { getCurrentProfile, type ProfileRow } from '../../services/profile';
 import PointsCoin from '../ui/PointsCoin';
 import RankBadge from '../ui/RankBadge';
 import StreakBadge from '../ui/StreakBadge';
+import UserAvatar from '../ui/UserAvatar';
 import { getPublicAvatarUrl } from '../../utils/displayName';
 
 type AppShellProps = {
@@ -185,9 +186,18 @@ export default function AppShell({ children, themeControls, fullHeight = false }
       if (typeof points !== 'number') return;
       setProfile((currentProfile) => currentProfile ? { ...currentProfile, points } : currentProfile);
     };
+    const updateProfileAvatar = (event: Event) => {
+      const detail = (event as CustomEvent<{ avatar_url?: unknown; avatar_bg_color?: unknown }>).detail;
+      if (typeof detail?.avatar_url !== 'string') return;
+      setProfile((currentProfile) => currentProfile ? { ...currentProfile, avatar_url: detail.avatar_url as string, avatar_bg_color: typeof detail.avatar_bg_color === 'string' ? detail.avatar_bg_color : null } : currentProfile);
+    };
 
     window.addEventListener('wc26:profile-points-changed', updateProfilePoints);
-    return () => window.removeEventListener('wc26:profile-points-changed', updateProfilePoints);
+    window.addEventListener('wc26:profile-avatar-changed', updateProfileAvatar);
+    return () => {
+      window.removeEventListener('wc26:profile-points-changed', updateProfilePoints);
+      window.removeEventListener('wc26:profile-avatar-changed', updateProfileAvatar);
+    };
   }, []);
 
   useEffect(() => {
@@ -314,7 +324,16 @@ export default function AppShell({ children, themeControls, fullHeight = false }
               {(() => {
                 const avatarUrl = user ? getPublicAvatarUrl(profile) : null;
                 return avatarUrl
-                  ? <img src={avatarUrl} alt="" className="w-[18px] h-[18px] rounded-full object-cover border border-inv shrink-0" />
+                  ? (
+                    <UserAvatar
+                      avatarUrl={avatarUrl}
+                      avatarBgColor={profile?.avatar_bg_color}
+                      displayName={profile?.display_name ?? profile?.username ?? t('common.profile')}
+                      initials=""
+                      className="w-[18px] h-[18px] rounded-full border border-inv shrink-0 text-[8px] font-black"
+                      imageClassName={avatarUrl.startsWith('/clubs/') ? 'w-full h-full object-contain p-0.5' : undefined}
+                    />
+                  )
                   : <User size={18} strokeWidth={2.5} />;
               })()}
               <div className="flex-col items-start leading-[1.1] hidden sm:flex">
