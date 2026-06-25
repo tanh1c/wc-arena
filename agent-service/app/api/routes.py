@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 
 from app.auth import verify_supabase_user
 from app.graph.workflow import run_agent_turn
 from app.models import AgentChatRequest, AgentChatResponse, AuthenticatedUser
+from app.picks.runner import run_agent_picks
+from app.settings import get_settings
 
 router = APIRouter()
 
@@ -41,3 +45,28 @@ async def _run_agent(payload: AgentChatRequest, request: Request, user: Authenti
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     return AgentChatResponse(**result)
+
+
+async def _run_cron_picks(x_cron_secret: str | None, secret: str | None) -> dict:
+    settings = get_settings()
+    expected = settings.cron_secret
+    provided = x_cron_secret or secret
+    if not expected or not provided or not secrets.compare_digest(provided, expected):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid cron secret")
+    return await run_agent_picks()
+
+
+@router.post("/cron/run-agent-picks")
+async def cron_run_agent_picks_post(
+    x_cron_secret: str | None = Header(default=None),
+    secret: str | None = Query(default=None),
+) -> dict:
+    return await _run_cron_picks(x_cron_secret, secret)
+
+
+@router.get("/cron/run-agent-picks")
+async def cron_run_agent_picks_get(
+    x_cron_secret: str | None = Header(default=None),
+    secret: str | None = Query(default=None),
+) -> dict:
+    return await _run_cron_picks(x_cron_secret, secret)
