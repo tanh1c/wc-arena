@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Bot, CalendarCheck, ChevronDown, MoreHorizontal, Settings, Wallet, X } from 'lucide-react';
+import { Bot, CalendarCheck, ChevronDown, MoreHorizontal, Settings, User, X } from 'lucide-react';
 import type { ThemeControls } from '../../App';
 import DailyLoginRewardPopup from '../DailyLoginRewardPopup';
 import { appNavigationGroups } from '../../config/navigation';
