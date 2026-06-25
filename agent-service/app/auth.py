@@ -16,10 +16,10 @@ def _get_bearer_token(request: Request) -> str:
 def verify_supabase_user(request: Request) -> AuthenticatedUser:
     settings = get_settings()
     token = _get_bearer_token(request)
-    if not settings.supabase_url or not settings.supabase_service_role_key:
+    if not settings.supabase_url or not settings.supabase_anon_key:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Supabase server credentials are not configured")
 
-    client = create_client(settings.supabase_url, settings.supabase_service_role_key)
+    client = create_client(settings.supabase_url, settings.supabase_anon_key)
     try:
         response = client.auth.get_user(token)
     except Exception as exc:

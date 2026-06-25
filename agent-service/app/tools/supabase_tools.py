@@ -1,29 +1,31 @@
-from functools import lru_cache
 from typing import Any
 
-from supabase import create_client
+from supabase import Client, create_client
 
 from app.settings import get_settings
 
 
-@lru_cache
-def get_supabase_client():
+def get_user_supabase_client(access_token: str) -> Client:
     settings = get_settings()
-    if not settings.supabase_url or not settings.supabase_service_role_key:
+    if not settings.supabase_url or not settings.supabase_anon_key:
         raise RuntimeError("Supabase server credentials are not configured")
-    return create_client(settings.supabase_url, settings.supabase_service_role_key)
+    if not access_token:
+        raise RuntimeError("Missing user access token")
+    client = create_client(settings.supabase_url, settings.supabase_anon_key)
+    client.postgrest.auth(access_token)
+    return client
 
 
-def _single_table_row(table: str, row_id: str) -> dict[str, Any]:
-    response = get_supabase_client().table(table).select("*").eq("id", row_id).limit(1).execute()
+def _single_table_row(client: Client, table: str, row_id: str) -> dict[str, Any]:
+    response = client.table(table).select("*").eq("id", row_id).limit(1).execute()
     rows = response.data or []
     if not rows:
         raise ValueError(f"{table} row not found: {row_id}")
     return rows[0]
 
 
-async def get_match(match_id: str) -> dict[str, Any]:
-    match = _single_table_row("matches", match_id)
+async def get_match(client: Client, match_id: str) -> dict[str, Any]:
+    match = _single_table_row(client, "matches", match_id)
     return {
         "id": match["id"],
         "home_team_id": match["home_team_id"],
@@ -41,8 +43,8 @@ async def get_match(match_id: str) -> dict[str, Any]:
     }
 
 
-async def get_teams(home_team_id: str, away_team_id: str) -> dict[str, Any]:
-    response = get_supabase_client().table("teams").select("*").in_("id", [home_team_id, away_team_id]).execute()
+async def get_teams(client: Client, home_team_id: str, away_team_id: str) -> dict[str, Any]:
+    response = client.table("teams").select("*").in_("id", [home_team_id, away_team_id]).execute()
     rows = response.data or []
     teams = {row["id"]: row for row in rows}
     return {
@@ -51,8 +53,8 @@ async def get_teams(home_team_id: str, away_team_id: str) -> dict[str, Any]:
     }
 
 
-async def get_espn_context(match_id: str) -> dict[str, Any]:
-    match = _single_table_row("matches", match_id)
+async def get_espn_context(client: Client, match_id: str) -> dict[str, Any]:
+    match = _single_table_row(client, "matches", match_id)
     summary = match.get("espn_summary") if isinstance(match.get("espn_summary"), dict) else {}
     return {
         "event_id": match.get("espn_event_id"),
@@ -71,9 +73,9 @@ async def get_espn_context(match_id: str) -> dict[str, Any]:
     }
 
 
-async def get_prediction_signal(match_id: str) -> dict[str, Any]:
-    match = _single_table_row("matches", match_id)
-    rpc_response = get_supabase_client().rpc("get_match_prediction_outcome_summary", {"target_match_id": match_id}).execute()
+async def get_prediction_signal(client: Client, match_id: str) -> dict[str, Any]:
+    match = _single_table_row(client, "matches", match_id)
+    rpc_response = client.rpc("get_match_prediction_outcome_summary", {"target_match_id": match_id}).execute()
     community = (rpc_response.data or [{}])[0] if rpc_response.data else {}
     return {
         "espn": {
@@ -86,10 +88,9 @@ async def get_prediction_signal(match_id: str) -> dict[str, Any]:
     }
 
 
-async def get_user_prediction_history(user_id: str) -> dict[str, Any]:
+async def get_user_prediction_history(client: Client, user_id: str) -> dict[str, Any]:
     response = (
-        get_supabase_client()
-        .table("predictions")
+        client.table("predictions")
         .select("match_id,prediction_type,home_score,away_score,predicted_outcome,confidence,status,created_at,updated_at")
         .eq("user_id", user_id)
         .order("updated_at", desc=True)
@@ -99,10 +100,9 @@ async def get_user_prediction_history(user_id: str) -> dict[str, Any]:
     return {"recent_predictions": response.data or []}
 
 
-async def get_leaderboard_context(user_id: str) -> dict[str, Any]:
+async def get_leaderboard_context(client: Client, user_id: str) -> dict[str, Any]:
     response = (
-        get_supabase_client()
-        .table("leaderboard_entries")
+        client.table("leaderboard_entries")
         .select("scope,rank,previous_rank,points,accuracy,exact_scores,streak,league_id,updated_at")
         .eq("user_id", user_id)
         .order("updated_at", desc=True)

@@ -33,12 +33,14 @@ async def run_agent_turn(
     match_id: str | None,
     user_id: str,
     email: str | None,
+    access_token: str,
     request_metadata: dict,
 ) -> dict:
     state: AgentState = {
         "messages": [{"role": "user", "content": message}],
         "user_id": user_id,
         "email": email,
+        "access_token": access_token,
         "session_id": session_id or str(uuid4()),
         "match_id": match_id,
         "request_metadata": request_metadata,
