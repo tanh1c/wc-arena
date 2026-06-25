@@ -50,6 +50,26 @@ class CronAuthTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["picked"], 1)
 
+    def test_runs_with_query_secret_via_head(self):
+        with patch.dict(os.environ, {"CRON_SECRET": "topsecret", "AGENT_ALLOWED_ORIGIN": "http://localhost:3000"}, clear=False):
+            get_settings.cache_clear()
+            with patch("app.api.routes.run_agent_picks", new=_async_return({"picked": 1, "skipped": 0, "errors": []})):
+                client = self._client()
+                resp = client.head("/cron/run-agent-picks?secret=topsecret")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_head_rejects_missing_secret(self):
+        with patch.dict(os.environ, {"CRON_SECRET": "topsecret", "AGENT_ALLOWED_ORIGIN": "http://localhost:3000"}, clear=False):
+            get_settings.cache_clear()
+            client = self._client()
+            resp = client.head("/cron/run-agent-picks")
+        self.assertEqual(resp.status_code, 401)
+
+    def test_health_accepts_head(self):
+        client = self._client()
+        resp = client.head("/health")
+        self.assertEqual(resp.status_code, 200)
+
 
 def _async_return(value):
     async def _fn(*args, **kwargs):

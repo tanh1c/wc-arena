@@ -11,7 +11,7 @@ from app.settings import get_settings
 router = APIRouter()
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 def health() -> dict[str, bool]:
     return {"ok": True}
 
@@ -64,7 +64,7 @@ async def cron_run_agent_picks_post(
     return await _run_cron_picks(x_cron_secret, secret)
 
 
-@router.get("/cron/run-agent-picks")
+@router.api_route("/cron/run-agent-picks", methods=["GET", "HEAD"])
 async def cron_run_agent_picks_get(
     x_cron_secret: str | None = Header(default=None),
     secret: str | None = Query(default=None),
