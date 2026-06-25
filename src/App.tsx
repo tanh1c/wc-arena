@@ -16,6 +16,7 @@ const Achievements = lazy(() => import('./pages/Achievements'));
 const Activity = lazy(() => import('./pages/Activity'));
 const AdminAudit = lazy(() => import('./pages/AdminAudit'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const Agent = lazy(() => import('./pages/Agent'));
 const Badges = lazy(() => import('./pages/Badges'));
 const JoinLeague = lazy(() => import('./pages/JoinLeague'));
 const LeagueCreate = lazy(() => import('./pages/LeagueCreate'));
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="/reset-password" element={<LegacyRoute Component={ResetPassword} themeControls={themeControls} />} />
           <Route path="/onboarding" element={<LegacyRoute Component={Onboarding} themeControls={themeControls} />} />
           <Route path="/matches" element={<LegacyRoute Component={Fixtures} themeControls={themeControls} />} />
+          <Route path="/agent" element={<Agent themeControls={themeControls} />} />
           <Route path="/picks" element={<LegacyRoute Component={Picks} themeControls={themeControls} />} />
           <Route path="/my-predictions" element={<MyPredictions themeControls={themeControls} />} />
           <Route path="/leaderboard" element={<LegacyRoute Component={Leaderboard} themeControls={themeControls} />} />

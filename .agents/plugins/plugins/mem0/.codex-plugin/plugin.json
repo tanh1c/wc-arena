@@ -1,0 +1,22 @@
+{
+  "name": "mem0",
+  "version": "0.1.0",
+  "description": "Mem0 MCP integration for Codex.",
+  "author": {
+    "name": "Local"
+  },
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Mem0",
+    "shortDescription": "Connect Codex to Mem0 through MCP.",
+    "longDescription": "Provides a local plugin wrapper for the Mem0 hosted MCP server.",
+    "developerName": "Local",
+    "category": "Productivity",
+    "capabilities": [
+      "MCP"
+    ],
+    "defaultPrompt": [
+      "Use Mem0 context for this task."
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { CalendarCheck, ChevronDown, MoreHorizontal, Settings, Wallet, X } from 'lucide-react';
+import { Bot, CalendarCheck, ChevronDown, MoreHorizontal, Settings, Wallet, X } from 'lucide-react';
 import type { ThemeControls } from '../../App';
 import DailyLoginRewardPopup from '../DailyLoginRewardPopup';
 import { appNavigationGroups } from '../../config/navigation';
@@ -300,6 +300,12 @@ export default function AppShell({ children, themeControls, fullHeight = false }
                 </span>
                 <span className="sm:hidden">+1</span>
               </button>
+            )}
+            {user && (
+              <Link to="/agent" aria-label={t('nav.items.agent')} className="border-2 border-main py-2 px-3 md:px-4 font-black uppercase text-xs flex items-center gap-2 bg-c3 text-main hover:bg-c1 shadow-[4px_4px_0_0_var(--color-shadow)] transition-all active:translate-y-[2px] active:translate-x-[2px] active:shadow-none">
+                <Bot size={18} strokeWidth={2.5} />
+                <span className="hidden md:inline">{t('nav.items.agent')}</span>
+              </Link>
             )}
             {user && <HeaderUserStats profile={profile} />}
             <ThemeSettings themeControls={themeControls} />
