@@ -251,6 +251,7 @@ def safety_review(state: AgentState) -> AgentState:
 async def memory_write(state: AgentState) -> AgentState:
     from app.memory import save_interaction, save_session_context
 
+    _save_session_language_context(state, save_session_context)
     _save_latest_match_context(state, save_session_context)
     await save_interaction(
         user_id=state.get("user_id", ""),
@@ -264,6 +265,17 @@ async def memory_write(state: AgentState) -> AgentState:
         },
     )
     return state
+
+
+def _save_session_language_context(state: AgentState, save_session_context_fn) -> None:
+    response_language = state.get("response_language")
+    if not response_language:
+        return
+    save_session_context_fn(
+        state.get("user_id", ""),
+        state.get("session_id", ""),
+        {"response_language": response_language},
+    )
 
 
 def _save_latest_match_context(state: AgentState, save_session_context_fn) -> None:

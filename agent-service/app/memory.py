@@ -28,7 +28,7 @@ def get_session_context(user_id: str, session_id: str) -> dict[str, Any]:
 def save_session_context(user_id: str, session_id: str, context: dict[str, Any]) -> None:
     if not user_id or not session_id or not context:
         return
-    _SESSION_CONTEXT[(user_id, session_id)] = dict(context)
+    _SESSION_CONTEXT[(user_id, session_id)] = {**_SESSION_CONTEXT.get((user_id, session_id), {}), **context}
 
 
 async def search_user_memory(user_id: str, query: str) -> list[dict[str, Any]]:

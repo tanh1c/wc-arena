@@ -1,8 +1,19 @@
 import unittest
 from unittest.mock import patch
 
-from app.graph.workflow import run_agent_turn
+from app.graph.workflow import detect_response_language, run_agent_turn
 from app.memory import save_session_context
+
+
+class ResponseLanguageDetectionTest(unittest.TestCase):
+    def test_detects_unaccented_vietnamese_question(self):
+        self.assertEqual(detect_response_language("mai ai dau"), "Vietnamese")
+
+    def test_detects_english_question(self):
+        self.assertEqual(detect_response_language("when is Argentina next match"), "English")
+
+    def test_uses_previous_language_for_short_ambiguous_followup(self):
+        self.assertEqual(detect_response_language("ok", previous_language="Vietnamese"), "Vietnamese")
 
 
 class WorkflowSessionContextTest(unittest.IsolatedAsyncioTestCase):
