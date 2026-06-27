@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.tools.football_tools import gather_ambiguous_matchup_context, gather_fixture_list_context, gather_reminder_context, gather_rules_context, gather_team_context
+from app.tools.football_tools import gather_ambiguous_matchup_context, gather_fixture_list_context, gather_reminder_context, gather_rules_context, gather_team_context, gather_team_schedule_context
 
 
 class FootballContextTest(unittest.IsolatedAsyncioTestCase):
@@ -86,6 +86,32 @@ class FootballContextTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context["reminder_context"]["mode"], "upcoming_matches")
         self.assertEqual(context["reminder_matches"][0]["home_team"]["name"], "Argentina")
         self.assertIn("list_upcoming_matches", tools)
+
+    async def test_gathers_team_schedule_next_match_context(self):
+        teams = [
+            {"id": "ARG", "name": "Argentina", "short_name": "ARG", "country_code": "AR", "fifa_rank": 1},
+            {"id": "KOR", "name": "Korea Republic", "short_name": "KOR", "country_code": "KR"},
+        ]
+        matches = [
+            {"id": "old", "home_team_id": "ARG", "away_team_id": "KOR", "kickoff_at": "2026-06-26T18:00:00+00:00"},
+            {"id": "next", "home_team_id": "ARG", "away_team_id": "KOR", "kickoff_at": "2026-06-28T20:00:00+00:00", "city": "Miami", "stage": "Group"},
+        ]
+        with (
+            patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),
+            patch("app.tools.football_tools.list_team_rows", new=AsyncMock(return_value=teams)),
+            patch("app.tools.football_tools.list_matches_for_team", new=AsyncMock(return_value=matches)),
+            patch("app.graph.nodes._call_llm", return_value='{"team_id": "ARG"}'),
+        ):
+            context, tools = await gather_team_schedule_context(
+                "argentina đá trận tiếp theo khi nào",
+                "token-1",
+                now_utc=datetime(2026, 6, 27, 12, tzinfo=timezone.utc),
+            )
+
+        self.assertEqual(context["team_schedule_context"]["team"]["id"], "ARG")
+        self.assertEqual(context["team_schedule_context"]["next_match"]["id"], "next")
+        self.assertEqual(context["team_schedule_context"]["next_match"]["away_team"]["name"], "Korea Republic")
+        self.assertIn("list_matches_for_team", tools)
 
     async def test_gathers_single_team_context(self):
         teams = [{"id": "ARG", "name": "Argentina", "short_name": "ARG", "country_code": "AR", "fifa_rank": 1}]

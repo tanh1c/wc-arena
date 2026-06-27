@@ -118,8 +118,10 @@ async def data_gather(state: AgentState) -> AgentState:
         gather_reminder_context,
         gather_rules_context,
         gather_team_context,
+        gather_team_schedule_context,
         is_fixture_list_query,
         is_reminder_query,
+        is_team_schedule_query,
         resolve_matchup_context,
     )
 
@@ -151,6 +153,12 @@ async def data_gather(state: AgentState) -> AgentState:
         elif extract_ambiguous_matchup_query(message):
             tool_branch = "ambiguous_matchup_context"
             tool_results, used_tools = await gather_ambiguous_matchup_context(
+                message,
+                state.get("access_token", ""),
+            )
+        elif is_team_schedule_query(message):
+            tool_branch = "team_schedule_context"
+            tool_results, used_tools = await gather_team_schedule_context(
                 message,
                 state.get("access_token", ""),
             )
@@ -201,7 +209,7 @@ def analysis(state: AgentState) -> AgentState:
         return {**state, "answer": off_topic_guardrail_answer()}
 
     fallback = _fallback_answer(state, message)
-    if state.get("tool_results", {}).get("ambiguous_matchup") and fallback:
+    if is_guardrail_fallback_context(state.get("tool_results", {})) and fallback:
         return {**state, "answer": fallback}
 
     prompt = _build_prompt(state, message)
@@ -230,6 +238,10 @@ def feature_suggestion_prompt() -> str:
 
 def off_topic_guardrail_answer() -> str:
     return f"I can help with We Speak Football only. {feature_suggestion_prompt()}"
+
+
+def is_guardrail_fallback_context(context: dict[str, Any]) -> bool:
+    return any(context.get(key) for key in ("ambiguous_matchup", "unmatched_matchup", "unmatched_team_context"))
 
 
 def safety_review(state: AgentState) -> AgentState:
@@ -297,6 +309,7 @@ def _build_prompt(state: AgentState, message: str) -> str:
             "For score suggestions, provide an exact-score suggestion and a short confidence rationale only from available match, team, ESPN, and community signals.",
             "Treat reminder requests as upcoming/locking match summaries; do not claim push notifications are scheduled unless tool context says so.",
             "Avoid betting, odds, wager, deposit, or gambling framing.",
+            f"Respond in {state.get('response_language') or 'the user message language'}.",
             f"Intent: {state.get('intent')}",
             f"User message: {message}",
             f"Memories: {json.dumps(state.get('memories', []), default=str)[:2500]}",
@@ -352,19 +365,17 @@ def _fallback_answer(state: AgentState, message: str) -> str:
             return f"Do you mean {display_matchup}? I found that fixture. If yes, ask me to preview or predict that match. {feature_suggestion_prompt()}"
         return f"Do you mean {display_matchup}? If yes, ask me to preview or predict that match. {feature_suggestion_prompt()}"
     if unmatched:
-        suggestions = unmatched.get("suggestions") or []
-        suggestion_text = f" For example: {', '.join(suggestions[:4])}." if suggestions else ""
-        return f"I couldn't confidently find that matchup in the World Cup fixtures. Could you clarify the team names?{suggestion_text} {feature_suggestion_prompt()}"
+        return off_topic_guardrail_answer()
     if context.get("fixture_window"):
         return _fixture_window_answer(context)
     if context.get("reminder_context"):
         return _reminder_answer(context)
     if context.get("team_context"):
         return _team_context_answer(context)
+    if context.get("team_schedule_context"):
+        return _team_schedule_answer(context, state.get("response_language"))
     if context.get("unmatched_team_context"):
-        suggestions = context["unmatched_team_context"].get("suggestions") or []
-        suggestion_text = f" For example: {', '.join(suggestions[:4])}." if suggestions else ""
-        return f"I couldn't confidently identify the team for that question. Could you provide the national team name more clearly?{suggestion_text} {feature_suggestion_prompt()}"
+        return off_topic_guardrail_answer()
     if context.get("rules_context"):
         return _rules_context_answer(context)
     if match and teams:
@@ -417,6 +428,27 @@ def _reminder_answer(context: dict[str, Any]) -> str:
         lines.append(f"- {_match_name(match)} kicks off at {match.get('kickoff_at')} and locks at {match.get('lock_at')}.")
     lines.append("I can summarize upcoming locks, but push notifications are not scheduled from this chat yet.")
     return " ".join(lines)
+
+
+def _team_schedule_answer(context: dict[str, Any], response_language: str | None = None) -> str:
+    schedule = context.get("team_schedule_context", {})
+    team = schedule.get("team", {})
+    next_match = schedule.get("next_match")
+    team_name = team.get("name") or team.get("id") or "that team"
+    if not next_match:
+        if response_language == "Vietnamese":
+            return f"Tôi chưa có trận sắp tới của {team_name} trong dữ liệu hiện tại. {feature_suggestion_prompt()}"
+        return f"I don't have an upcoming match for {team_name} in the current tool context. {feature_suggestion_prompt()}"
+
+    matchup = _match_name(next_match)
+    kickoff = next_match.get("kickoff_at")
+    location = f" tại {next_match.get('city')}" if response_language == "Vietnamese" and next_match.get("city") else f" in {next_match.get('city')}" if next_match.get("city") else ""
+    stage = next_match.get("stage")
+    if response_language == "Vietnamese":
+        stage_text = f" Vòng: {stage}." if stage else ""
+        return f"Trận tiếp theo của {team_name} là {matchup}, diễn ra lúc {kickoff}{location}.{stage_text}"
+    stage_text = f" Stage: {stage}." if stage else ""
+    return f"{team_name}'s next match is {matchup} at {kickoff}{location}.{stage_text}"
 
 
 def _team_context_answer(context: dict[str, Any]) -> str:

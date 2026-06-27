@@ -12,6 +12,7 @@ class AgentState(TypedDict, total=False):
     session_id: str
     match_id: str | None
     context_match_source: str | None
+    response_language: str | None
     intent: AgentIntent
     memories: list[dict[str, Any]]
     tool_results: dict[str, Any]

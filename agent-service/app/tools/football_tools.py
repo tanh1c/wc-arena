@@ -42,7 +42,9 @@ FIXTURE_QUERY_RE = re.compile(r"\b(?:fixture|fixtures|schedule|match schedule|to
 REMINDER_QUERY_RE = re.compile(r"\b(?:remind|reminder|notify|notification|alert|nhắc|nhac|thông báo|thong bao|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
 RULES_QUERY_RE = re.compile(r"\b(?:rule|rules|points|scoring|leaderboard|ranking|rank|deadline|lock|bảng xếp hạng|bang xep hang|xếp hạng|xep hang|leo bảng|leo bang|điểm|diem|luật|luat)\b", re.IGNORECASE)
 TEAM_CONTEXT_RE = re.compile(r"\b(?:team|squad|players|lineup|form|head-to-head|h2h|đội hình|doi hinh|phong độ|phong do|đối đầu|doi dau|lịch sử đối đầu|lich su doi dau)\b", re.IGNORECASE)
+TEAM_SCHEDULE_RE = re.compile(r"\b(?:next\s+match|match\s+next|schedule|fixture|fixtures|lịch|lich|trận\s+tiếp\s+theo|tran\s+tiep\s+theo|trận\s+kế\s+tiếp|tran\s+ke\s+tiep|đá\s+khi\s+nào|da\s+khi\s+nao|đá\s+trận|da\s+tran|còn\s+trận|con\s+tran)\b", re.IGNORECASE)
 AMBIGUOUS_NON_TEAM_TERMS = {"doi hinh", "phong do", "lineup", "form", "team", "squad", "players", "player"}
+TEAM_SCHEDULE_CLEAN_RE = re.compile(r"\b(?:when|is|the|next|match|schedule|fixture|fixtures|lịch|lich|trận|tran|tiếp|tiep|theo|kế|ke|đá|da|khi|nào|nao|còn|con|của|cua)\b", re.IGNORECASE)
 
 
 def normalize_team_query(value: str) -> str:
@@ -148,6 +150,20 @@ def is_team_context_query(message: str) -> bool:
     return bool(TEAM_CONTEXT_RE.search(message))
 
 
+def is_team_schedule_query(message: str) -> bool:
+    return bool(TEAM_SCHEDULE_RE.search(normalize_team_query(message)))
+
+
+def extract_team_schedule_query(message: str) -> str | None:
+    if not is_team_schedule_query(message):
+        return None
+    if extract_matchup_query(message) or extract_ambiguous_matchup_query(message):
+        return None
+    cleaned = TEAM_SCHEDULE_CLEAN_RE.sub(" ", message)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ?!.,;:-")
+    return cleaned or None
+
+
 def extract_matchup_query(message: str) -> tuple[str, str] | None:
     match = MATCHUP_RE.search(message.strip())
     if not match:
@@ -201,6 +217,15 @@ def _compact_team_from_lookup(team_id: str, teams_by_id: dict[str, dict[str, Any
         "group_code": team.get("group_code"),
         "fifa_rank": team.get("fifa_rank"),
     }
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _attach_match_teams(matches: list[dict[str, Any]], teams: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -286,6 +311,38 @@ async def gather_ambiguous_matchup_context(message: str, access_token: str) -> t
     else:
         _log_resolution("ambiguous_matchup_resolved", message=message, resolved_team_ids=[first_team_id, second_team_id])
     return {"ambiguous_matchup": ambiguous_matchup}, ["list_team_rows", "resolve_team_id", "find_match_by_team_ids"]
+
+
+async def gather_team_schedule_context(message: str, access_token: str, now_utc: datetime | None = None) -> tuple[dict[str, Any], list[str]]:
+    query = extract_team_schedule_query(message)
+    if not query:
+        _log_resolution("team_schedule_not_extracted", message=message)
+        return {}, []
+
+    client = get_user_supabase_client(access_token)
+    teams = await list_team_rows(client)
+    team_id = resolve_team_id_from_rows(query, teams)
+    if not team_id:
+        _log_resolution("team_schedule_unresolved", message=message, query=query)
+        return {"unmatched_team_context": {"query": query, "suggestions": team_suggestions(teams)}}, ["list_team_rows", "resolve_team_id"]
+
+    team = next((row for row in teams if row.get("id") == team_id), {"id": team_id})
+    matches = await list_matches_for_team(client, team_id)
+    attached_matches = _attach_match_teams(matches, teams)
+    now = now_utc or datetime.now(timezone.utc)
+    upcoming_matches = sorted(
+        [match for match in attached_matches if _parse_datetime(match.get("kickoff_at")) and _parse_datetime(match.get("kickoff_at")) >= now],
+        key=lambda match: _parse_datetime(match.get("kickoff_at")),
+    )
+    _log_resolution("team_schedule_resolved", message=message, query=query, team_id=team_id, match_count=len(attached_matches), upcoming_count=len(upcoming_matches))
+    return {
+        "team_schedule_context": {
+            "team": team,
+            "matches": attached_matches,
+            "upcoming_matches": upcoming_matches,
+            "next_match": upcoming_matches[0] if upcoming_matches else None,
+        }
+    }, ["list_team_rows", "resolve_team_id", "list_matches_for_team"]
 
 
 async def gather_team_context(message: str, access_token: str) -> tuple[dict[str, Any], list[str]]:

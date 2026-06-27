@@ -132,8 +132,38 @@ class AnalysisGuardrailTest(unittest.TestCase):
         self.assertIn("upcoming lock reminders", result["answer"])
         call_llm.assert_not_called()
 
+    def test_unmatched_matchup_returns_guardrail_without_entity_commentary(self):
+        state = {
+            "messages": [{"role": "user", "content": "messi với ronaldo chọn ai"}],
+            "intent": "prediction_help",
+            "tool_results": {"unmatched_matchup": {"teams": ["messi", "ronaldo"], "resolved_team_ids": ["arg", None]}},
+        }
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = analysis(state)
+
+        self.assertIn("I can help with We Speak Football only", result["answer"])
+        self.assertIn("fixtures by date", result["answer"])
+        self.assertNotIn("messi", result["answer"].lower())
+        self.assertNotIn("ronaldo", result["answer"].lower())
+        call_llm.assert_not_called()
+
 
 class DataGatherTest(unittest.IsolatedAsyncioTestCase):
+    async def test_gathers_team_schedule_before_generic_match_preview(self):
+        state = {
+            "messages": [{"role": "user", "content": "argentina đá trận tiếp theo khi nào"}],
+            "intent": "match_preview",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with patch("app.tools.football_tools.gather_team_schedule_context", return_value=({"team_schedule_context": {"team": {"id": "ARG"}}}, ["list_team_rows", "resolve_team_id", "list_matches_for_team"])):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["team_schedule_context"]["team"]["id"], "ARG")
+        self.assertEqual(result["used_tools"], ["list_team_rows", "resolve_team_id", "list_matches_for_team"])
+
     async def test_resolves_natural_language_matchup_without_match_id(self):
         state = {
             "messages": [{"role": "user", "content": "phân tích bồ đào nha vs colombia"}],

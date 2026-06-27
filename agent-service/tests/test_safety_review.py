@@ -24,9 +24,14 @@ class BuildPromptTest(unittest.TestCase):
         self.assertIn("Do not invent", prompt)
         self.assertIn("squads", prompt)
 
+    def test_instructs_response_language_from_context(self):
+        prompt = _build_prompt({"intent": "match_preview", "response_language": "Vietnamese", "memories": [], "tool_results": {}}, "argentina đá trận tiếp theo khi nào")
+
+        self.assertIn("Respond in Vietnamese", prompt)
+
 
 class FallbackAnswerTest(unittest.TestCase):
-    def test_asks_for_clarification_when_matchup_unmatched(self):
+    def test_unmatched_matchup_returns_capability_guardrail(self):
         answer = _fallback_answer(
             {
                 "tool_results": {
@@ -39,8 +44,10 @@ class FallbackAnswerTest(unittest.TestCase):
             "foo vs bar",
         )
 
-        self.assertIn("Could you clarify the team names", answer)
-        self.assertIn("Portugal", answer)
+        self.assertIn("I can help with We Speak Football only", answer)
+        self.assertIn("fixtures by date", answer)
+        self.assertNotIn("foo", answer)
+        self.assertNotIn("Portugal", answer)
 
     def test_lists_fixture_window_from_tool_context(self):
         answer = _fallback_answer(

@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 from app.tools.football_tools import (
     extract_ambiguous_matchup_query,
     extract_matchup_query,
+    extract_team_schedule_query,
     is_fixture_list_query,
     is_reminder_query,
+    is_team_schedule_query,
     normalize_team_query,
     resolve_relative_date_window,
     resolve_team_id_from_rows,
@@ -85,6 +87,14 @@ class MatchupResolutionTest(unittest.TestCase):
     def test_explicit_connector_does_not_use_ambiguous_matchup(self):
         self.assertIsNone(extract_ambiguous_matchup_query("bồ đào nha với colombia"))
         self.assertEqual(extract_matchup_query("bồ đào nha với colombia"), ("bồ đào nha", "colombia"))
+
+    def test_detects_team_next_match_query(self):
+        self.assertTrue(is_team_schedule_query("argentina đá trận tiếp theo khi nào"))
+        self.assertEqual(extract_team_schedule_query("argentina đá trận tiếp theo khi nào"), "argentina")
+
+    def test_extracts_english_team_next_match_query(self):
+        self.assertTrue(is_team_schedule_query("when is Argentina next match"))
+        self.assertEqual(extract_team_schedule_query("when is Argentina next match"), "Argentina")
 
 
 if __name__ == "__main__":

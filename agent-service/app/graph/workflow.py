@@ -6,6 +6,11 @@ from app.graph.state import AgentState
 from app.memory import get_session_context
 
 FOLLOW_UP_MATCH_RE = re.compile(r"(?:trận đó|tran do|trận này|tran nay|that match|this match|match đó|match do)", re.IGNORECASE)
+VIETNAMESE_RE = re.compile(r"[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]|\b(?:toi|tôi|cho|tran|trận|doi|đội|da|đá|khi nao|lịch|lich)\b", re.IGNORECASE)
+
+
+def detect_response_language(message: str) -> str:
+    return "Vietnamese" if VIETNAMESE_RE.search(message) else "English"
 
 
 def build_agent_graph():
@@ -56,6 +61,7 @@ async def run_agent_turn(
         "session_id": resolved_session_id,
         "match_id": match_id,
         "context_match_source": context_match_source,
+        "response_language": detect_response_language(message),
         "request_metadata": request_metadata,
     }
 
