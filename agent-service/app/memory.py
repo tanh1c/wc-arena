@@ -25,7 +25,7 @@ async def search_user_memory(user_id: str, query: str) -> list[dict[str, Any]]:
     if client is None:
         return []
     try:
-        results = client.search(query=query, user_id=user_id, limit=5)
+        results = client.search(query=query, filters={"user_id": user_id}, limit=5)
     except Exception:
         logger.warning("mem0 search failed for user %s", user_id, exc_info=True)
         return []
