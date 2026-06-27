@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.graph.nodes import data_gather, intent_router
+from app.graph.nodes import analysis, data_gather, intent_router
 
 
 class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
@@ -75,6 +75,64 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["intent"], "rules_help")
 
 
+class MemoryWriteSessionContextTest(unittest.IsolatedAsyncioTestCase):
+    async def test_saves_latest_match_context(self):
+        state = {
+            "messages": [{"role": "user", "content": "POR vs COL"}],
+            "user_id": "user-2",
+            "session_id": "session-2",
+            "answer": "Portugal vs Colombia preview",
+            "intent": "match_preview",
+            "tool_results": {
+                "match": {"id": "m2", "home_team_id": "POR", "away_team_id": "COL"},
+                "teams": {"home": {"name": "Portugal"}, "away": {"name": "Colombia"}},
+            },
+        }
+
+        with (
+            patch("app.graph.nodes.save_interaction", create=True) as unused_save_interaction,
+            patch("app.memory.get_memory_client", return_value=None),
+        ):
+            from app.graph.nodes import memory_write
+            from app.memory import get_session_context
+
+            await memory_write(state)
+
+        self.assertEqual(get_session_context("user-2", "session-2")["match_id"], "m2")
+
+
+class AnalysisGuardrailTest(unittest.TestCase):
+    def test_off_topic_general_chat_returns_tool_suggestions_without_llm(self):
+        state = {
+            "messages": [{"role": "user", "content": "explain stock trading"}],
+            "intent": "general_chat",
+            "tool_results": {},
+        }
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = analysis(state)
+
+        self.assertIn("fixtures by date", result["answer"])
+        self.assertIn("exact-score prediction", result["answer"])
+        self.assertIn("leaderboard climbing", result["answer"])
+        call_llm.assert_not_called()
+
+    def test_ambiguous_matchup_clarification_includes_feature_suggestions(self):
+        state = {
+            "messages": [{"role": "user", "content": "bồ đào nha và colombia"}],
+            "intent": "team_context",
+            "tool_results": {"ambiguous_matchup": {"display_matchup": "Portugal vs Colombia", "match_id": "m1"}},
+        }
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = analysis(state)
+
+        self.assertIn("Do you mean Portugal vs Colombia", result["answer"])
+        self.assertIn("fixtures by date", result["answer"])
+        self.assertIn("upcoming lock reminders", result["answer"])
+        call_llm.assert_not_called()
+
+
 class DataGatherTest(unittest.IsolatedAsyncioTestCase):
     async def test_resolves_natural_language_matchup_without_match_id(self):
         state = {
@@ -103,6 +161,24 @@ class DataGatherTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["tool_results"]["fixture_window"]["label"], "tomorrow")
         self.assertEqual(result["used_tools"], ["list_matches_by_window"])
+
+    async def test_gathers_ambiguous_matchup_before_team_context(self):
+        state = {
+            "messages": [{"role": "user", "content": "bồ đào nha và colombia"}],
+            "intent": "team_context",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with (
+            patch("app.tools.football_tools.gather_ambiguous_matchup_context", return_value=({"ambiguous_matchup": {"display_matchup": "Portugal vs Colombia"}}, ["list_team_rows", "resolve_team_id", "find_match_by_team_ids"])),
+            patch("app.tools.football_tools.gather_team_context") as gather_team_context,
+        ):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["ambiguous_matchup"]["display_matchup"], "Portugal vs Colombia")
+        self.assertEqual(result["used_tools"], ["list_team_rows", "resolve_team_id", "find_match_by_team_ids"])
+        gather_team_context.assert_not_called()
 
     async def test_gathers_short_vietnamese_tomorrow_fixture_list(self):
         state = {

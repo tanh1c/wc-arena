@@ -1,7 +1,11 @@
+import re
 from uuid import uuid4
 
 from app.graph.nodes import analysis, data_gather, intent_router, memory_retrieve, memory_write, safety_review
 from app.graph.state import AgentState
+from app.memory import get_session_context
+
+FOLLOW_UP_MATCH_RE = re.compile(r"(?:trận đó|tran do|trận này|tran nay|that match|this match|match đó|match do)", re.IGNORECASE)
 
 
 def build_agent_graph():
@@ -36,13 +40,22 @@ async def run_agent_turn(
     access_token: str,
     request_metadata: dict,
 ) -> dict:
+    resolved_session_id = session_id or str(uuid4())
+    context_match_source = None
+    if not match_id and FOLLOW_UP_MATCH_RE.search(message):
+        session_context = get_session_context(user_id, resolved_session_id)
+        match_id = session_context.get("match_id")
+        if match_id:
+            context_match_source = "session"
+
     state: AgentState = {
         "messages": [{"role": "user", "content": message}],
         "user_id": user_id,
         "email": email,
         "access_token": access_token,
-        "session_id": session_id or str(uuid4()),
+        "session_id": resolved_session_id,
         "match_id": match_id,
+        "context_match_source": context_match_source,
         "request_metadata": request_metadata,
     }
 

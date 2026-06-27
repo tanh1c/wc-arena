@@ -110,7 +110,9 @@ def _log_agent_tool_event(event: str, **fields: Any) -> None:
 
 async def data_gather(state: AgentState) -> AgentState:
     from app.tools.football_tools import (
+        extract_ambiguous_matchup_query,
         extract_matchup_query,
+        gather_ambiguous_matchup_context,
         gather_fixture_list_context,
         gather_match_context,
         gather_reminder_context,
@@ -145,6 +147,12 @@ async def data_gather(state: AgentState) -> AgentState:
                 state.get("user_id", ""),
                 state.get("access_token", ""),
                 include_user=include_user,
+            )
+        elif extract_ambiguous_matchup_query(message):
+            tool_branch = "ambiguous_matchup_context"
+            tool_results, used_tools = await gather_ambiguous_matchup_context(
+                message,
+                state.get("access_token", ""),
             )
         elif is_reminder_query(message):
             tool_branch = "reminder_context"
@@ -189,9 +197,39 @@ def get_message(messages: List[dict[str, str]]) -> str:
 
 def analysis(state: AgentState) -> AgentState:
     message = get_message(state.get("messages", []))
+    if not is_supported_agent_topic(message, state):
+        return {**state, "answer": off_topic_guardrail_answer()}
+
+    fallback = _fallback_answer(state, message)
+    if state.get("tool_results", {}).get("ambiguous_matchup") and fallback:
+        return {**state, "answer": fallback}
+
     prompt = _build_prompt(state, message)
-    answer = _call_llm(prompt) or _fallback_answer(state, message)
+    answer = _call_llm(prompt) or fallback
     return {**state, "answer": answer}
+
+
+def is_supported_agent_topic(message: str, state: AgentState) -> bool:
+    if state.get("intent") != "general_chat":
+        return True
+    if state.get("match_id") or state.get("tool_results"):
+        return True
+    normalized = _normalize_router_text(message)
+    return bool(
+        re.search(
+            r"\b(world\s+cup|football|soccer|we\s+speak\s+football|predict\s+2026|fixture|match|team|leaderboard|score|pick|prediction|tran|doi|lich|xep\s+hang|du\s+doan|ti\s+so|ty\s+so)\b",
+            normalized,
+            re.IGNORECASE,
+        )
+    )
+
+
+def feature_suggestion_prompt() -> str:
+    return "Try asking about fixtures by date, a match preview, exact-score prediction reasoning, team context, scoring rules, leaderboard climbing, or upcoming lock reminders."
+
+
+def off_topic_guardrail_answer() -> str:
+    return f"I can help with We Speak Football only. {feature_suggestion_prompt()}"
 
 
 def safety_review(state: AgentState) -> AgentState:
@@ -199,8 +237,9 @@ def safety_review(state: AgentState) -> AgentState:
 
 
 async def memory_write(state: AgentState) -> AgentState:
-    from app.memory import save_interaction
+    from app.memory import save_interaction, save_session_context
 
+    _save_latest_match_context(state, save_session_context)
     await save_interaction(
         user_id=state.get("user_id", ""),
         session_id=state.get("session_id", ""),
@@ -213,6 +252,28 @@ async def memory_write(state: AgentState) -> AgentState:
         },
     )
     return state
+
+
+def _save_latest_match_context(state: AgentState, save_session_context_fn) -> None:
+    tool_results = state.get("tool_results", {})
+    match = tool_results.get("match") or {}
+    match_id = match.get("id") or tool_results.get("resolved_matchup", {}).get("match_id")
+    if not match_id:
+        return
+
+    teams = tool_results.get("teams", {})
+    home = teams.get("home", {}) if isinstance(teams, dict) else {}
+    away = teams.get("away", {}) if isinstance(teams, dict) else {}
+    save_session_context_fn(
+        state.get("user_id", ""),
+        state.get("session_id", ""),
+        {
+            "match_id": match_id,
+            "home_team": home.get("name") or home.get("short_name") or match.get("home_team_id"),
+            "away_team": away.get("name") or away.get("short_name") or match.get("away_team_id"),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
 
 
 def safety_review_text(text: str) -> str:
@@ -283,11 +344,17 @@ def _fallback_answer(state: AgentState, message: str) -> str:
     match = context.get("match")
     teams = context.get("teams", {})
     signal = context.get("prediction_signal", {})
+    ambiguous = context.get("ambiguous_matchup")
     unmatched = context.get("unmatched_matchup")
+    if ambiguous:
+        display_matchup = ambiguous.get("display_matchup") or "those two teams"
+        if ambiguous.get("match_id"):
+            return f"Do you mean {display_matchup}? I found that fixture. If yes, ask me to preview or predict that match. {feature_suggestion_prompt()}"
+        return f"Do you mean {display_matchup}? If yes, ask me to preview or predict that match. {feature_suggestion_prompt()}"
     if unmatched:
         suggestions = unmatched.get("suggestions") or []
         suggestion_text = f" For example: {', '.join(suggestions[:4])}." if suggestions else ""
-        return f"I couldn't confidently find that matchup in the World Cup fixtures. Could you clarify the team names?{suggestion_text}"
+        return f"I couldn't confidently find that matchup in the World Cup fixtures. Could you clarify the team names?{suggestion_text} {feature_suggestion_prompt()}"
     if context.get("fixture_window"):
         return _fixture_window_answer(context)
     if context.get("reminder_context"):
@@ -297,7 +364,7 @@ def _fallback_answer(state: AgentState, message: str) -> str:
     if context.get("unmatched_team_context"):
         suggestions = context["unmatched_team_context"].get("suggestions") or []
         suggestion_text = f" For example: {', '.join(suggestions[:4])}." if suggestions else ""
-        return f"I couldn't confidently identify the team for that question. Could you provide the national team name more clearly?{suggestion_text}"
+        return f"I couldn't confidently identify the team for that question. Could you provide the national team name more clearly?{suggestion_text} {feature_suggestion_prompt()}"
     if context.get("rules_context"):
         return _rules_context_answer(context)
     if match and teams:

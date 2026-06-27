@@ -3,6 +3,7 @@ from functools import lru_cache
 from typing import Any
 
 logger = logging.getLogger(__name__)
+_SESSION_CONTEXT: dict[tuple[str, str], dict[str, Any]] = {}
 
 
 @lru_cache
@@ -18,6 +19,16 @@ def get_memory_client():
         logger.warning("mem0 package is not installed; agent memory is disabled")
         return None
     return MemoryClient(api_key=settings.mem0_api_key)
+
+
+def get_session_context(user_id: str, session_id: str) -> dict[str, Any]:
+    return dict(_SESSION_CONTEXT.get((user_id, session_id), {}))
+
+
+def save_session_context(user_id: str, session_id: str, context: dict[str, Any]) -> None:
+    if not user_id or not session_id or not context:
+        return
+    _SESSION_CONTEXT[(user_id, session_id)] = dict(context)
 
 
 async def search_user_memory(user_id: str, query: str) -> list[dict[str, Any]]:

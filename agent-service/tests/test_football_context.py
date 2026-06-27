@@ -2,10 +2,44 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.tools.football_tools import gather_fixture_list_context, gather_reminder_context, gather_rules_context, gather_team_context
+from app.tools.football_tools import gather_ambiguous_matchup_context, gather_fixture_list_context, gather_reminder_context, gather_rules_context, gather_team_context
 
 
 class FootballContextTest(unittest.IsolatedAsyncioTestCase):
+    async def test_gathers_ambiguous_matchup_context_with_fixture(self):
+        teams = [
+            {"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"},
+            {"id": "COL", "name": "Colombia", "short_name": "COL", "country_code": "CO"},
+        ]
+        with (
+            patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),
+            patch("app.tools.football_tools.list_team_rows", new=AsyncMock(return_value=teams)),
+            patch("app.graph.nodes._call_llm", side_effect=['{"team_id": "POR"}', '{"team_id": "COL"}']),
+            patch("app.tools.football_tools.find_match_by_team_ids", new=AsyncMock(return_value={"id": "m1"})),
+        ):
+            context, tools = await gather_ambiguous_matchup_context("bồ đào nha và colombia", "token-1")
+
+        self.assertEqual(context["ambiguous_matchup"]["display_matchup"], "Portugal vs Colombia")
+        self.assertEqual(context["ambiguous_matchup"]["match_id"], "m1")
+        self.assertIn("find_match_by_team_ids", tools)
+
+    async def test_gathers_ambiguous_matchup_context_without_fixture(self):
+        teams = [
+            {"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"},
+            {"id": "COL", "name": "Colombia", "short_name": "COL", "country_code": "CO"},
+        ]
+        with (
+            patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),
+            patch("app.tools.football_tools.list_team_rows", new=AsyncMock(return_value=teams)),
+            patch("app.graph.nodes._call_llm", side_effect=['{"team_id": "POR"}', '{"team_id": "COL"}']),
+            patch("app.tools.football_tools.find_match_by_team_ids", new=AsyncMock(return_value=None)),
+        ):
+            context, tools = await gather_ambiguous_matchup_context("bồ đào nha và colombia", "token-1")
+
+        self.assertEqual(context["ambiguous_matchup"]["display_matchup"], "Portugal vs Colombia")
+        self.assertNotIn("match_id", context["ambiguous_matchup"])
+        self.assertIn("find_match_by_team_ids", tools)
+
     async def test_gathers_tomorrow_fixture_context(self):
         with (
             patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),

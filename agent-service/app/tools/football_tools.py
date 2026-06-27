@@ -25,6 +25,7 @@ from app.tools.supabase_tools import (
 logger = logging.getLogger(__name__)
 
 MATCHUP_RE = re.compile(r"\b(.+?)\s+(?:vs|v|versus|với|voi|đấu với|dau voi|gặp|gap)\s+(.+?)\b", re.IGNORECASE)
+AMBIGUOUS_MATCHUP_RE = re.compile(r"\b(.+?)\s+(?:và|va|and|&)\s+(.+?)\b", re.IGNORECASE)
 TRAILING_REQUEST_RE = re.compile(
     r"\s+(?:"
     r"bạn nghĩ|ban nghi|"
@@ -41,6 +42,7 @@ FIXTURE_QUERY_RE = re.compile(r"\b(?:fixture|fixtures|schedule|match schedule|to
 REMINDER_QUERY_RE = re.compile(r"\b(?:remind|reminder|notify|notification|alert|nhắc|nhac|thông báo|thong bao|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
 RULES_QUERY_RE = re.compile(r"\b(?:rule|rules|points|scoring|leaderboard|ranking|rank|deadline|lock|bảng xếp hạng|bang xep hang|xếp hạng|xep hang|leo bảng|leo bang|điểm|diem|luật|luat)\b", re.IGNORECASE)
 TEAM_CONTEXT_RE = re.compile(r"\b(?:team|squad|players|lineup|form|head-to-head|h2h|đội hình|doi hinh|phong độ|phong do|đối đầu|doi dau|lịch sử đối đầu|lich su doi dau)\b", re.IGNORECASE)
+AMBIGUOUS_NON_TEAM_TERMS = {"doi hinh", "phong do", "lineup", "form", "team", "squad", "players", "player"}
 
 
 def normalize_team_query(value: str) -> str:
@@ -157,6 +159,21 @@ def extract_matchup_query(message: str) -> tuple[str, str] | None:
     return first_team, second_team
 
 
+def extract_ambiguous_matchup_query(message: str) -> tuple[str, str] | None:
+    if extract_matchup_query(message):
+        return None
+    match = AMBIGUOUS_MATCHUP_RE.search(message.strip())
+    if not match:
+        return None
+    first_team = _clean_matchup_team_query(match.group(1))
+    second_team = _clean_matchup_team_query(match.group(2))
+    if not first_team or not second_team:
+        return None
+    if normalize_team_query(first_team) in AMBIGUOUS_NON_TEAM_TERMS or normalize_team_query(second_team) in AMBIGUOUS_NON_TEAM_TERMS:
+        return None
+    return first_team, second_team
+
+
 def _clean_matchup_team_query(value: str) -> str:
     cleaned = value.strip(" ?!.,;:-")
     cleaned = re.sub(r"^(?:analyze|preview|predict|pick|phân tích|phan tich|dự đoán|du doan|xem|coi|lịch sử đối đầu|lich su doi dau|đối đầu|doi dau)\s+", "", cleaned, flags=re.IGNORECASE)
@@ -232,6 +249,43 @@ async def gather_reminder_context(message: str, user_id: str, access_token: str)
         },
         "reminder_matches": reminder_matches,
     }, ["list_upcoming_matches", "list_team_rows"]
+
+
+async def gather_ambiguous_matchup_context(message: str, access_token: str) -> tuple[dict[str, Any], list[str]]:
+    matchup = extract_ambiguous_matchup_query(message)
+    if not matchup:
+        _log_resolution("ambiguous_matchup_not_extracted", message=message)
+        return {}, []
+
+    client = get_user_supabase_client(access_token)
+    teams = await list_team_rows(client)
+    first_team_id = resolve_team_id_from_rows(matchup[0], teams)
+    second_team_id = resolve_team_id_from_rows(matchup[1], teams)
+    if not first_team_id or not second_team_id:
+        _log_resolution("ambiguous_matchup_unresolved", message=message, teams=list(matchup), resolved_team_ids=[first_team_id, second_team_id])
+        return {
+            "unmatched_matchup": {
+                "teams": list(matchup),
+                "resolved_team_ids": [first_team_id, second_team_id],
+                "suggestions": team_suggestions(teams),
+            }
+        }, ["list_team_rows", "resolve_team_id"]
+
+    teams_by_id = _team_lookup(teams)
+    home = _compact_team_from_lookup(first_team_id, teams_by_id)
+    away = _compact_team_from_lookup(second_team_id, teams_by_id)
+    ambiguous_matchup = {
+        "query_teams": list(matchup),
+        "resolved_team_ids": [first_team_id, second_team_id],
+        "display_matchup": f"{home.get('name') or first_team_id} vs {away.get('name') or second_team_id}",
+    }
+    resolved_match = await find_match_by_team_ids(client, first_team_id, second_team_id)
+    if resolved_match:
+        ambiguous_matchup["match_id"] = resolved_match["id"]
+        _log_resolution("ambiguous_matchup_fixture_found", message=message, match_id=resolved_match["id"], resolved_team_ids=[first_team_id, second_team_id])
+    else:
+        _log_resolution("ambiguous_matchup_resolved", message=message, resolved_team_ids=[first_team_id, second_team_id])
+    return {"ambiguous_matchup": ambiguous_matchup}, ["list_team_rows", "resolve_team_id", "find_match_by_team_ids"]
 
 
 async def gather_team_context(message: str, access_token: str) -> tuple[dict[str, Any], list[str]]:
