@@ -151,7 +151,7 @@ export default function Achievements({ themeControls }: AchievementsProps) {
           <div className="mt-3 sm:mt-4 grid grid-cols-3 sm:flex sm:flex-wrap gap-2 sm:gap-3 font-black uppercase text-[9px] sm:text-xs">
             <Link to="/badges" className="bg-c2 text-inv border-2 border-main px-2 sm:px-4 py-2 sm:py-3 text-center shadow-[2px_2px_0_var(--color-shadow)] sm:shadow-[3px_3px_0_var(--color-shadow)] rounded-sm">{t('appPages.achievements.viewBadges')}</Link>
             <Link to="/leaderboard" className="bg-c1 text-main border-2 border-main px-2 sm:px-4 py-2 sm:py-3 text-center shadow-[2px_2px_0_var(--color-shadow)] sm:shadow-[3px_3px_0_var(--color-shadow)] rounded-sm">{t('appPages.achievements.viewLeaderboard')}</Link>
-            <Link to="/picks" className="bg-main text-inv border-2 border-main px-2 sm:px-4 py-2 sm:py-3 text-center shadow-[2px_2px_0_var(--color-shadow)] sm:shadow-[3px_3px_0_var(--color-shadow)] rounded-sm">{t('appPages.achievements.makePredictions')}</Link>
+            <Link to="/matches" className="bg-main text-inv border-2 border-main px-2 sm:px-4 py-2 sm:py-3 text-center shadow-[2px_2px_0_var(--color-shadow)] sm:shadow-[3px_3px_0_var(--color-shadow)] rounded-sm">{t('appPages.achievements.makePredictions')}</Link>
           </div>
         </div>
 
@@ -360,7 +360,7 @@ export default function Achievements({ themeControls }: AchievementsProps) {
               <div className="p-2 bg-card font-black uppercase flex flex-col gap-1.5 border-b-4 border-main">
                 <Link to="/badges" className="bg-card text-main border-2 border-main p-3 flex items-center gap-3 hover:bg-muted"><Award /> {t('appPages.achievements.viewBadges')}</Link>
                 <Link to="/leaderboard" className="bg-c1 text-main border-2 border-main p-3 flex items-center gap-3"><Trophy /> {t('appPages.achievements.viewLeaderboard')}</Link>
-                <Link to="/picks" className="bg-main text-inv border-2 border-main p-3 flex items-center gap-3"><Sparkles /> {t('appPages.achievements.makePredictions')}</Link>
+                <Link to="/matches" className="bg-main text-inv border-2 border-main p-3 flex items-center gap-3"><Sparkles /> {t('appPages.achievements.makePredictions')}</Link>
               </div>
 
               <div className="flex flex-col flex-1 bg-c1 text-main">

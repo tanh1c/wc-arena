@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.picks.picker import parse_pick, decide_pick
+from app.picks.picker import parse_pick, decide_pick, _build_pick_prompt
 
 
 class ParsePickTest(unittest.TestCase):
@@ -31,6 +31,14 @@ class ParsePickTest(unittest.TestCase):
         self.assertEqual(result["confidence"], 100)
         result2 = parse_pick('{"home_score": 1, "away_score": 1, "confidence": -5}')
         self.assertEqual(result2["confidence"], 0)
+
+
+class BuildPickPromptTest(unittest.TestCase):
+    def test_includes_match_id_mapping_rule(self):
+        prompt = _build_pick_prompt({"match": {"id": "wc2026-1", "home_team_id": "team-a", "away_team_id": "team-b"}})
+        self.assertIn("wc2026-1", prompt)
+        self.assertIn("canonical match_id", prompt)
+        self.assertIn("Do not invent or change the match_id", prompt)
 
 
 class DecidePickTest(unittest.TestCase):

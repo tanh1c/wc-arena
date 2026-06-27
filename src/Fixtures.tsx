@@ -8,20 +8,24 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
-  CheckCircle2,
+  CheckCircle,
   Clock,
   Flag,
   MonitorPlay,
   Pencil,
-  Settings,
   Star,
+  Target,
+  TrendingUp,
   Trophy,
-  XCircle,
+  User,
 } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
 import { getErrorMessage } from './services/serviceTypes';
+import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
 import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type MatchRow } from './services/matches';
+import { listCurrentUserPredictions, type PredictionWithMatch } from './services/predictions';
 import { getTeamMap, type TeamRow } from './services/teams';
+import { getPublicDisplayName } from './utils/displayName';
 import { getTeamFlag } from './utils/teamFlags';
 
 type FixturesProps = {
@@ -175,6 +179,8 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   const themeControls = { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame };
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
+  const [predictions, setPredictions] = useState<PredictionWithMatch[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntryWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>('group');
@@ -187,11 +193,13 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
     setLoading(true);
     setError(null);
 
-    Promise.all([listMatches(), getTeamMap()])
-      .then(([nextMatches, nextTeams]) => {
+    Promise.all([listMatches(), getTeamMap(), listCurrentUserPredictions(), listGlobalLeaderboard()])
+      .then(([nextMatches, nextTeams, nextPredictions, nextLeaderboard]) => {
         if (!active) return;
         setMatches(nextMatches);
         setTeams(nextTeams);
+        setPredictions(nextPredictions);
+        setLeaderboard(nextLeaderboard.slice(0, 5));
       })
       .catch((nextError) => {
         if (!active) return;
@@ -222,10 +230,17 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   const liveMatches = matches.filter((match) => getEffectiveMatchStatus(match) === 'live').length;
   const upcomingMatches = matches.filter((match) => ['open', 'scheduled'].includes(getEffectiveMatchStatus(match))).length;
   const completedMatches = matches.filter((match) => getEffectiveMatchStatus(match) === 'finished').length;
+  const openMatches = matches.filter(isMatchPredictionOpen).length;
+  const submittedCount = predictions.length;
   const nextDeadline = matches.find(isMatchPredictionOpen);
   const nextHomeTeam = nextDeadline ? teams.get(nextDeadline.home_team_id) : undefined;
   const nextAwayTeam = nextDeadline ? teams.get(nextDeadline.away_team_id) : undefined;
   const firstOpenMatchId = filteredMatches.find(isMatchPredictionOpen)?.id;
+  const slipItems = [
+    { label: t('ui.submittedPicks'), calculation: t('ui.savedCount', { count: submittedCount }), value: t('ui.picksCount', { count: submittedCount }), icon: <Star size={16} /> },
+    { label: t('ui.openMatches'), calculation: t('ui.editableCount', { count: openMatches }), value: `${openMatches}`, icon: <CheckCircle size={16} className="text-c2" /> },
+    { label: t('ui.maxExactPoints'), calculation: t('ui.timesPoints', { count: submittedCount, points: 5 }), value: `${submittedCount * 5} ${t('ui.pointsShort')}`, icon: <TrendingUp size={16} className="text-c4" /> },
+  ];
 
   return (
     <AppShell themeControls={themeControls}>
@@ -348,33 +363,96 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                   <span className="font-black text-4xl xl:text-5xl text-c4 font-mono tracking-tighter w-full mb-1">{nextDeadline ? formatTime(nextDeadline.lock_at) : '—'}</span>
                   <span className="font-black text-xs uppercase">{nextDeadline ? formatDate(nextDeadline.lock_at) : t('ui.noOpenDeadline')}</span>
                   <span className="font-bold text-xs text-subtle mt-0.5 mb-4">{nextDeadline ? `${nextHomeTeam?.name ?? nextDeadline.home_team_id} vs ${nextAwayTeam?.name ?? nextDeadline.away_team_id}` : t('ui.checkBackFixtures')}</span>
-                  <button onClick={() => onNavigate('picks')} className="w-full bg-c2 hover:opacity-90 text-inv font-black text-xs uppercase py-3 border-2 border-main flex items-center justify-center gap-2 transition-transform active:translate-y-[2px] active:translate-x-[2px] active:shadow-none focus:outline-none">
-                    {t('ui.goToMyPicks')} <ChevronRight size={16} strokeWidth={3} />
+                  <button onClick={() => onNavigate('my-predictions')} className="w-full bg-c2 hover:opacity-90 text-inv font-black text-xs uppercase py-3 border-2 border-main flex items-center justify-center gap-2 transition-transform active:translate-y-[2px] active:translate-x-[2px] active:shadow-none focus:outline-none">
+                    {t('ui.viewAll')} <ChevronRight size={16} strokeWidth={3} />
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-col flex-1 bg-card">
-                <div className="bg-main text-inv font-black uppercase text-xs py-3 px-4 min-h-[48px] flex items-center justify-between border-b-4 border-main">
-                  <span>{t('ui.yourPredictions')}</span>
-                  <span className="text-[9px] hover:underline cursor-pointer">{t('ui.viewAll')}</span>
+              <div className="flex flex-col border-b-4 border-main">
+                <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm flex justify-between items-center border-b-4 border-main">
+                  <span>{t('ui.mySlip')}</span>
+                  <span className="text-c1 font-bold text-xs"><span className="text-accent-inv">{submittedCount}/64</span> {t('ui.picksMade')}</span>
                 </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between px-3 py-2 border-b-2 border-line">
-                    <div className="flex items-center gap-2 font-bold text-sm"><Clock size={16} className="text-subtle" /> <span>{upcomingMatches}</span></div>
-                    <span className="bg-c5 text-main font-black text-[9px] px-2 py-0.5 border-2 border-main uppercase">{t('ui.open')}</span>
+                <div className="bg-muted p-4 flex flex-col gap-3 text-sm">
+                  {slipItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2 font-bold text-subtle">
+                        <div className="w-6 h-6 bg-card border border-line flex items-center justify-center shrink-0">{item.icon}</div>
+                        {item.label}
+                      </div>
+                      <div className="flex items-center gap-4 text-right">
+                        <span className="text-xs text-faint font-medium">{item.calculation}</span>
+                        <span className="font-black w-14">{item.value}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="mt-2 pt-3 border-t-2 border-main flex items-center justify-between font-black uppercase">
+                    <span className="text-subtle text-sm">{t('ui.totalPotentialPoints')}</span>
+                    <span className="text-xl">{submittedCount * 5} {t('ui.pointsShort')}</span>
                   </div>
-                  <div className="flex items-center justify-between px-3 py-2 border-b-2 border-line">
-                    <div className="flex items-center gap-2 font-bold text-sm"><Settings size={16} className="text-subtle" /> <span>{matches.filter((match) => match.status === 'locked').length}</span></div>
-                    <span className="bg-c1 text-main font-black text-[9px] px-2 py-0.5 border-2 border-main uppercase">{t('ui.locked')}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col border-b-4 border-main">
+                <div className="bg-main text-inv font-black px-4 py-2 uppercase tracking-wide text-[11px] flex justify-between items-center">
+                  <span>{t('ui.yourPredictions')} ({submittedCount})</span>
+                  <button className="text-faint font-bold hover:text-inv cursor-pointer" onClick={() => onNavigate('my-predictions')}>{t('ui.viewAll')}</button>
+                </div>
+                <div className="flex flex-col bg-card p-2 gap-1.5">
+                  {predictions.slice(0, 5).map((prediction) => {
+                    const match = prediction.matches;
+                    if (!match) return null;
+                    const homeTeam = teams.get(match.home_team_id);
+                    const awayTeam = teams.get(match.away_team_id);
+                    return (
+                      <div key={prediction.id} className="flex items-center justify-between text-xs font-bold border border-line p-2 gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="truncate">{homeTeam?.short_name ?? 'TBD'}</span>
+                          <span className="text-faint font-normal text-[10px]">{t('ui.vs')}</span>
+                          <span className="truncate">{awayTeam?.short_name ?? 'TBD'}</span>
+                        </div>
+                        <div className="font-black px-2 shrink-0">{prediction.prediction_type === 'exact_score' && typeof prediction.home_score === 'number' && typeof prediction.away_score === 'number' ? `${prediction.home_score} - ${prediction.away_score}` : prediction.predicted_outcome.toUpperCase()}</div>
+                        <div className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-sm border border-main font-black bg-c3 text-accent-on shrink-0">{prediction.status}</div>
+                      </div>
+                    );
+                  })}
+                  {predictions.length === 0 && <div className="p-2 font-black uppercase text-xs text-subtle">{t('ui.noSavedPicks')}</div>}
+                </div>
+              </div>
+
+              <div className="hidden xl:flex flex-col border-b-4 border-main">
+                <div className="bg-main text-inv font-black px-4 py-2 uppercase tracking-wide text-[11px] flex justify-between items-center">
+                  <span>{t('ui.topPlayersThisWeek')}</span>
+                  <button className="text-faint font-bold hover:text-inv cursor-pointer" onClick={() => onNavigate('leaderboard')}>{t('ui.viewAll')}</button>
+                </div>
+                <div className="flex flex-col bg-card">
+                  {leaderboard.map((item) => (
+                    <div key={item.user_id} className="flex border-b border-line last:border-b-0 items-stretch hover:bg-elevated transition-colors text-sm">
+                      <div className="w-10 border-r border-line flex items-center justify-center font-black bg-c1 text-accent-on">{item.rank}</div>
+                      <div className="p-2 border-r border-line flex items-center justify-center bg-elevated"><User size={14} strokeWidth={3} className="text-main" /></div>
+                      <div className="flex-1 p-2 font-bold flex items-center min-w-0 truncate">{getPublicDisplayName(item.profiles, item.user_id)}</div>
+                      <div className="p-2 font-black flex items-center justify-end text-main whitespace-nowrap">{item.points.toLocaleString()} {t('ui.pointsShort')}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-row flex-1">
+                <div className="flex-1 flex flex-col border-r-4 border-main">
+                  <div className="bg-main text-inv font-black px-3 py-2 uppercase tracking-wide text-[11px]">{t('ui.scoring')} {t('nav.public.rules')}</div>
+                  <div className="p-3 flex flex-col gap-2 font-bold text-xs bg-card text-subtle">
+                    <div className="flex items-center gap-2"><div className="bg-c1 p-1 border border-main flex items-center justify-center"><Target size={14} strokeWidth={2.5} className="text-accent-on"/></div><span>{t('ui.exactScoreFive')}</span></div>
+                    <div className="flex items-center gap-2"><div className="bg-c2 p-1 border border-main flex items-center justify-center"><CheckCircle size={14} strokeWidth={2.5} className="text-accent-inv"/></div><span>{t('ui.correctOutcomeTwo')}</span></div>
+                    <div className="flex items-center gap-2"><div className="bg-c4 p-1 border border-main flex items-center justify-center"><TrendingUp size={14} strokeWidth={2.5} className="text-accent-inv"/></div><span>{t('ui.streakBonusFive')}</span></div>
                   </div>
-                  <div className="flex items-center justify-between px-3 py-2 border-b-2 border-line">
-                    <div className="flex items-center gap-2 font-bold text-sm"><CheckCircle2 size={16} className="text-c5" /> <span>{completedMatches}</span></div>
-                    <span className="text-c5 font-black text-[9px] px-2 pt-0.5 uppercase">{t('ui.completed')}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <div className="flex items-center gap-2 font-bold text-sm"><XCircle size={16} className="text-c4" /> <span>{matches.filter((match) => match.status === 'postponed' || match.status === 'cancelled').length}</span></div>
-                    <span className="text-c4 font-black text-[9px] px-2 pt-0.5 uppercase">{t('ui.void')}</span>
+                </div>
+
+                <div className="flex-1 flex flex-col bg-muted">
+                  <div className="bg-main text-inv font-black px-3 py-2 uppercase tracking-wide text-[11px]">{t('appPages.predictions.nextDeadline')}</div>
+                  <div className="p-4 flex flex-col justify-center items-center h-full gap-1 pt-2">
+                    <div className="text-3xl font-black text-c5 tracking-tighter">{nextDeadline ? formatTime(nextDeadline.lock_at) : '—'}</div>
+                    <div className="text-center font-bold text-xs leading-tight">{nextDeadline ? `${formatDate(nextDeadline.lock_at)} ${nextHomeTeam?.short_name ?? 'TBD'} ${t('ui.vs')} ${nextAwayTeam?.short_name ?? 'TBD'}` : t('ui.noOpenMatch')}</div>
                   </div>
                 </div>
               </div>

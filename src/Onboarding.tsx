@@ -26,7 +26,7 @@ export default function Onboarding({ onNavigate, ...themeControls }: OnboardingP
     }
 
     if (!user || !nextDisplayName) {
-      onNavigate('picks');
+      onNavigate('matches');
       return;
     }
 
@@ -34,7 +34,7 @@ export default function Onboarding({ onNavigate, ...themeControls }: OnboardingP
     setError(null);
     try {
       await updateCurrentProfile(user.id, { display_name: nextDisplayName });
-      onNavigate('picks');
+      onNavigate('matches');
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {

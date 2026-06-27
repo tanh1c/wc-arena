@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 
 const Landing = lazy(() => import('./Landing'));
-const Picks = lazy(() => import('./Picks'));
 const Leaderboard = lazy(() => import('./Leaderboard'));
 const Rules = lazy(() => import('./Rules'));
 const PointsGuide = lazy(() => import('./PointsGuide'));
@@ -114,7 +113,7 @@ export default function App() {
           <Route path="/onboarding" element={<LegacyRoute Component={Onboarding} themeControls={themeControls} />} />
           <Route path="/matches" element={<LegacyRoute Component={Fixtures} themeControls={themeControls} />} />
           <Route path="/agent" element={<Agent themeControls={themeControls} />} />
-          <Route path="/picks" element={<LegacyRoute Component={Picks} themeControls={themeControls} />} />
+          <Route path="/picks" element={<Navigate to="/matches" replace />} />
           <Route path="/my-predictions" element={<MyPredictions themeControls={themeControls} />} />
           <Route path="/leaderboard" element={<LegacyRoute Component={Leaderboard} themeControls={themeControls} />} />
           <Route path="/rules" element={<LegacyRoute Component={Rules} themeControls={themeControls} />} />

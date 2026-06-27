@@ -123,7 +123,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
   }, [matches, now]);
   async function handlePredictionCta() {
     const { data } = await supabase.auth.getSession();
-    onNavigate(data.session?.user ? 'picks' : user ? 'picks' : 'register');
+    onNavigate(data.session?.user ? 'matches' : user ? 'matches' : 'register');
   }
 
   const stats = [
@@ -245,7 +245,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
               })}
             </div>
 
-            <div onClick={() => onNavigate('picks')} className="bg-c2 hover:opacity-80 transition-opacity transition-colors text-inv font-black text-lg sm:text-xl py-4 flex items-center justify-center gap-3 border-b-4 border-main cursor-pointer shadow-[0_-4px_0_0_inset_rgba(0,0,0,0.2)]">
+            <div onClick={() => onNavigate('matches')} className="bg-c2 hover:opacity-80 transition-opacity transition-colors text-inv font-black text-lg sm:text-xl py-4 flex items-center justify-center gap-3 border-b-4 border-main cursor-pointer shadow-[0_-4px_0_0_inset_rgba(0,0,0,0.2)]">
               {t('landing.savePicks')} <ArrowRight size={22} strokeWidth={3} className="mt-0.5" />
             </div>
 

@@ -92,7 +92,7 @@ function HeaderUserStats({ profile }: { profile: ProfileRow | null }) {
   );
 }
 
-const mobilePrimaryPaths = ['/matches', '/picks', '/leaderboard'];
+const mobilePrimaryPaths = ['/matches', '/leaderboard', '/my-predictions'];
 
 function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
   const [showSettings, setShowSettings] = useState(false);

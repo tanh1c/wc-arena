@@ -28,7 +28,6 @@ export const appNavigationGroups: NavigationGroup[] = [
       { labelKey: 'nav.items.leaderboard', shortLabelKey: 'nav.items.rank', to: '/leaderboard', icon: Award },
       { labelKey: 'nav.items.rules', shortLabelKey: 'nav.items.rulesShort', to: '/rules', icon: ScrollText },
       { labelKey: 'nav.items.pointsGuide', shortLabelKey: 'nav.items.points', to: '/points-guide', icon: Gift },
-      { labelKey: 'nav.items.myPicks', shortLabelKey: 'nav.items.picks', to: '/picks', icon: ClipboardList },
       { labelKey: 'nav.items.myPredictions', shortLabelKey: 'nav.items.predicts', to: '/my-predictions', icon: Medal },
     ],
   },

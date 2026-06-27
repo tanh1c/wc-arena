@@ -46,6 +46,8 @@ def _build_pick_prompt(context: dict[str, Any]) -> str:
         [
             "You are a World Cup match predictor. Predict the exact final score.",
             "Consider FIFA rank, recent form, and any provided signals.",
+            "The match object in context is the only match you may predict; its id is the canonical match_id used for submission.",
+            "Map every team-name matchup back to that canonical match_id before reasoning. Do not invent or change the match_id, and do not answer for a different fixture.",
             "Respond with ONLY a JSON object, no prose:",
             '{"home_score": <int>, "away_score": <int>, "confidence": <int 0-100>}',
             f"Match context: {json.dumps(context, default=str)[:6000]}",
