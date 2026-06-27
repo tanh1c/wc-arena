@@ -130,6 +130,55 @@ async def find_match_by_team_ids(client: Client, first_team_id: str, second_team
     return rows[0] if rows else None
 
 
+async def list_matches_by_window(client: Client, start_iso: str, end_iso: str, limit: int = 12) -> list[dict[str, Any]]:
+    response = (
+        client.table("matches")
+        .select("id,home_team_id,away_team_id,kickoff_at,lock_at,stage,group_code,matchday,status,stadium,city,home_score,away_score")
+        .gte("kickoff_at", start_iso)
+        .lt("kickoff_at", end_iso)
+        .order("kickoff_at", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
+
+
+async def list_upcoming_matches(client: Client, start_iso: str, limit: int = 12) -> list[dict[str, Any]]:
+    response = (
+        client.table("matches")
+        .select("id,home_team_id,away_team_id,kickoff_at,lock_at,stage,group_code,matchday,status,stadium,city,home_score,away_score")
+        .gte("kickoff_at", start_iso)
+        .order("kickoff_at", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
+
+
+async def list_matches_for_team(client: Client, team_id: str, limit: int = 8) -> list[dict[str, Any]]:
+    response = (
+        client.table("matches")
+        .select("id,home_team_id,away_team_id,kickoff_at,lock_at,stage,group_code,matchday,status,stadium,city,home_score,away_score")
+        .or_(f"home_team_id.eq.{team_id},away_team_id.eq.{team_id}")
+        .order("kickoff_at", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
+
+
+async def list_global_leaderboard_context(client: Client, limit: int = 10) -> list[dict[str, Any]]:
+    response = (
+        client.table("leaderboard_entries")
+        .select("scope,rank,previous_rank,points,accuracy,exact_scores,streak,league_id,updated_at")
+        .eq("scope", "global")
+        .order("rank", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
+
+
 def _compact_team(team: dict[str, Any] | None, team_id: str) -> dict[str, Any]:
     if not team:
         return {"id": team_id, "name": team_id}

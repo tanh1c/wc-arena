@@ -1,6 +1,8 @@
 import json
+import logging
 import re
 import unicodedata
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.tools.supabase_tools import (
@@ -12,11 +14,33 @@ from app.tools.supabase_tools import (
     get_teams,
     get_user_prediction_history,
     get_user_supabase_client,
+    list_global_leaderboard_context,
+    list_matches_by_window,
+    list_matches_for_team,
     list_team_rows,
+    list_upcoming_matches,
 )
 
 
-MATCHUP_RE = re.compile(r"\b(.+?)\s+(?:vs|v|versus|đấu với|dau voi|gặp|gap)\s+(.+?)\b", re.IGNORECASE)
+logger = logging.getLogger(__name__)
+
+MATCHUP_RE = re.compile(r"\b(.+?)\s+(?:vs|v|versus|với|voi|đấu với|dau voi|gặp|gap)\s+(.+?)\b", re.IGNORECASE)
+TRAILING_REQUEST_RE = re.compile(
+    r"\s+(?:"
+    r"bạn nghĩ|ban nghi|"
+    r"dự đoán|du doan|"
+    r"predict|prediction|preview|analyze|"
+    r"trận này|tran nay|"
+    r"tỉ số|ti so|ty so|"
+    r"cho tôi|cho toi|giúp tôi|giup toi|"
+    r"please|pls"
+    r")\b.*$",
+    re.IGNORECASE,
+)
+FIXTURE_QUERY_RE = re.compile(r"\b(?:fixture|fixtures|schedule|match schedule|today|tomorrow|upcoming|next match|lịch|lich|lịch thi đấu|lich thi dau|hôm nay|hom nay|ngày mai|ngay mai|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
+REMINDER_QUERY_RE = re.compile(r"\b(?:remind|reminder|notify|notification|alert|nhắc|nhac|thông báo|thong bao|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
+RULES_QUERY_RE = re.compile(r"\b(?:rule|rules|points|scoring|leaderboard|ranking|rank|deadline|lock|bảng xếp hạng|bang xep hang|xếp hạng|xep hang|leo bảng|leo bang|điểm|diem|luật|luat)\b", re.IGNORECASE)
+TEAM_CONTEXT_RE = re.compile(r"\b(?:team|squad|players|lineup|form|head-to-head|h2h|đội hình|doi hinh|phong độ|phong do|đối đầu|doi dau|lịch sử đối đầu|lich su doi dau)\b", re.IGNORECASE)
 
 
 def normalize_team_query(value: str) -> str:
@@ -28,14 +52,19 @@ def normalize_team_query(value: str) -> str:
 def resolve_team_id_from_rows(query: str, teams: list[dict[str, Any]]) -> str | None:
     normalized_query = normalize_team_query(query)
     if not normalized_query:
+        _log_resolution("team_query_empty", query=query)
         return None
 
     for team in teams:
         candidates = [team.get("id"), team.get("name"), team.get("short_name"), team.get("country_code")]
         if any(normalize_team_query(str(candidate)) == normalized_query for candidate in candidates if candidate):
-            return team["id"]
+            team_id = team["id"]
+            _log_resolution("team_resolved_exact", query=query, normalized_query=normalized_query, team_id=team_id)
+            return team_id
 
-    return resolve_team_id_with_llm(query, teams)
+    team_id = resolve_team_id_with_llm(query, teams)
+    _log_resolution("team_resolved_llm" if team_id else "team_unresolved_llm", query=query, normalized_query=normalized_query, team_id=team_id)
+    return team_id
 
 
 def resolve_team_id_with_llm(query: str, teams: list[dict[str, Any]]) -> str | None:
@@ -83,6 +112,40 @@ def team_suggestions(teams: list[dict[str, Any]], limit: int = 6) -> list[str]:
     return [team.get("name") or team.get("id") for team in teams[:limit] if team.get("name") or team.get("id")]
 
 
+def resolve_relative_date_window(message: str, now_utc: datetime | None = None) -> dict[str, str] | None:
+    normalized_message = normalize_team_query(message)
+    now = now_utc or datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if any(term in normalized_message for term in ("tomorrow", "ngay mai")):
+        start = today_start + timedelta(days=1)
+        end = start + timedelta(days=1)
+        return {"label": "tomorrow", "start_iso": start.isoformat(), "end_iso": end.isoformat()}
+    if any(term in normalized_message for term in ("today", "hom nay")):
+        end = today_start + timedelta(days=1)
+        return {"label": "today", "start_iso": today_start.isoformat(), "end_iso": end.isoformat()}
+    if any(term in normalized_message for term in ("upcoming", "next match", "sap dien ra")):
+        end = now + timedelta(days=7)
+        return {"label": "upcoming", "start_iso": now.isoformat(), "end_iso": end.isoformat()}
+    return None
+
+
+def is_fixture_list_query(message: str) -> bool:
+    return bool(FIXTURE_QUERY_RE.search(message))
+
+
+def is_reminder_query(message: str) -> bool:
+    return bool(REMINDER_QUERY_RE.search(message))
+
+
+def is_rules_or_leaderboard_query(message: str) -> bool:
+    return bool(RULES_QUERY_RE.search(message))
+
+
+def is_team_context_query(message: str) -> bool:
+    return bool(TEAM_CONTEXT_RE.search(message))
+
+
 def extract_matchup_query(message: str) -> tuple[str, str] | None:
     match = MATCHUP_RE.search(message.strip())
     if not match:
@@ -96,18 +159,147 @@ def extract_matchup_query(message: str) -> tuple[str, str] | None:
 
 def _clean_matchup_team_query(value: str) -> str:
     cleaned = value.strip(" ?!.,;:-")
-    return re.sub(r"^(?:analyze|preview|predict|pick|phân tích|phan tich|dự đoán|du doan|xem|coi)\s+", "", cleaned, flags=re.IGNORECASE).strip(" ?!.,;:-")
+    cleaned = re.sub(r"^(?:analyze|preview|predict|pick|phân tích|phan tich|dự đoán|du doan|xem|coi|lịch sử đối đầu|lich su doi dau|đối đầu|doi dau)\s+", "", cleaned, flags=re.IGNORECASE)
+    cleaned = TRAILING_REQUEST_RE.sub("", cleaned)
+    return cleaned.strip(" ?!.,;:-")
+
+
+def _log_resolution(event: str, **fields: Any) -> None:
+    logger.info("matchup_resolution %s %s", event, json.dumps(fields, ensure_ascii=False, default=str))
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+
+
+def _team_lookup(teams: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {team["id"]: team for team in teams if team.get("id")}
+
+
+def _compact_team_from_lookup(team_id: str, teams_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    team = teams_by_id.get(team_id) or {}
+    return {
+        "id": team_id,
+        "name": team.get("name") or team.get("short_name") or team_id,
+        "short_name": team.get("short_name"),
+        "country_code": team.get("country_code"),
+        "group_code": team.get("group_code"),
+        "fifa_rank": team.get("fifa_rank"),
+    }
+
+
+def _attach_match_teams(matches: list[dict[str, Any]], teams: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    teams_by_id = _team_lookup(teams)
+    return [
+        {
+            **match,
+            "home_team": _compact_team_from_lookup(match.get("home_team_id", ""), teams_by_id),
+            "away_team": _compact_team_from_lookup(match.get("away_team_id", ""), teams_by_id),
+        }
+        for match in matches
+    ]
+
+
+def _extract_single_team_query(message: str) -> str:
+    cleaned = re.sub(
+        r"\b(?:team|squad|players|lineup|form|đội hình|doi hinh|phong độ|phong do|thế nào|the nao|của|cua|cho tôi|cho toi|về|ve|about)\b",
+        " ",
+        message,
+        flags=re.IGNORECASE,
+    )
+    return re.sub(r"\s+", " ", cleaned).strip(" ?!.,;:-")
+
+
+async def gather_fixture_list_context(message: str, access_token: str, now_utc: datetime | None = None) -> tuple[dict[str, Any], list[str]]:
+    window = resolve_relative_date_window(message, now_utc) or resolve_relative_date_window("upcoming", now_utc)
+    client = get_user_supabase_client(access_token)
+    matches = await list_matches_by_window(client, window["start_iso"], window["end_iso"])
+    teams = await list_team_rows(client)
+    fixtures = _attach_match_teams(matches, teams)
+    _log_resolution("fixture_window_resolved", message=message, window=window, match_count=len(fixtures))
+    return {"fixture_window": window, "fixtures": fixtures}, ["list_matches_by_window", "list_team_rows"]
+
+
+async def gather_reminder_context(message: str, user_id: str, access_token: str) -> tuple[dict[str, Any], list[str]]:
+    now = datetime.now(timezone.utc).isoformat()
+    client = get_user_supabase_client(access_token)
+    matches = await list_upcoming_matches(client, now)
+    teams = await list_team_rows(client)
+    reminder_matches = _attach_match_teams(matches, teams)
+    _log_resolution("reminder_context_resolved", message=message, user_id=user_id, match_count=len(reminder_matches))
+    return {
+        "reminder_context": {
+            "mode": "upcoming_matches",
+            "notification_available": False,
+        },
+        "reminder_matches": reminder_matches,
+    }, ["list_upcoming_matches", "list_team_rows"]
+
+
+async def gather_team_context(message: str, access_token: str) -> tuple[dict[str, Any], list[str]]:
+    matchup = extract_matchup_query(message)
+    if matchup:
+        return {
+            "head_to_head_context": {
+                "teams": list(matchup),
+                "requires_matchup_resolution": True,
+                "note": "Use resolved matchup context when a fixture exists; otherwise ask for clearer team names.",
+            }
+        }, ["extract_matchup_query"]
+
+    client = get_user_supabase_client(access_token)
+    teams = await list_team_rows(client)
+    query = _extract_single_team_query(message)
+    team_id = resolve_team_id_from_rows(query, teams)
+    if not team_id:
+        _log_resolution("team_context_unresolved", message=message, query=query)
+        return {"unmatched_team_context": {"query": query, "suggestions": team_suggestions(teams)}}, ["list_team_rows", "resolve_team_id"]
+
+    team = next((row for row in teams if row.get("id") == team_id), {"id": team_id})
+    matches = await list_matches_for_team(client, team_id)
+    _log_resolution("team_context_resolved", message=message, query=query, team_id=team_id, match_count=len(matches))
+    return {
+        "team_context": {
+            "team": team,
+            "matches": _attach_match_teams(matches, teams),
+            "squad_available": bool(team.get("squad") or team.get("players")),
+            "form_available": bool(team.get("form") or team.get("recent_form")),
+        }
+    }, ["list_team_rows", "resolve_team_id", "list_matches_for_team"]
+
+
+async def gather_rules_context(user_id: str, access_token: str) -> tuple[dict[str, Any], list[str]]:
+    client = get_user_supabase_client(access_token)
+    leaderboard = await get_leaderboard_context(client, user_id)
+    global_leaderboard = await list_global_leaderboard_context(client)
+    return {
+        "rules_context": {
+            "scoring": [
+                "Exact-score picks are the strongest way to gain points.",
+                "Outcome-only accuracy helps when exact scores miss.",
+                "Submit before the match lock/deadline.",
+                "Climb the leaderboard by combining exact scores, consistent outcomes, and streaks where available.",
+            ],
+        },
+        "leaderboard_context": leaderboard,
+        "global_leaderboard_context": global_leaderboard,
+    }, ["get_leaderboard_context", "list_global_leaderboard_context"]
 
 
 async def resolve_matchup_context(message: str, user_id: str, access_token: str, include_user: bool = False) -> tuple[dict[str, Any], list[str]]:
     matchup = extract_matchup_query(message)
     if not matchup:
+        _log_resolution("matchup_not_extracted", message=message)
         return {}, []
+    _log_resolution("matchup_extracted", message=message, teams=list(matchup))
     client = get_user_supabase_client(access_token)
     teams = await list_team_rows(client)
     first_team_id = resolve_team_id_from_rows(matchup[0], teams)
     second_team_id = resolve_team_id_from_rows(matchup[1], teams)
     if not first_team_id or not second_team_id:
+        _log_resolution(
+            "matchup_team_unresolved",
+            teams=list(matchup),
+            resolved_team_ids=[first_team_id, second_team_id],
+        )
         return {
             "unmatched_matchup": {
                 "teams": list(matchup),
@@ -118,6 +310,11 @@ async def resolve_matchup_context(message: str, user_id: str, access_token: str,
 
     resolved_match = await find_match_by_team_ids(client, first_team_id, second_team_id)
     if not resolved_match:
+        _log_resolution(
+            "matchup_fixture_unresolved",
+            teams=list(matchup),
+            resolved_team_ids=[first_team_id, second_team_id],
+        )
         return {
             "unmatched_matchup": {
                 "teams": list(matchup),
@@ -127,6 +324,7 @@ async def resolve_matchup_context(message: str, user_id: str, access_token: str,
         }, ["list_team_rows", "resolve_team_id", "find_match_by_team_ids"]
 
     match_id = resolved_match["id"]
+    _log_resolution("matchup_resolved", teams=list(matchup), resolved_team_ids=[first_team_id, second_team_id], match_id=match_id)
     context, tools = await gather_match_context(match_id, user_id, access_token, include_user=include_user)
     context["resolved_matchup"] = {
         "query_teams": list(matchup),

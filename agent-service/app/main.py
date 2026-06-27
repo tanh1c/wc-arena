@@ -1,3 +1,6 @@
+import logging
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,7 +8,14 @@ from app.api.routes import router
 from app.settings import get_settings
 
 
+def configure_logging() -> None:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.flush = sys.stdout.flush
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+
+
 def create_app() -> FastAPI:
+    configure_logging()
     settings = get_settings()
     app = FastAPI(title="We Speak Football Agent", version="0.1.0")
     app.add_middleware(

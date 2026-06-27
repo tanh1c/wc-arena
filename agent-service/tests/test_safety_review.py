@@ -11,6 +11,19 @@ class BuildPromptTest(unittest.TestCase):
         self.assertIn("World Cup football", prompt)
         self.assertIn("politely redirect", prompt)
 
+    def test_includes_current_time(self):
+        prompt = _build_prompt({"intent": "general_chat", "memories": [], "tool_results": {}}, "What matches are live?")
+
+        self.assertRegex(prompt, r"Current time: \d{4}-\d{2}-\d{2}T")
+        self.assertIn("+00:00", prompt)
+
+    def test_requires_tool_context_for_factual_football_data(self):
+        prompt = _build_prompt({"intent": "team_context", "memories": [], "tool_results": {}}, "đội hình Argentina thế nào")
+
+        self.assertIn("source of truth", prompt)
+        self.assertIn("Do not invent", prompt)
+        self.assertIn("squads", prompt)
+
 
 class FallbackAnswerTest(unittest.TestCase):
     def test_asks_for_clarification_when_matchup_unmatched(self):
@@ -28,6 +41,45 @@ class FallbackAnswerTest(unittest.TestCase):
 
         self.assertIn("Could you clarify the team names", answer)
         self.assertIn("Portugal", answer)
+
+    def test_lists_fixture_window_from_tool_context(self):
+        answer = _fallback_answer(
+            {
+                "tool_results": {
+                    "fixture_window": {"label": "tomorrow"},
+                    "fixtures": [
+                        {
+                            "home_team": {"name": "Portugal"},
+                            "away_team": {"name": "Congo DR"},
+                            "kickoff_at": "2026-06-28T20:00:00+00:00",
+                            "city": "Miami",
+                        }
+                    ],
+                }
+            },
+            "cho tôi biết trận ngày mai",
+        )
+
+        self.assertIn("tomorrow", answer)
+        self.assertIn("Portugal vs Congo DR", answer)
+
+    def test_team_context_does_not_fabricate_unavailable_squad(self):
+        answer = _fallback_answer(
+            {
+                "tool_results": {
+                    "team_context": {
+                        "team": {"name": "Argentina", "fifa_rank": 1},
+                        "squad_available": False,
+                        "matches": [],
+                    }
+                }
+            },
+            "đội hình Argentina thế nào",
+        )
+
+        self.assertIn("Argentina", answer)
+        self.assertIn("squad", answer.lower())
+        self.assertIn("not available", answer.lower())
 
 
 class SafetyReviewTextTest(unittest.TestCase):
