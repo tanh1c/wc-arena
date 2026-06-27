@@ -112,6 +112,24 @@ async def get_leaderboard_context(client: Client, user_id: str) -> dict[str, Any
     return {"entries": response.data or []}
 
 
+async def list_team_rows(client: Client) -> list[dict[str, Any]]:
+    response = client.table("teams").select("id,name,short_name,country_code,group_code,fifa_rank").execute()
+    return response.data or []
+
+
+async def find_match_by_team_ids(client: Client, first_team_id: str, second_team_id: str) -> dict[str, Any] | None:
+    matches_response = (
+        client.table("matches")
+        .select("id,home_team_id,away_team_id,kickoff_at,lock_at,stage,group_code,matchday,status,stadium,city,home_score,away_score")
+        .or_(f"and(home_team_id.eq.{first_team_id},away_team_id.eq.{second_team_id}),and(home_team_id.eq.{second_team_id},away_team_id.eq.{first_team_id})")
+        .order("kickoff_at", desc=False)
+        .limit(1)
+        .execute()
+    )
+    rows = matches_response.data or []
+    return rows[0] if rows else None
+
+
 def _compact_team(team: dict[str, Any] | None, team_id: str) -> dict[str, Any]:
     if not team:
         return {"id": team_id, "name": team_id}

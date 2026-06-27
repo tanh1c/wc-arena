@@ -82,21 +82,29 @@ def keyword_intent_router(message: str, match_id: str | None = None) -> AgentInt
 
 
 async def data_gather(state: AgentState) -> AgentState:
-    from app.tools.football_tools import gather_match_context
+    from app.tools.football_tools import gather_match_context, resolve_matchup_context
 
     match_id = state.get("match_id")
     intent = state.get("intent", "general_chat")
     tool_results: dict[str, Any] = {}
     used_tools: list[str] = []
 
-    if match_id and intent in ("match_preview", "prediction_help", "team_context"):
+    if intent in ("match_preview", "prediction_help", "team_context"):
         include_user = intent == "prediction_help"
-        tool_results, used_tools = await gather_match_context(
-            match_id,
-            state.get("user_id", ""),
-            state.get("access_token", ""),
-            include_user=include_user,
-        )
+        if match_id:
+            tool_results, used_tools = await gather_match_context(
+                match_id,
+                state.get("user_id", ""),
+                state.get("access_token", ""),
+                include_user=include_user,
+            )
+        else:
+            tool_results, used_tools = await resolve_matchup_context(
+                get_message(state.get("messages", [])),
+                state.get("user_id", ""),
+                state.get("access_token", ""),
+                include_user=include_user,
+            )
 
     return {**state, "tool_results": tool_results, "used_tools": used_tools}
 
@@ -144,6 +152,8 @@ def _build_prompt(state: AgentState, message: str) -> str:
     return "\n\n".join(
         [
             "You are We Speak Football, an assistant for a free World Cup exact-score prediction app.",
+            "Only answer questions related to We Speak Football, World Cup football, teams, fixtures, predictions, scoring rules, leaderboards, and the app experience.",
+            "If a request is outside that domain, politely redirect the user back to World Cup football or the prediction app instead of answering the unrelated topic.",
             "Use supplied tool context. Avoid betting, odds, wager, deposit, or gambling framing.",
             f"Intent: {state.get('intent')}",
             f"User message: {message}",
@@ -192,6 +202,11 @@ def _fallback_answer(state: AgentState, message: str) -> str:
     match = context.get("match")
     teams = context.get("teams", {})
     signal = context.get("prediction_signal", {})
+    unmatched = context.get("unmatched_matchup")
+    if unmatched:
+        suggestions = unmatched.get("suggestions") or []
+        suggestion_text = f" For example: {', '.join(suggestions[:4])}." if suggestions else ""
+        return f"I couldn't confidently find that matchup in the World Cup fixtures. Could you clarify the team names?{suggestion_text}"
     if match and teams:
         home = teams.get("home", {})
         away = teams.get("away", {})

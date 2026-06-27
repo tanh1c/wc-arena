@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.graph.nodes import intent_router
+from app.graph.nodes import data_gather, intent_router
 
 
 class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
@@ -29,6 +29,23 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
             result = await intent_router(state)
 
         self.assertEqual(result["intent"], "rules_help")
+
+
+
+class DataGatherTest(unittest.IsolatedAsyncioTestCase):
+    async def test_resolves_natural_language_matchup_without_match_id(self):
+        state = {
+            "messages": [{"role": "user", "content": "phân tích bồ đào nha vs colombia"}],
+            "intent": "match_preview",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with patch("app.tools.football_tools.resolve_matchup_context", return_value=({"resolved_matchup": {"match_id": "wc2026-10"}}, ["find_match_by_team_names"])):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["resolved_matchup"]["match_id"], "wc2026-10")
+        self.assertEqual(result["used_tools"], ["find_match_by_team_names"])
 
 
 if __name__ == "__main__":
