@@ -29,6 +29,21 @@ class MatchupResolutionTest(unittest.TestCase):
         with patch("app.graph.nodes._call_llm", return_value='{"team_id": "ARG"}'):
             self.assertEqual(resolve_team_id_from_rows("á căn đình", teams), "ARG")
 
+    def test_accepts_case_insensitive_llm_team_id(self):
+        teams = [{"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"}]
+        with patch("app.graph.nodes._call_llm", return_value='{"team_id": "por", "confidence": "high"}'):
+            self.assertEqual(resolve_team_id_from_rows("bồ đào nha", teams), "POR")
+
+    def test_accepts_llm_matched_name_from_database_rows(self):
+        teams = [{"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"}]
+        with patch("app.graph.nodes._call_llm", return_value='{"team_id": null, "matched_name": "Portugal", "confidence": "high"}'):
+            self.assertEqual(resolve_team_id_from_rows("bo dao nha", teams), "POR")
+
+    def test_rejects_low_confidence_llm_resolution(self):
+        teams = [{"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"}]
+        with patch("app.graph.nodes._call_llm", return_value='{"team_id": "POR", "confidence": "low"}'):
+            self.assertIsNone(resolve_team_id_from_rows("unknown", teams))
+
     def test_rejects_llm_team_id_not_in_database_rows(self):
         teams = [{"id": "ARG", "name": "Argentina", "short_name": "ARG", "country_code": "AR"}]
         with patch("app.graph.nodes._call_llm", return_value='{"team_id": "BRA"}'):

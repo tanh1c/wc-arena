@@ -85,14 +85,15 @@ def resolve_team_id_with_llm(query: str, teams: list[dict[str, Any]]) -> str | N
     ]
     prompt = "\n".join(
         [
-            "Map a natural-language national team name to exactly one team id from the provided World Cup team list.",
-            "Use multilingual football knowledge and common Vietnamese names/transliterations.",
+            "Map a natural-language national team name to exactly one team from the provided World Cup team list.",
+            "Use multilingual football knowledge, common local names, Vietnamese names, transliterations, abbreviations, and nicknames.",
+            "Never invent a team outside the provided list.",
             "Few-shot examples:",
-            "- 'arg' => ARG when Argentina is in the list.",
-            "- 'á căn đình' => ARG when Argentina is in the list.",
-            "- 'bồ đào nha' => POR when Portugal is in the list.",
-            "- 'hàn quốc' => KOR when Korea Republic is in the list.",
-            "Return ONLY JSON: {\"team_id\": \"<id>\"} or {\"team_id\": null} if uncertain.",
+            "- 'arg' => {\"team_id\": \"ARG\", \"matched_name\": \"Argentina\", \"confidence\": \"high\"} when Argentina is in the list.",
+            "- 'á căn đình' => {\"team_id\": \"ARG\", \"matched_name\": \"Argentina\", \"confidence\": \"high\"} when Argentina is in the list.",
+            "- 'bồ đào nha' or 'bo dao nha' => {\"team_id\": \"POR\", \"matched_name\": \"Portugal\", \"confidence\": \"high\"} when Portugal is in the list.",
+            "- 'hàn quốc' or 'han quoc' => {\"team_id\": \"KOR\", \"matched_name\": \"Korea Republic\", \"confidence\": \"high\"} when Korea Republic is in the list.",
+            "Return ONLY JSON: {\"team_id\": \"<id or null>\", \"matched_name\": \"<database name or null>\", \"confidence\": \"high|low\"}.",
             f"Query: {query}",
             f"Teams: {json.dumps(team_options, ensure_ascii=False, default=str)[:6000]}",
         ]
@@ -107,9 +108,27 @@ def resolve_team_id_with_llm(query: str, teams: list[dict[str, Any]]) -> str | N
         data = json.loads(match.group(0))
     except (ValueError, TypeError):
         return None
+    if str(data.get("confidence") or "").lower() == "low":
+        return None
+    return _validated_llm_team_id(data, teams)
+
+
+def _validated_llm_team_id(data: dict[str, Any], teams: list[dict[str, Any]]) -> str | None:
+    id_lookup = {str(team.get("id", "")).lower(): team.get("id") for team in teams if team.get("id")}
     team_id = data.get("team_id")
-    valid_ids = {team.get("id") for team in teams}
-    return team_id if team_id in valid_ids else None
+    if team_id is not None:
+        resolved_id = id_lookup.get(str(team_id).lower())
+        if resolved_id:
+            return resolved_id
+
+    matched_name = data.get("matched_name")
+    if matched_name:
+        normalized_name = normalize_team_query(str(matched_name))
+        for team in teams:
+            candidates = [team.get("name"), team.get("short_name"), team.get("country_code")]
+            if any(normalize_team_query(str(candidate)) == normalized_name for candidate in candidates if candidate):
+                return team.get("id")
+    return None
 
 
 def team_suggestions(teams: list[dict[str, Any]], limit: int = 6) -> list[str]:
