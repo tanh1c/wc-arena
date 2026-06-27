@@ -66,6 +66,15 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["intent"], "team_context")
 
+    async def test_routes_standalone_multilingual_team_name(self):
+        state = {"messages": [{"role": "user", "content": "bồ đào nha"}]}
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = await intent_router(state)
+
+        self.assertEqual(result["intent"], "team_context")
+        call_llm.assert_not_called()
+
     async def test_routes_leaderboard_climb_question(self):
         state = {"messages": [{"role": "user", "content": "làm sao leo bảng xếp hạng"}]}
 
@@ -237,6 +246,20 @@ class DataGatherTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["tool_results"]["team_context"]["team"]["id"], "ARG")
         self.assertEqual(result["used_tools"], ["list_team_rows"])
+
+    async def test_gathers_standalone_multilingual_team_context(self):
+        state = {
+            "messages": [{"role": "user", "content": "bồ đào nha"}],
+            "intent": "team_context",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with patch("app.tools.football_tools.gather_team_context", return_value=({"team_context": {"team": {"id": "POR"}}}, ["list_team_rows", "resolve_team_id", "list_matches_for_team"])):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["team_context"]["team"]["id"], "POR")
+        self.assertEqual(result["used_tools"], ["list_team_rows", "resolve_team_id", "list_matches_for_team"])
 
     async def test_gathers_rules_context(self):
         state = {

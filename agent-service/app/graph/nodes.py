@@ -34,6 +34,8 @@ INTENT_PATTERNS: list[tuple[AgentIntent, re.Pattern[str]]] = [
     ("team_context", re.compile(r"\b(team|squad|player|players|lineup|form|h2h|head\s*to\s*head|history|doi|doi\s+hinh|phong\s+do|doi\s+dau|lich\s+su)\b", re.IGNORECASE)),
     ("match_preview", re.compile(r"\b(match|matches|fixture|fixtures|schedule|calendar|today|tomorrow|upcoming|next|remind|notify|alert|tran|lich|hom\s+nay|ngay\s+mai|mai|sap|nhac)\b", re.IGNORECASE)),
 ]
+VIETNAMESE_DIACRITIC_RE = re.compile(r"[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]", re.IGNORECASE)
+STANDALONE_TEAM_STOPWORDS = {"chao", "xin chao", "cam on", "ok", "hello", "hi"}
 
 
 async def memory_retrieve(state: AgentState) -> AgentState:
@@ -92,7 +94,16 @@ def keyword_intent_router(message: str, match_id: str | None = None) -> AgentInt
     for intent, pattern in INTENT_PATTERNS:
         if pattern.search(normalized):
             return intent
+    if is_standalone_team_name_candidate(message, normalized):
+        return "team_context"
     return "general_chat"
+
+
+def is_standalone_team_name_candidate(message: str, normalized: str) -> bool:
+    if normalized in STANDALONE_TEAM_STOPWORDS:
+        return False
+    words = normalized.split()
+    return bool(VIETNAMESE_DIACRITIC_RE.search(message) and 1 <= len(words) <= 4)
 
 
 def _normalize_router_text(message: str) -> str:
