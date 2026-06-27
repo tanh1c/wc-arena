@@ -1,11 +1,15 @@
 import json
+import logging
 import re
+import unicodedata
 from datetime import datetime, timezone
 from typing import Any, List
 
 import httpx
 
 from app.graph.state import AgentIntent, AgentState
+
+logger = logging.getLogger(__name__)
 
 GAMBLING_REPLACEMENTS = {
     "betting": "prediction",
@@ -24,6 +28,13 @@ VALID_INTENTS: set[AgentIntent] = {
     "general_chat",
 }
 
+INTENT_PATTERNS: list[tuple[AgentIntent, re.Pattern[str]]] = [
+    ("rules_help", re.compile(r"\b(rule|rules|point|points|score|scoring|rank|ranking|leaderboard|deadline|lock|table|luat|diem|xep\s+hang|bang|khoa|han)\b", re.IGNORECASE)),
+    ("prediction_help", re.compile(r"\b(predict|prediction|pick|tip|confidence|suggest|du\s+doan|ti\s+so|ty\s+so|chon|goi\s+y)\b", re.IGNORECASE)),
+    ("team_context", re.compile(r"\b(team|squad|player|players|lineup|form|h2h|head\s*to\s*head|history|doi|doi\s+hinh|phong\s+do|doi\s+dau|lich\s+su)\b", re.IGNORECASE)),
+    ("match_preview", re.compile(r"\b(match|matches|fixture|fixtures|schedule|calendar|today|tomorrow|upcoming|next|remind|notify|alert|tran|lich|hom\s+nay|ngay\s+mai|mai|sap|nhac)\b", re.IGNORECASE)),
+]
+
 
 async def memory_retrieve(state: AgentState) -> AgentState:
     from app.memory import search_user_memory
@@ -35,23 +46,28 @@ async def memory_retrieve(state: AgentState) -> AgentState:
 
 async def intent_router(state: AgentState) -> AgentState:
     message = get_message(state.get("messages", []))
+    matched_intent = keyword_intent_router(message, state.get("match_id"))
+    if matched_intent != "general_chat":
+        return {**state, "intent": matched_intent}
+
     llm_intent = classify_intent_with_llm(message, state.get("match_id"))
     if llm_intent:
         return {**state, "intent": llm_intent}
 
-    return {**state, "intent": keyword_intent_router(message, state.get("match_id"))}
+    return {**state, "intent": "general_chat"}
 
 
 def classify_intent_with_llm(message: str, match_id: str | None = None) -> AgentIntent | None:
     prompt = "\n".join(
         [
-            "Classify this Predict 2026 assistant message into exactly one intent.",
-            "Allowed intents: match_preview, prediction_help, team_context, rules_help, general_chat.",
-            "Use prediction_help for choosing a pick, exact score, confidence, score suggestion, or prediction reasoning.",
-            "Use team_context for team squad, players, lineup, form, head-to-head, H2H, group, rank, or comparative team information.",
-            "Use rules_help for scoring rules, points, deadlines, locks, leaderboard, ranking, or climbing the table.",
-            "Use match_preview for previewing or analyzing a specific match, fixtures, schedule, today, tomorrow, upcoming, next match, or reminder-style upcoming match requests.",
-            "Use general_chat only when none of the above apply.",
+            "Classify this Predict 2026 assistant message into exactly one executable backend route.",
+            "Allowed routes: match_preview, prediction_help, team_context, rules_help, general_chat.",
+            "Available backend tool routes:",
+            "- match_preview executes DB tools for selected match context, natural-language matchup resolution, fixture/date windows, and upcoming reminder summaries.",
+            "- prediction_help executes match context, ESPN/community signals, user prediction history, and leaderboard context before suggesting scores.",
+            "- team_context executes team lookup, team schedule/context, and head-to-head matchup resolution when two teams are present.",
+            "- rules_help executes rules and leaderboard context tools.",
+            "Use general_chat only when no executable football/app route applies.",
             f"Has selected match: {'yes' if match_id else 'no'}",
             f"Message: {message}",
             "Return only the intent string.",
@@ -69,17 +85,27 @@ def classify_intent_with_llm(message: str, match_id: str | None = None) -> Agent
 
 
 def keyword_intent_router(message: str, match_id: str | None = None) -> AgentIntent:
-    message = message.lower()
-
-    if any(word in message for word in ("rule", "rules", "points", "scoring", "deadline", "lock", "leaderboard", "ranking", "bảng xếp hạng", "xếp hạng", "leo bảng", "điểm", "luật")):
-        return "rules_help"
-    if any(word in message for word in ("predict", "prediction", "pick", "score", "confidence", "dự đoán", "tỉ số", "ti so")):
-        return "prediction_help"
-    if any(word in message for word in ("team", "squad", "players", "lineup", "rank", "form", "group", "head-to-head", "h2h", "đội hình", "phong độ", "đối đầu")):
-        return "team_context"
-    if match_id or any(word in message for word in ("match", "preview", "analyze", "fixture", "fixtures", "schedule", "today", "tomorrow", "upcoming", "next match", "lịch", "hôm nay", "ngày mai", "sắp diễn ra", "nhắc")):
+    if match_id:
         return "match_preview"
+
+    normalized = _normalize_router_text(message)
+    for intent, pattern in INTENT_PATTERNS:
+        if pattern.search(normalized):
+            return intent
     return "general_chat"
+
+
+def _normalize_router_text(message: str) -> str:
+    normalized = unicodedata.normalize("NFKD", message.lower().replace("đ", "d"))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _log_agent_tool_event(event: str, **fields: Any) -> None:
+    logger.info("agent_tool_call %s %s", event, json.dumps(fields, ensure_ascii=False, default=str))
+    for handler in logging.getLogger().handlers:
+        handler.flush()
 
 
 async def data_gather(state: AgentState) -> AgentState:
@@ -100,10 +126,12 @@ async def data_gather(state: AgentState) -> AgentState:
     intent = state.get("intent", "general_chat")
     tool_results: dict[str, Any] = {}
     used_tools: list[str] = []
+    tool_branch = "none"
 
     if intent in ("match_preview", "prediction_help", "team_context"):
         include_user = intent == "prediction_help"
         if match_id:
+            tool_branch = "selected_match"
             tool_results, used_tools = await gather_match_context(
                 match_id,
                 state.get("user_id", ""),
@@ -111,6 +139,7 @@ async def data_gather(state: AgentState) -> AgentState:
                 include_user=include_user,
             )
         elif extract_matchup_query(message):
+            tool_branch = "matchup_resolution"
             tool_results, used_tools = await resolve_matchup_context(
                 message,
                 state.get("user_id", ""),
@@ -118,27 +147,39 @@ async def data_gather(state: AgentState) -> AgentState:
                 include_user=include_user,
             )
         elif is_reminder_query(message):
+            tool_branch = "reminder_context"
             tool_results, used_tools = await gather_reminder_context(
                 message,
                 state.get("user_id", ""),
                 state.get("access_token", ""),
             )
         elif is_fixture_list_query(message):
+            tool_branch = "fixture_list_context"
             tool_results, used_tools = await gather_fixture_list_context(
                 message,
                 state.get("access_token", ""),
             )
         elif intent == "team_context":
+            tool_branch = "team_context"
             tool_results, used_tools = await gather_team_context(
                 message,
                 state.get("access_token", ""),
             )
     elif intent == "rules_help":
+        tool_branch = "rules_context"
         tool_results, used_tools = await gather_rules_context(
             state.get("user_id", ""),
             state.get("access_token", ""),
         )
 
+    _log_agent_tool_event(
+        "data_gather_complete",
+        intent=intent,
+        branch=tool_branch,
+        used_tools=used_tools,
+        tool_result_keys=list(tool_results.keys()),
+        message=message,
+    )
     return {**state, "tool_results": tool_results, "used_tools": used_tools}
 
 def get_message(messages: List[dict[str, str]]) -> str:

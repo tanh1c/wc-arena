@@ -56,8 +56,21 @@ class MatchupResolutionTest(unittest.TestCase):
         self.assertEqual(window["start_iso"], "2026-06-28T00:00:00+00:00")
         self.assertEqual(window["end_iso"], "2026-06-29T00:00:00+00:00")
 
+    def test_resolves_short_vietnamese_tomorrow_window(self):
+        window = resolve_relative_date_window(
+            "mai có trận",
+            now_utc=datetime(2026, 6, 27, 12, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(window["label"], "tomorrow")
+        self.assertEqual(window["start_iso"], "2026-06-28T00:00:00+00:00")
+        self.assertEqual(window["end_iso"], "2026-06-29T00:00:00+00:00")
+
     def test_detects_fixture_list_query(self):
         self.assertTrue(is_fixture_list_query("lịch thi đấu hôm nay có trận nào"))
+
+    def test_detects_short_vietnamese_tomorrow_fixture_query(self):
+        self.assertTrue(is_fixture_list_query("mai có trận"))
 
     def test_detects_reminder_query(self):
         self.assertTrue(is_reminder_query("nhắc tôi các trận sắp diễn ra"))

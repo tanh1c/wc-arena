@@ -37,7 +37,7 @@ TRAILING_REQUEST_RE = re.compile(
     r")\b.*$",
     re.IGNORECASE,
 )
-FIXTURE_QUERY_RE = re.compile(r"\b(?:fixture|fixtures|schedule|match schedule|today|tomorrow|upcoming|next match|lịch|lich|lịch thi đấu|lich thi dau|hôm nay|hom nay|ngày mai|ngay mai|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
+FIXTURE_QUERY_RE = re.compile(r"\b(?:fixture|fixtures|schedule|match schedule|today|tomorrow|upcoming|next match|lịch|lich|lịch thi đấu|lich thi dau|hôm nay|hom nay|ngày mai|ngay mai|mai|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
 REMINDER_QUERY_RE = re.compile(r"\b(?:remind|reminder|notify|notification|alert|nhắc|nhac|thông báo|thong bao|sắp diễn ra|sap dien ra)\b", re.IGNORECASE)
 RULES_QUERY_RE = re.compile(r"\b(?:rule|rules|points|scoring|leaderboard|ranking|rank|deadline|lock|bảng xếp hạng|bang xep hang|xếp hạng|xep hang|leo bảng|leo bang|điểm|diem|luật|luat)\b", re.IGNORECASE)
 TEAM_CONTEXT_RE = re.compile(r"\b(?:team|squad|players|lineup|form|head-to-head|h2h|đội hình|doi hinh|phong độ|phong do|đối đầu|doi dau|lịch sử đối đầu|lich su doi dau)\b", re.IGNORECASE)
@@ -117,7 +117,7 @@ def resolve_relative_date_window(message: str, now_utc: datetime | None = None) 
     now = now_utc or datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    if any(term in normalized_message for term in ("tomorrow", "ngay mai")):
+    if any(term in normalized_message.split() for term in ("tomorrow", "mai")) or "ngay mai" in normalized_message:
         start = today_start + timedelta(days=1)
         end = start + timedelta(days=1)
         return {"label": "tomorrow", "start_iso": start.isoformat(), "end_iso": end.isoformat()}

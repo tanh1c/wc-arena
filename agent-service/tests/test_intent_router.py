@@ -5,12 +5,24 @@ from app.graph.nodes import data_gather, intent_router
 
 
 class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
-    async def test_uses_llm_classification_when_valid(self):
+    async def test_deterministic_router_runs_before_llm(self):
         state = {
-            "messages": [{"role": "user", "content": "Can you explain team form and exact score confidence?"}],
+            "messages": [{"role": "user", "content": "Can you explain team form?"}],
             "user_id": "user-1",
             "session_id": "session-1",
-            "match_id": "match-1",
+        }
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = await intent_router(state)
+
+        self.assertEqual(result["intent"], "team_context")
+        call_llm.assert_not_called()
+
+    async def test_falls_back_to_llm_when_no_deterministic_route_matches(self):
+        state = {
+            "messages": [{"role": "user", "content": "What should I focus on here?"}],
+            "user_id": "user-1",
+            "session_id": "session-1",
         }
 
         with patch("app.graph.nodes._call_llm", return_value="prediction_help"):
@@ -18,9 +30,9 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["intent"], "prediction_help")
 
-    async def test_falls_back_to_keyword_router_when_llm_returns_invalid_intent(self):
+    async def test_returns_general_chat_when_no_route_matches(self):
         state = {
-            "messages": [{"role": "user", "content": "What are the points and deadline rules?"}],
+            "messages": [{"role": "user", "content": "hello there"}],
             "user_id": "user-1",
             "session_id": "session-1",
         }
@@ -28,10 +40,18 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
         with patch("app.graph.nodes._call_llm", return_value="unclear"):
             result = await intent_router(state)
 
-        self.assertEqual(result["intent"], "rules_help")
+        self.assertEqual(result["intent"], "general_chat")
 
     async def test_routes_tomorrow_fixture_question(self):
         state = {"messages": [{"role": "user", "content": "cho tôi biết trận ngày mai"}]}
+
+        with patch("app.graph.nodes._call_llm", return_value="unclear"):
+            result = await intent_router(state)
+
+        self.assertEqual(result["intent"], "match_preview")
+
+    async def test_routes_short_vietnamese_tomorrow_fixture_question(self):
+        state = {"messages": [{"role": "user", "content": "mai có trận"}]}
 
         with patch("app.graph.nodes._call_llm", return_value="unclear"):
             result = await intent_router(state)
@@ -73,6 +93,20 @@ class DataGatherTest(unittest.IsolatedAsyncioTestCase):
     async def test_gathers_fixture_list_without_match_id(self):
         state = {
             "messages": [{"role": "user", "content": "cho tôi biết trận ngày mai"}],
+            "intent": "match_preview",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with patch("app.tools.football_tools.gather_fixture_list_context", return_value=({"fixture_window": {"label": "tomorrow"}}, ["list_matches_by_window"])):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["fixture_window"]["label"], "tomorrow")
+        self.assertEqual(result["used_tools"], ["list_matches_by_window"])
+
+    async def test_gathers_short_vietnamese_tomorrow_fixture_list(self):
+        state = {
+            "messages": [{"role": "user", "content": "mai có trận"}],
             "intent": "match_preview",
             "user_id": "user-1",
             "access_token": "token-1",
