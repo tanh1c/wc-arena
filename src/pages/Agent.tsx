@@ -93,6 +93,7 @@ export default function Agent({ themeControls }: AgentProps) {
       .slice(0, 4);
   }, [matches]);
   const locale = i18n.resolvedLanguage === 'vi' ? 'vi' : 'en';
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -110,6 +111,7 @@ export default function Agent({ themeControls }: AgentProps) {
         message,
         session_id: sessionId,
         match_id: selectedMatchId || undefined,
+        metadata: { timezone, locale },
       });
       setSessionId(response.session_id);
       setMessages((current) => [

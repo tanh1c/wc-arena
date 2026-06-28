@@ -58,12 +58,33 @@ function renderList(items: string[], ordered: boolean) {
   return `<${tag}>${items.map((item) => `<li>${formatInline(item)}</li>`).join('')}</${tag}>`;
 }
 
+function splitTableRow(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.replaceAll('\\|', '|').trim());
+}
+
+function isTableDivider(line: string) {
+  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function renderTable(lines: string[]) {
+  const [headerLine, , ...bodyLines] = lines;
+  const headers = splitTableRow(headerLine);
+  const rows = bodyLines.map(splitTableRow);
+  return `<table><thead><tr>${headers.map((cell) => `<th>${formatInline(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${formatInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
 export function renderAgentMarkdown(markdown: string) {
   const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
   const blocks: string[] = [];
   let paragraph: string[] = [];
   let unorderedItems: string[] = [];
   let orderedItems: string[] = [];
+  let tableLines: string[] = [];
   let codeLines: string[] = [];
   let inCodeBlock = false;
 
@@ -84,10 +105,20 @@ export function renderAgentMarkdown(markdown: string) {
     }
   }
 
-  for (const line of lines) {
+  function flushTable() {
+    if (tableLines.length > 0) {
+      blocks.push(renderTable(tableLines));
+      tableLines = [];
+    }
+  }
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
     if (line.trim().startsWith('```')) {
       flushParagraph();
       flushLists();
+      flushTable();
       if (inCodeBlock) {
         blocks.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
         codeLines = [];
@@ -106,8 +137,18 @@ export function renderAgentMarkdown(markdown: string) {
     if (!line.trim()) {
       flushParagraph();
       flushLists();
+      flushTable();
       continue;
     }
+
+    if (line.includes('|') && (tableLines.length > 0 || isTableDivider(lines[index + 1] ?? '') || isTableDivider(line))) {
+      flushParagraph();
+      flushLists();
+      tableLines.push(line);
+      continue;
+    }
+
+    flushTable();
 
     const unorderedMatch = line.match(/^\s*[-*]\s+(.+)$/);
     if (unorderedMatch) {
@@ -143,6 +184,7 @@ export function renderAgentMarkdown(markdown: string) {
   }
   flushParagraph();
   flushLists();
+  flushTable();
 
   return blocks.join('');
 }

@@ -23,6 +23,21 @@ test('renders README-style markdown used by agent responses', () => {
   assert.match(html, /<a href="https:\/\/example\.com\/match" target="_blank" rel="noreferrer">Open match<\/a>/);
 });
 
+test('renders markdown tables used by agent fixture responses', () => {
+  const html = renderAgentMarkdown([
+    '## Lịch thi đấu',
+    '',
+    '| Giờ | Trận | Vòng |',
+    '|---|---|---|',
+    '| 2026-06-29 02:00 +07:00 | RSA vs CAN | Round of 32 |',
+  ].join('\n'));
+
+  assert.match(html, /<table>/);
+  assert.match(html, /<th>Giờ<\/th>/);
+  assert.match(html, /<td>RSA vs CAN<\/td>/);
+  assert.match(html, /<td>Round of 32<\/td>/);
+});
+
 test('escapes unsafe html and rejects unsafe links', () => {
   const html = renderAgentMarkdown('<script>alert(1)</script>\n\n[bad](javascript:alert(1))');
 

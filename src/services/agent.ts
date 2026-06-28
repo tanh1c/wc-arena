@@ -8,6 +8,10 @@ export type AgentChatPayload = {
   message: string;
   session_id?: string;
   match_id?: string;
+  metadata?: {
+    timezone?: string;
+    locale?: string;
+  };
 };
 
 export type AgentChatResponse = {

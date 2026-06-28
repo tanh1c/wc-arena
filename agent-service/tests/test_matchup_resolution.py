@@ -84,6 +84,18 @@ class MatchupResolutionTest(unittest.TestCase):
         self.assertEqual(window["start_iso"], "2026-06-28T00:00:00+00:00")
         self.assertEqual(window["end_iso"], "2026-06-29T00:00:00+00:00")
 
+    def test_resolves_tomorrow_window_in_user_timezone(self):
+        window = resolve_relative_date_window(
+            "fixtures tomorrow",
+            now_utc=datetime(2026, 6, 27, 20, tzinfo=timezone.utc),
+            request_metadata={"client": {"timezone": "Asia/Ho_Chi_Minh"}},
+        )
+
+        self.assertEqual(window["label"], "tomorrow")
+        self.assertEqual(window["timezone"], "Asia/Ho_Chi_Minh")
+        self.assertEqual(window["start_iso"], "2026-06-28T17:00:00+00:00")
+        self.assertEqual(window["end_iso"], "2026-06-29T17:00:00+00:00")
+
     def test_detects_fixture_list_query(self):
         self.assertTrue(is_fixture_list_query("lịch thi đấu hôm nay có trận nào"))
 

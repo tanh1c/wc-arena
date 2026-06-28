@@ -31,9 +31,10 @@ class BuildPromptTest(unittest.TestCase):
 
 
 class FallbackAnswerTest(unittest.TestCase):
-    def test_unmatched_matchup_returns_capability_guardrail(self):
+    def test_unmatched_matchup_returns_localized_examples(self):
         answer = _fallback_answer(
             {
+                "response_language": "Vietnamese",
                 "tool_results": {
                     "unmatched_matchup": {
                         "teams": ["foo", "bar"],
@@ -44,10 +45,20 @@ class FallbackAnswerTest(unittest.TestCase):
             "foo vs bar",
         )
 
-        self.assertIn("I can help with We Speak Football only", answer)
-        self.assertIn("fixtures by date", answer)
-        self.assertNotIn("foo", answer)
-        self.assertNotIn("Portugal", answer)
+        self.assertIn("## Tôi không hỗ trợ hỏi về foo vs bar", answer)
+        self.assertIn("Bạn có thể hỏi:", answer)
+        self.assertIn("- Vòng 32 đội hôm nay có trận gì?", answer)
+        self.assertNotIn("Argentina, Portugal", answer)
+
+    def test_off_topic_returns_english_examples_for_english_message(self):
+        answer = _fallback_answer(
+            {"response_language": "English", "intent": "general_chat", "tool_results": {}},
+            "Tell me about crypto trading",
+        )
+
+        self.assertIn("## I can't help with Tell me about crypto trading", answer)
+        self.assertIn("You can ask:", answer)
+        self.assertIn("- What round of 32 matches are today?", answer)
 
     def test_lists_fixture_window_from_tool_context(self):
         answer = _fallback_answer(
@@ -67,8 +78,32 @@ class FallbackAnswerTest(unittest.TestCase):
             "cho tôi biết trận ngày mai",
         )
 
-        self.assertIn("tomorrow", answer)
-        self.assertIn("Portugal vs Congo DR", answer)
+        self.assertIn("## World Cup fixtures for tomorrow", answer)
+        self.assertIn("| Time | Match | Stage | Location | Status |", answer)
+        self.assertIn("| 2026-06-28 20:00 +00:00 | Portugal vs Congo DR | - | Miami | - |", answer)
+
+    def test_formats_fixture_window_in_user_timezone(self):
+        answer = _fallback_answer(
+            {
+                "request_metadata": {"client": {"timezone": "Asia/Ho_Chi_Minh"}},
+                "tool_results": {
+                    "fixture_window": {"label": "tomorrow", "timezone": "Asia/Ho_Chi_Minh"},
+                    "fixtures": [
+                        {
+                            "home_team": {"name": "Portugal"},
+                            "away_team": {"name": "Congo DR"},
+                            "kickoff_at": "2026-06-28T20:00:00+00:00",
+                            "city": "Miami",
+                        }
+                    ],
+                },
+            },
+            "cho tôi biết trận ngày mai",
+        )
+
+        self.assertIn("2026-06-29 03:00", answer)
+        self.assertIn("+07", answer)
+        self.assertNotIn("2026-06-28T20:00:00+00:00", answer)
 
     def test_team_context_does_not_fabricate_unavailable_squad(self):
         answer = _fallback_answer(

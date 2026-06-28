@@ -72,6 +72,50 @@ class FootballContextTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context["fixtures"][0]["away_team"]["name"], "Congo DR")
         self.assertIn("list_matches_by_window", tools)
 
+    async def test_gathers_fixture_context_with_user_timezone_window(self):
+        with (
+            patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),
+            patch("app.tools.football_tools.list_matches_by_window", new=AsyncMock(return_value=[])) as list_matches,
+            patch("app.tools.football_tools.list_team_rows", new=AsyncMock(return_value=[])),
+        ):
+            context, _tools = await gather_fixture_list_context(
+                "mai có trận gì",
+                "token-1",
+                now_utc=datetime(2026, 6, 27, 20, tzinfo=timezone.utc),
+                request_metadata={"client": {"timezone": "Asia/Ho_Chi_Minh"}},
+            )
+
+        self.assertEqual(context["fixture_window"]["timezone"], "Asia/Ho_Chi_Minh")
+        self.assertEqual(list_matches.await_args.args[1], "2026-06-28T17:00:00+00:00")
+        self.assertEqual(list_matches.await_args.args[2], "2026-06-29T17:00:00+00:00")
+
+    async def test_filters_fixture_context_by_knockout_stage(self):
+        cases = [
+            ("vòng 32 đội hôm nay có trận gì", "round32"),
+            ("vòng 16 đội hôm nay có trận gì", "round16"),
+            ("tứ kết hôm nay có trận gì", "quarter"),
+            ("bán kết hôm nay có trận gì", "semi"),
+            ("chung kết hôm nay có trận gì", "final"),
+        ]
+
+        for message, stage in cases:
+            with (
+                self.subTest(message=message),
+                patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),
+                patch("app.tools.football_tools.list_matches_by_window", new=AsyncMock(return_value=[])) as list_matches,
+                patch("app.tools.football_tools.list_team_rows", new=AsyncMock(return_value=[])),
+            ):
+                context, tools = await gather_fixture_list_context(
+                    message,
+                    "token-1",
+                    now_utc=datetime(2026, 6, 28, 12, tzinfo=timezone.utc),
+                )
+
+            self.assertEqual(context["fixture_stage"], stage)
+            list_matches.assert_awaited_once()
+            self.assertEqual(list_matches.await_args.args[3], stage)
+            self.assertIn("list_matches_by_window", tools)
+
     async def test_gathers_upcoming_matches_for_reminders(self):
         with (
             patch("app.tools.football_tools.get_user_supabase_client", return_value=MagicMock()),

@@ -11,6 +11,14 @@ from app.settings import get_settings
 router = APIRouter()
 
 
+def _client_metadata(metadata: dict) -> dict[str, str]:
+    return {
+        key: value
+        for key in ("timezone", "locale")
+        if isinstance(value := metadata.get(key), str)
+    }
+
+
 @router.api_route("/health", methods=["GET", "HEAD"])
 def health() -> dict[str, bool]:
     return {"ok": True}
@@ -37,6 +45,7 @@ async def _run_agent(payload: AgentChatRequest, request: Request, user: Authenti
             request_metadata={
                 "client_host": request.client.host if request.client else None,
                 "user_agent": request.headers.get("user-agent"),
+                "client": _client_metadata(payload.metadata),
             },
         )
     except ValueError as exc:

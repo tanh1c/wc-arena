@@ -4,6 +4,7 @@ import re
 import unicodedata
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.tools.supabase_tools import (
     find_match_by_team_ids,
@@ -45,6 +46,14 @@ TEAM_CONTEXT_RE = re.compile(r"\b(?:team|squad|players|lineup|form|head-to-head|
 TEAM_SCHEDULE_RE = re.compile(r"\b(?:next\s+match|match\s+next|schedule|fixture|fixtures|lịch|lich|trận\s+tiếp\s+theo|tran\s+tiep\s+theo|trận\s+kế\s+tiếp|tran\s+ke\s+tiep|đá\s+khi\s+nào|da\s+khi\s+nao|đá\s+trận|da\s+tran|còn\s+trận|con\s+tran)\b", re.IGNORECASE)
 AMBIGUOUS_NON_TEAM_TERMS = {"doi hinh", "phong do", "lineup", "form", "team", "squad", "players", "player"}
 TEAM_SCHEDULE_CLEAN_RE = re.compile(r"\b(?:when|is|the|next|match|schedule|fixture|fixtures|lịch|lich|trận|tran|tiếp|tiep|theo|kế|ke|đá|da|khi|nào|nao|còn|con|của|cua)\b", re.IGNORECASE)
+KNOCKOUT_STAGE_PATTERNS = [
+    ("round32", re.compile(r"\b(?:round\s+of\s+32|round32|vong\s+32|32\s+doi|1\s*/\s*16)\b", re.IGNORECASE)),
+    ("round16", re.compile(r"\b(?:round\s+of\s+16|round16|vong\s+16|16\s+doi|1\s*/\s*8)\b", re.IGNORECASE)),
+    ("quarter", re.compile(r"\b(?:quarter\s*finals?|quarter|tu\s+ket)\b", re.IGNORECASE)),
+    ("semi", re.compile(r"\b(?:semi\s*finals?|semi|ban\s+ket)\b", re.IGNORECASE)),
+    ("third_place", re.compile(r"\b(?:third\s+place|tranh\s+hang\s+ba|hang\s+ba)\b", re.IGNORECASE)),
+    ("final", re.compile(r"\b(?:final|chung\s+ket)\b", re.IGNORECASE)),
+]
 
 
 def normalize_team_query(value: str) -> str:
@@ -135,21 +144,46 @@ def team_suggestions(teams: list[dict[str, Any]], limit: int = 6) -> list[str]:
     return [team.get("name") or team.get("id") for team in teams[:limit] if team.get("name") or team.get("id")]
 
 
-def resolve_relative_date_window(message: str, now_utc: datetime | None = None) -> dict[str, str] | None:
+def resolve_request_timezone(request_metadata: dict[str, Any] | None = None) -> ZoneInfo:
+    timezone_name = ((request_metadata or {}).get("client") or {}).get("timezone")
+    if not isinstance(timezone_name, str):
+        return ZoneInfo("UTC")
+    try:
+        return ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("UTC")
+
+
+def _utc_iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat()
+
+
+def resolve_relative_date_window(message: str, now_utc: datetime | None = None, request_metadata: dict[str, Any] | None = None) -> dict[str, str] | None:
     normalized_message = normalize_team_query(message)
+    user_timezone = resolve_request_timezone(request_metadata)
     now = now_utc or datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    local_now = now.astimezone(user_timezone)
+    today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    timezone_name = getattr(user_timezone, "key", "UTC")
 
     if any(term in normalized_message.split() for term in ("tomorrow", "mai")) or "ngay mai" in normalized_message:
         start = today_start + timedelta(days=1)
         end = start + timedelta(days=1)
-        return {"label": "tomorrow", "start_iso": start.isoformat(), "end_iso": end.isoformat()}
+        return {"label": "tomorrow", "timezone": timezone_name, "start_iso": _utc_iso(start), "end_iso": _utc_iso(end)}
     if any(term in normalized_message for term in ("today", "hom nay")):
         end = today_start + timedelta(days=1)
-        return {"label": "today", "start_iso": today_start.isoformat(), "end_iso": end.isoformat()}
+        return {"label": "today", "timezone": timezone_name, "start_iso": _utc_iso(today_start), "end_iso": _utc_iso(end)}
     if any(term in normalized_message for term in ("upcoming", "next match", "sap dien ra")):
-        end = now + timedelta(days=7)
-        return {"label": "upcoming", "start_iso": now.isoformat(), "end_iso": end.isoformat()}
+        end = local_now + timedelta(days=7)
+        return {"label": "upcoming", "timezone": timezone_name, "start_iso": _utc_iso(local_now), "end_iso": _utc_iso(end)}
+    return None
+
+
+def resolve_fixture_stage(message: str) -> str | None:
+    normalized_message = normalize_team_query(message)
+    for stage, pattern in KNOCKOUT_STAGE_PATTERNS:
+        if pattern.search(normalized_message):
+            return stage
     return None
 
 
@@ -269,14 +303,15 @@ def _extract_single_team_query(message: str) -> str:
     return re.sub(r"\s+", " ", cleaned).strip(" ?!.,;:-")
 
 
-async def gather_fixture_list_context(message: str, access_token: str, now_utc: datetime | None = None) -> tuple[dict[str, Any], list[str]]:
-    window = resolve_relative_date_window(message, now_utc) or resolve_relative_date_window("upcoming", now_utc)
+async def gather_fixture_list_context(message: str, access_token: str, now_utc: datetime | None = None, request_metadata: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[str]]:
+    window = resolve_relative_date_window(message, now_utc, request_metadata) or resolve_relative_date_window("upcoming", now_utc, request_metadata)
+    stage = resolve_fixture_stage(message)
     client = get_user_supabase_client(access_token)
-    matches = await list_matches_by_window(client, window["start_iso"], window["end_iso"])
+    matches = await list_matches_by_window(client, window["start_iso"], window["end_iso"], stage)
     teams = await list_team_rows(client)
     fixtures = _attach_match_teams(matches, teams)
-    _log_resolution("fixture_window_resolved", message=message, window=window, match_count=len(fixtures))
-    return {"fixture_window": window, "fixtures": fixtures}, ["list_matches_by_window", "list_team_rows"]
+    _log_resolution("fixture_window_resolved", message=message, window=window, stage=stage, match_count=len(fixtures))
+    return {"fixture_window": window, "fixture_stage": stage, "fixtures": fixtures}, ["list_matches_by_window", "list_team_rows"]
 
 
 async def gather_reminder_context(message: str, user_id: str, access_token: str) -> tuple[dict[str, Any], list[str]]:

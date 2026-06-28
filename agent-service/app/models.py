@@ -10,6 +10,7 @@ class AgentChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
     session_id: str | None = None
     match_id: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class AgentChatResponse(BaseModel):
