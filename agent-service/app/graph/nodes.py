@@ -98,9 +98,17 @@ def keyword_intent_router(message: str, match_id: str | None = None) -> AgentInt
     for intent, pattern in INTENT_PATTERNS:
         if pattern.search(normalized):
             return intent
+    if is_possible_team_matchup(message, normalized):
+        return "team_context"
     if is_standalone_team_name_candidate(message, normalized):
         return "team_context"
     return "general_chat"
+
+
+def is_possible_team_matchup(message: str, normalized: str) -> bool:
+    if not VIETNAMESE_DIACRITIC_RE.search(message):
+        return False
+    return bool(re.search(r"\b(?:va|and|vs|voi|gap|dau voi)\b", normalized))
 
 
 def is_standalone_team_name_candidate(message: str, normalized: str) -> bool:
@@ -166,11 +174,20 @@ async def data_gather(state: AgentState) -> AgentState:
                 include_user=include_user,
             )
         elif extract_ambiguous_matchup_query(message):
-            tool_branch = "ambiguous_matchup_context"
-            tool_results, used_tools = await gather_ambiguous_matchup_context(
-                message,
-                state.get("access_token", ""),
-            )
+            if intent == "prediction_help":
+                tool_branch = "matchup_resolution"
+                tool_results, used_tools = await resolve_matchup_context(
+                    message,
+                    state.get("user_id", ""),
+                    state.get("access_token", ""),
+                    include_user=include_user,
+                )
+            else:
+                tool_branch = "ambiguous_matchup_context"
+                tool_results, used_tools = await gather_ambiguous_matchup_context(
+                    message,
+                    state.get("access_token", ""),
+                )
         elif is_team_schedule_query(message):
             tool_branch = "team_schedule_context"
             tool_results, used_tools = await gather_team_schedule_context(
@@ -224,8 +241,11 @@ def analysis(state: AgentState) -> AgentState:
     if not is_supported_agent_topic(message, state):
         return {**state, "answer": off_topic_guardrail_answer(message, state.get("response_language"))}
 
+    context = state.get("tool_results", {})
     fallback = _fallback_answer(state, message)
-    if should_use_deterministic_answer(state.get("tool_results", {})) and fallback:
+    if should_use_deterministic_answer(context) and fallback:
+        if should_polish_deterministic_answer(context):
+            return {**state, "answer": _polish_deterministic_answer(state, message, fallback) or fallback}
         return {**state, "answer": fallback}
 
     prompt = _build_prompt(state, message)
@@ -250,8 +270,8 @@ def is_supported_agent_topic(message: str, state: AgentState) -> bool:
 
 def feature_suggestion_prompt(response_language: str | None = None) -> str:
     if response_language == "English":
-        return "Try asking me things like:\n- Which World Cup matches are worth watching today?\n- What round of 32 matches are today?\n- What exact score should I pick for Argentina vs Mexico?\n- How is Portugal looking before their next match?\n- How can I climb the leaderboard this week?"
-    return "Thử hỏi mình những câu như:\n- Hôm nay World Cup có trận nào đáng xem?\n- Vòng 32 đội hôm nay có trận gì?\n- Argentina vs Mexico nên dự đoán tỉ số bao nhiêu?\n- Portugal đang có phong độ thế nào trước trận tiếp theo?\n- Tuần này nên pick thế nào để leo leaderboard?"
+        return "Try asking me things like:\n- What World Cup matches are today?\n- What World Cup matches are tomorrow?\n- Which matches are coming up soon?\n- When is Portugal's next match?\n- How is Spain looking before their next match?\n- What are the exact-score rules?\n- How do pick deadlines work?\n- What is my current leaderboard snapshot?"
+    return "Thử hỏi mình những câu như:\n- Hôm nay World Cup có trận nào?\n- Ngày mai World Cup có trận nào?\n- Các trận sắp diễn ra là những trận nào?\n- Portugal có trận tiếp theo khi nào?\n- Tây Ban Nha đang thế nào trước trận tiếp theo?\n- Luật tính điểm dự đoán tỉ số như thế nào?\n- Pick khóa trước trận bao lâu?\n- Bảng xếp hạng hiện tại của tôi ra sao?"
 
 
 def off_topic_guardrail_answer(topic: str | None = None, response_language: str | None = None) -> str:
@@ -276,6 +296,29 @@ def should_use_deterministic_answer(context: dict[str, Any]) -> bool:
             "match",
         )
     )
+
+
+def should_polish_deterministic_answer(context: dict[str, Any]) -> bool:
+    return any(context.get(key) for key in ("fixture_window", "reminder_context", "team_context", "team_schedule_context", "rules_context", "match"))
+
+
+def _polish_deterministic_answer(state: AgentState, message: str, answer: str) -> str | None:
+    prompt = "\n".join(
+        [
+            "Rewrite this We Speak Football answer to be cleaner and easier to read in the user's language.",
+            "Keep every factual value exactly the same: teams, scores, dates, times, venue, status, percentages, and table rows.",
+            "Do not add new facts, analysis, predictions, match history, teams, or caveats.",
+            "You may only improve wording, section titles, bullet style, and natural labels.",
+            "Keep markdown. Prefer short sections and compact tables.",
+            f"User message: {message}",
+            f"Answer to polish:\n{answer}",
+        ]
+    )
+    try:
+        polished = _call_llm(prompt)
+    except RuntimeError:
+        return None
+    return polished.strip() if polished else None
 
 
 def safety_review(state: AgentState) -> AgentState:
@@ -503,7 +546,7 @@ def _fallback_answer(state: AgentState, message: str) -> str:
 def _match_name(match: dict[str, Any]) -> str:
     home = match.get("home_team", {})
     away = match.get("away_team", {})
-    return f"{home.get('short_name') or home.get('name') or match.get('home_team_id')} vs {away.get('short_name') or away.get('name') or match.get('away_team_id')}"
+    return f"{home.get('name') or home.get('short_name') or match.get('home_team_id')} vs {away.get('name') or away.get('short_name') or match.get('away_team_id')}"
 
 
 def _request_timezone(request_metadata: dict[str, Any] | None = None) -> ZoneInfo:
@@ -524,9 +567,21 @@ def _format_local_time(value: str | None, request_metadata: dict[str, Any] | Non
     except ValueError:
         return value
     local = instant.astimezone(_request_timezone(request_metadata))
-    offset = local.strftime("%z")
-    offset_text = f"{offset[:3]}:{offset[3:]}" if offset else "UTC"
-    return f"{local:%Y-%m-%d %H:%M} {offset_text}"
+    return f"{local:%d/%m %H:%M}"
+
+
+def _status_label(status: str | None, response_language: str | None = None) -> str:
+    labels = {
+        "scheduled": ("Chưa mở pick", "Scheduled"),
+        "open": ("Đang mở dự đoán", "Open for picks"),
+        "locked": ("Đã khóa pick", "Picks locked"),
+        "live": ("Đang diễn ra", "Live"),
+        "finished": ("Đã kết thúc", "Finished"),
+        "postponed": ("Hoãn", "Postponed"),
+        "cancelled": ("Đã hủy", "Cancelled"),
+    }
+    vietnamese, english = labels.get(status or "", (status or "-", status or "-"))
+    return vietnamese if response_language == "Vietnamese" else english
 
 
 def _cell(value: Any) -> str:
@@ -594,7 +649,7 @@ def _fixture_window_answer(context: dict[str, Any], request_metadata: dict[str, 
             _match_name(match),
             _stage_label(match.get("stage") or context.get("fixture_stage"), response_language),
             match.get("city"),
-            match.get("status"),
+            _status_label(match.get("status"), response_language),
         ]
         for match in fixtures[:8]
     ]
@@ -665,13 +720,44 @@ def _team_context_answer(context: dict[str, Any], request_metadata: dict[str, An
     return f"## {name}\n\n{details}\n\n### {related_title}\n\n" + _markdown_table(headers, rows)
 
 
+def _as_number(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _score_pick(home_name: str, away_name: str, espn: dict[str, Any], response_language: str | None = None) -> tuple[str, str]:
+    home_pct = _as_number(espn.get("home_win_pct"))
+    draw_pct = _as_number(espn.get("draw_pct"))
+    away_pct = _as_number(espn.get("away_win_pct"))
+    if home_pct is None or draw_pct is None or away_pct is None:
+        score = f"{home_name} 1-1 {away_name}"
+        reason = "Thiếu tín hiệu rõ, chọn tỉ số an toàn." if response_language == "Vietnamese" else "Signals are limited, so this keeps the scoreline conservative."
+        return score, reason
+
+    if draw_pct >= max(home_pct, away_pct) - 5:
+        score = f"{home_name} 1-1 {away_name}"
+        reason = "ESPN cho thấy trận khá cân bằng, nên hòa 1-1 là lựa chọn an toàn." if response_language == "Vietnamese" else "ESPN has this fairly balanced, so 1-1 is the safer scoreline."
+        return score, reason
+
+    favorite, underdog, favorite_pct, underdog_pct, favorite_home = (home_name, away_name, home_pct, away_pct, True) if home_pct > away_pct else (away_name, home_name, away_pct, home_pct, False)
+    margin = favorite_pct - underdog_pct
+    if favorite_home:
+        score = f"{home_name} 2-0 {away_name}" if margin >= 45 else f"{home_name} 2-1 {away_name}"
+    else:
+        score = f"{home_name} 0-2 {away_name}" if margin >= 45 else f"{home_name} 1-2 {away_name}"
+    reason = (f"{favorite} nhỉnh hơn theo ESPN ({favorite_pct:g}% so với {underdog_pct:g}%), nhưng vẫn nên giữ tỉ số vừa phải." if response_language == "Vietnamese" else f"{favorite} leads the ESPN signal ({favorite_pct:g}% vs {underdog_pct:g}%), but the scoreline stays moderate.")
+    return score, reason
+
+
 def _match_answer(context: dict[str, Any], intent: str | None = None, request_metadata: dict[str, Any] | None = None, response_language: str | None = None) -> str:
     match = context.get("match", {})
     teams = context.get("teams", {})
     home = teams.get("home", {})
     away = teams.get("away", {})
-    home_name = home.get("short_name") or home.get("name") or match.get("home_team_id")
-    away_name = away.get("short_name") or away.get("name") or match.get("away_team_id")
+    home_name = home.get("name") or home.get("short_name") or match.get("home_team_id")
+    away_name = away.get("name") or away.get("short_name") or match.get("away_team_id")
     title = f"{home_name} vs {away_name}"
     if response_language == "Vietnamese":
         info_headers = ["Thông tin", "Giá trị"]
@@ -679,7 +765,7 @@ def _match_answer(context: dict[str, Any], intent: str | None = None, request_me
             ["Giờ đá", _format_local_time(match.get("kickoff_at"), request_metadata)],
             ["Vòng", _stage_label(match.get("stage"), response_language)],
             ["Sân", match.get("stadium") or match.get("city")],
-            ["Trạng thái", match.get("status")],
+            ["Trạng thái", _status_label(match.get("status"), response_language)],
         ]
     else:
         info_headers = ["Info", "Value"]
@@ -687,7 +773,7 @@ def _match_answer(context: dict[str, Any], intent: str | None = None, request_me
             ["Kickoff", _format_local_time(match.get("kickoff_at"), request_metadata)],
             ["Round", _stage_label(match.get("stage"), response_language)],
             ["Venue", match.get("stadium") or match.get("city")],
-            ["Status", match.get("status")],
+            ["Status", _status_label(match.get("status"), response_language)],
         ]
     info = _markdown_table(info_headers, info_rows)
     if intent != "prediction_help":
@@ -701,9 +787,11 @@ def _match_answer(context: dict[str, Any], intent: str | None = None, request_me
         ["Hòa" if response_language == "Vietnamese" else "Draw", espn.get("draw_pct")],
         [away_name, espn.get("away_win_pct")],
     ]
+    score, reason = _score_pick(home_name, away_name, espn, response_language)
     if response_language == "Vietnamese":
         return (
             f"## Dự đoán: {title}\n\n"
+            f"### Tỉ số gợi ý\n\n**{score}**\n\n{reason}\n\n"
             "### Trận đấu\n\n"
             f"{info}\n\n"
             "### Tín hiệu ESPN\n\n"
@@ -716,6 +804,7 @@ def _match_answer(context: dict[str, Any], intent: str | None = None, request_me
         )
     return (
         f"## Prediction: {title}\n\n"
+        f"### Suggested score\n\n**{score}**\n\n{reason}\n\n"
         "### Match\n\n"
         f"{info}\n\n"
         "### ESPN signal\n\n"

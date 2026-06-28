@@ -85,6 +85,15 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["intent"], "rules_help")
 
+    async def test_routes_multilingual_prediction_matchup_before_llm(self):
+        state = {"messages": [{"role": "user", "content": "dự đoán cho tôi trận bồ đào nha và croatia"}]}
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = await intent_router(state)
+
+        self.assertEqual(result["intent"], "prediction_help")
+        call_llm.assert_not_called()
+
 
 class MemoryWriteSessionContextTest(unittest.IsolatedAsyncioTestCase):
     async def test_saves_latest_match_context(self):
@@ -141,8 +150,8 @@ class AnalysisGuardrailTest(unittest.TestCase):
             result = analysis(state)
 
         self.assertIn("Mình chưa hỗ trợ", result["answer"])
-        self.assertIn("Hôm nay World Cup có trận nào đáng xem?", result["answer"])
-        self.assertIn("leo leaderboard", result["answer"])
+        self.assertIn("Hôm nay World Cup có trận nào?", result["answer"])
+        self.assertIn("Bảng xếp hạng hiện tại của tôi ra sao?", result["answer"])
         call_llm.assert_not_called()
 
     def test_ambiguous_matchup_clarification_includes_feature_suggestions(self):
@@ -156,7 +165,7 @@ class AnalysisGuardrailTest(unittest.TestCase):
             result = analysis(state)
 
         self.assertIn("Bạn muốn hỏi Portugal vs Colombia", result["answer"])
-        self.assertIn("Hôm nay World Cup có trận nào đáng xem?", result["answer"])
+        self.assertIn("Hôm nay World Cup có trận nào?", result["answer"])
         self.assertIn("dự đoán tỉ số", result["answer"])
         call_llm.assert_not_called()
 
@@ -171,7 +180,7 @@ class AnalysisGuardrailTest(unittest.TestCase):
             result = analysis(state)
 
         self.assertIn("Mình chưa hỗ trợ", result["answer"])
-        self.assertIn("Hôm nay World Cup có trận nào đáng xem?", result["answer"])
+        self.assertIn("Hôm nay World Cup có trận nào?", result["answer"])
         self.assertNotIn("messi", result["answer"].lower())
         self.assertNotIn("ronaldo", result["answer"].lower())
         call_llm.assert_not_called()
@@ -237,6 +246,20 @@ class DataGatherTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["tool_results"]["ambiguous_matchup"]["display_matchup"], "Portugal vs Colombia")
         self.assertEqual(result["used_tools"], ["list_team_rows", "resolve_team_id", "find_match_by_team_ids"])
         gather_team_context.assert_not_called()
+
+    async def test_prediction_intent_resolves_ambiguous_multilingual_matchup(self):
+        state = {
+            "messages": [{"role": "user", "content": "dự đoán cho tôi trận bồ đào nha và croatia"}],
+            "intent": "prediction_help",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with patch("app.tools.football_tools.resolve_matchup_context", return_value=({"resolved_matchup": {"match_id": "wc2026-101"}}, ["find_match_by_team_ids"])):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["resolved_matchup"]["match_id"], "wc2026-101")
+        self.assertEqual(result["used_tools"], ["find_match_by_team_ids"])
 
     async def test_gathers_short_vietnamese_tomorrow_fixture_list(self):
         state = {

@@ -48,7 +48,10 @@ class FallbackAnswerTest(unittest.TestCase):
         self.assertIn("## Mình chưa hỗ trợ chủ đề này", answer)
         self.assertIn("Mình chưa hỗ trợ **nội dung này**", answer)
         self.assertIn("Thử hỏi mình những câu như:", answer)
-        self.assertIn("- Hôm nay World Cup có trận nào đáng xem?", answer)
+        self.assertIn("- Hôm nay World Cup có trận nào?", answer)
+        self.assertIn("- Pick khóa trước trận bao lâu?", answer)
+        self.assertIn("- Bảng xếp hạng hiện tại của tôi ra sao?", answer)
+        self.assertNotIn("Argentina vs Mexico", answer)
         self.assertNotIn("foo vs bar", answer.lower())
         self.assertNotIn("**foo", answer.lower())
 
@@ -61,7 +64,9 @@ class FallbackAnswerTest(unittest.TestCase):
         self.assertIn("## I can't help with that topic yet", answer)
         self.assertIn("I can't help with **Tell me about crypto trading**", answer)
         self.assertIn("Try asking me things like:", answer)
-        self.assertIn("- Which World Cup matches are worth watching today?", answer)
+        self.assertIn("- What World Cup matches are today?", answer)
+        self.assertIn("- How do pick deadlines work?", answer)
+        self.assertIn("- What is my current leaderboard snapshot?", answer)
 
     def test_lists_fixture_window_from_tool_context(self):
         answer = _fallback_answer(
@@ -83,7 +88,7 @@ class FallbackAnswerTest(unittest.TestCase):
 
         self.assertIn("## Matches for World Cup tomorrow", answer)
         self.assertIn("| Time | Match | Round | Location | Status |", answer)
-        self.assertIn("| 2026-06-28 20:00 +00:00 | Portugal vs Congo DR | - | Miami | - |", answer)
+        self.assertIn("| 28/06 20:00 | Portugal vs Congo DR | - | Miami | - |", answer)
 
     def test_formats_fixture_window_in_user_timezone(self):
         answer = _fallback_answer(
@@ -104,8 +109,8 @@ class FallbackAnswerTest(unittest.TestCase):
             "cho tôi biết trận ngày mai",
         )
 
-        self.assertIn("2026-06-29 03:00", answer)
-        self.assertIn("+07", answer)
+        self.assertIn("29/06 03:00", answer)
+        self.assertNotIn("+07", answer)
         self.assertNotIn("2026-06-28T20:00:00+00:00", answer)
 
     def test_team_context_does_not_fabricate_unavailable_squad(self):
@@ -156,6 +161,40 @@ class FallbackAnswerTest(unittest.TestCase):
         self.assertIn("Chưa có dữ liệu", answer)
         self.assertNotIn("Brazil", answer)
         self.assertNotIn("Tổng kết", answer)
+
+    def test_prediction_answer_includes_score_reason_and_natural_labels(self):
+        answer = _fallback_answer(
+            {
+                "response_language": "Vietnamese",
+                "request_metadata": {"client": {"timezone": "Asia/Ho_Chi_Minh"}},
+                "intent": "prediction_help",
+                "tool_results": {
+                    "match": {
+                        "home_team_id": "POR",
+                        "away_team_id": "CRO",
+                        "kickoff_at": "2026-07-02T23:00:00+00:00",
+                        "stage": "round32",
+                        "stadium": "BMO Field",
+                        "status": "open",
+                    },
+                    "teams": {
+                        "home": {"name": "Portugal", "short_name": "POR"},
+                        "away": {"name": "Croatia", "short_name": "CRO"},
+                    },
+                    "prediction_signal": {"espn": {"home_win_pct": 52, "draw_pct": 27, "away_win_pct": 21}},
+                },
+            },
+            "dự đoán cho tôi trận bồ đào nha và croatia",
+        )
+
+        self.assertIn("## Dự đoán: Portugal vs Croatia", answer)
+        self.assertIn("### Tỉ số gợi ý", answer)
+        self.assertIn("**Portugal 2-1 Croatia**", answer)
+        self.assertIn("Portugal nhỉnh hơn theo ESPN", answer)
+        self.assertIn("03/07 06:00", answer)
+        self.assertIn("Đang mở dự đoán", answer)
+        self.assertNotIn("POR vs CRO", answer)
+        self.assertNotIn("open", answer)
 
 
 class SafetyReviewTextTest(unittest.TestCase):

@@ -123,6 +123,9 @@ class MatchupResolutionTest(unittest.TestCase):
     def test_extracts_ambiguous_vietnamese_matchup(self):
         self.assertEqual(extract_ambiguous_matchup_query("bồ đào nha và colombia"), ("bồ đào nha", "colombia"))
 
+    def test_extracts_prefixed_ambiguous_prediction_matchup(self):
+        self.assertEqual(extract_ambiguous_matchup_query("dự đoán cho tôi trận bồ đào nha và croatia"), ("bồ đào nha", "croatia"))
+
     def test_explicit_connector_does_not_use_ambiguous_matchup(self):
         self.assertIsNone(extract_ambiguous_matchup_query("bồ đào nha với colombia"))
         self.assertEqual(extract_matchup_query("bồ đào nha với colombia"), ("bồ đào nha", "colombia"))

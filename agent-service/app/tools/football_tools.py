@@ -246,6 +246,7 @@ def extract_ambiguous_matchup_query(message: str) -> tuple[str, str] | None:
 def _clean_matchup_team_query(value: str) -> str:
     cleaned = value.strip(" ?!.,;:-")
     cleaned = re.sub(r"^(?:analyze|preview|predict|pick|phân tích|phan tich|dự đoán|du doan|xem|coi|lịch sử đối đầu|lich su doi dau|đối đầu|doi dau)\s+", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^(?:(?:cho tôi|cho toi|giúp tôi|giup toi|trận|tran|the match)\s+)+", "", cleaned, flags=re.IGNORECASE)
     cleaned = TRAILING_REQUEST_RE.sub("", cleaned)
     return cleaned.strip(" ?!.,;:-")
 
@@ -450,7 +451,7 @@ async def gather_rules_context(user_id: str, access_token: str) -> tuple[dict[st
 
 
 async def resolve_matchup_context(message: str, user_id: str, access_token: str, include_user: bool = False) -> tuple[dict[str, Any], list[str]]:
-    matchup = extract_matchup_query(message)
+    matchup = extract_matchup_query(message) or extract_ambiguous_matchup_query(message)
     if not matchup:
         _log_resolution("matchup_not_extracted", message=message)
         return {}, []
