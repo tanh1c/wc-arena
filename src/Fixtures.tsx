@@ -20,6 +20,7 @@ import {
   User,
 } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
+import { buildKnockoutTeamProjection, type ProjectedMatchTeams } from './lib/knockoutAdvancement';
 import { getErrorMessage } from './services/serviceTypes';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
 import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type MatchRow } from './services/matches';
@@ -87,6 +88,12 @@ function getStatusClass(status: string) {
   return 'bg-c1 text-main';
 }
 
+function statusMatchesFilter(statusFilter: StatusFilter, effectiveStatus: string) {
+  if (statusFilter === 'all') return true;
+  if (statusFilter === 'open') return effectiveStatus === 'open' || effectiveStatus === 'scheduled';
+  return effectiveStatus === statusFilter;
+}
+
 function TeamFlag({ team }: { team?: TeamRow }) {
   const FlagIcon = getTeamFlag(team?.country_code, team?.short_name);
 
@@ -117,10 +124,11 @@ function MatchScore({ match }: { match: MatchRow }) {
   );
 }
 
-function MatchListRow({ match, homeTeam, awayTeam, featured, onNavigate, t }: { key?: string; match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow; featured: boolean; onNavigate: (page: string) => void; t: TranslationFn }) {
+function MatchListRow({ match, homeTeam, awayTeam, projection, featured, onNavigate, t }: { key?: string; match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow; projection?: ProjectedMatchTeams; featured: boolean; onNavigate: (page: string) => void; t: TranslationFn }) {
   const effectiveStatus = getEffectiveMatchStatus(match);
   const isLive = effectiveStatus === 'live';
   const isFinished = effectiveStatus === 'finished';
+  const isProjected = Boolean(projection && (projection.home.projected || projection.away.projected));
 
   return (
     <div className={`flex flex-col sm:flex-row border-b-4 border-main relative hover:bg-page transition-colors overflow-hidden ${isLive ? 'bg-[#f0f9ff]' : 'bg-card'} ${isFinished ? 'opacity-80' : ''}`}>
@@ -165,6 +173,7 @@ function MatchListRow({ match, homeTeam, awayTeam, featured, onNavigate, t }: { 
         </div>
         <div className="w-full md:w-auto mt-3 md:mt-0 md:ml-6 grid grid-cols-2 md:flex items-center gap-2 md:gap-3 shrink-0">
           <span className={`${getStatusClass(effectiveStatus)} px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px]`}>{getStatusLabel(effectiveStatus, t)}</span>
+          {isProjected && <span className="bg-c1 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">Projected</span>}
           <button onClick={() => onNavigate(`matches/${match.id}`)} className={`${effectiveStatus === 'open' ? 'bg-c2 text-inv hover:opacity-90' : 'bg-card hover:bg-page text-main'} font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 min-w-0 md:min-w-24 focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all`}>
             {effectiveStatus === 'open' ? t('matches.predict') : isFinished ? t('matches.results') : t('matches.details')} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
           </button>
@@ -185,7 +194,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   const [error, setError] = useState<string | null>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>('group');
   const [matchdayFilter, setMatchdayFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -214,12 +223,13 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
     };
   }, []);
 
+  const knockoutProjection = useMemo(() => buildKnockoutTeamProjection(matches, teams), [matches, teams]);
+
   const filteredMatches = useMemo(() => matches.filter((match) => {
     const effectiveStatus = getEffectiveMatchStatus(match);
     const stageMatches = match.stage === stageFilter;
     const matchdayMatches = matchdayFilter === 'all' || String(match.matchday) === matchdayFilter;
-    const statusMatches = statusFilter === 'all' || effectiveStatus === statusFilter;
-    return stageMatches && matchdayMatches && statusMatches;
+    return stageMatches && matchdayMatches && statusMatchesFilter(statusFilter, effectiveStatus);
   }), [matches, matchdayFilter, stageFilter, statusFilter]);
 
   const matchdays = useMemo(() => Array.from(new Set(matches.filter((match) => match.stage === stageFilter && match.matchday).map((match) => match.matchday))).sort((a, b) => Number(a) - Number(b)), [matches, stageFilter]);
@@ -296,13 +306,15 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
               <div className="flex flex-col sm:flex-row items-center justify-between p-3 border-b-4 border-main bg-card gap-3 relative z-20">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 w-full">
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-                    <div className="relative flex-1 md:flex-none">
-                      <select value={matchdayFilter} onChange={(event) => { setMatchdayFilter(event.target.value); setPage(1); }} className="appearance-none w-full md:w-40 border-2 border-main py-2 pl-3 pr-8 font-black uppercase text-xs bg-card outline-none cursor-pointer focus:translate-y-[2px] focus:translate-x-[2px] focus:shadow-none transition-all">
-                        <option value="all">{t('ui.allMatchdays')}</option>
-                        {matchdays.map((matchday) => <option key={matchday} value={String(matchday)}>{t('ui.matchdayLabel', { matchday })}</option>)}
-                      </select>
-                      <ChevronDown size={14} strokeWidth={3} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    {stageFilter === 'group' && (
+                      <div className="relative flex-1 md:flex-none">
+                        <select value={matchdayFilter} onChange={(event) => { setMatchdayFilter(event.target.value); setPage(1); }} className="appearance-none w-full md:w-40 border-2 border-main py-2 pl-3 pr-8 font-black uppercase text-xs bg-card outline-none cursor-pointer focus:translate-y-[2px] focus:translate-x-[2px] focus:shadow-none transition-all">
+                          <option value="all">{t('ui.allMatchdays')}</option>
+                          {matchdays.map((matchday) => <option key={matchday} value={String(matchday)}>{t('ui.matchdayLabel', { matchday })}</option>)}
+                        </select>
+                        <ChevronDown size={14} strokeWidth={3} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 border-2 border-main py-2 px-3 bg-page font-bold text-xs uppercase flex-1 md:flex-none justify-center min-w-0">
                       <Calendar size={14} className="text-main shrink-0" />
                       <span className="truncate">{formatDateRange(filteredMatches, t)}</span>
@@ -322,17 +334,21 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                 {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingMatches')}</div>}
                 {error && <div className="p-6 font-black uppercase text-sm bg-c5 text-main border-b-4 border-main">{error}</div>}
                 {!loading && !error && filteredMatches.length === 0 && <div className="p-6 font-black uppercase text-sm">{t('ui.noMatchesForFilter')}</div>}
-                {!loading && !error && visibleMatches.map((match) => (
-                  <MatchListRow
-                    key={match.id}
-                    match={match}
-                    homeTeam={teams.get(match.home_team_id)}
-                    awayTeam={teams.get(match.away_team_id)}
-                    featured={match.id === firstOpenMatchId}
-                    onNavigate={onNavigate}
-                    t={t}
-                  />
-                ))}
+                {!loading && !error && visibleMatches.map((match) => {
+                  const projection = knockoutProjection.get(match.id);
+                  return (
+                    <MatchListRow
+                      key={match.id}
+                      match={match}
+                      homeTeam={teams.get(projection?.home.teamId ?? match.home_team_id)}
+                      awayTeam={teams.get(projection?.away.teamId ?? match.away_team_id)}
+                      projection={projection}
+                      featured={match.id === firstOpenMatchId}
+                      onNavigate={onNavigate}
+                      t={t}
+                    />
+                  );
+                })}
                 {!loading && !error && filteredMatches.length > MATCHES_PER_PAGE && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-card border-b-4 border-main font-black uppercase text-xs">
                     <span>

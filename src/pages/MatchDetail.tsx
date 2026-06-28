@@ -6,6 +6,7 @@ import AppShell from '../components/layout/AppShell';
 import PredictionShareButton from '../components/PredictionShareButton';
 import StatusPill from '../components/ui/StatusPill';
 import { buildGroupStandings, getRecentCompletedGroupMatchesForTeams } from '../lib/groupStandings';
+import { buildKnockoutTeamProjection } from '../lib/knockoutAdvancement';
 import { calculatePredictionScore, getPredictionOutcome } from '../lib/scoring';
 import { useAuth } from '../lib/auth';
 import { getEffectiveMatchStatus, getMatch, listMatches, type MatchRow } from '../services/matches';
@@ -415,8 +416,11 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
     };
   }, [authUser, matchId]);
 
-  const homeTeam = match ? teams.get(match.home_team_id) : undefined;
-  const awayTeam = match ? teams.get(match.away_team_id) : undefined;
+  const knockoutProjection = useMemo(() => buildKnockoutTeamProjection(allMatches, teams), [allMatches, teams]);
+  const matchProjection = match ? knockoutProjection.get(match.id) : undefined;
+  const homeTeam = match ? teams.get(matchProjection?.home.teamId ?? match.home_team_id) : undefined;
+  const awayTeam = match ? teams.get(matchProjection?.away.teamId ?? match.away_team_id) : undefined;
+  const isProjectedMatchup = Boolean(matchProjection && (matchProjection.home.projected || matchProjection.away.projected));
   const result = match ? getMatchResult(match) : undefined;
   const effectiveStatus = match ? getEffectiveMatchStatus(match) : undefined;
   const isInputDisabled = !effectiveStatus || ['live', 'finished', 'postponed', 'cancelled'].includes(effectiveStatus);
@@ -550,6 +554,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
             {homeTeam.short_name} vs {awayTeam.short_name}
           </h1>
           <p className="font-bold text-xs sm:text-sm text-subtle max-w-xl">{t('ui.matchHelper')}</p>
+          {isProjectedMatchup && <p className="mt-2 inline-flex bg-c1 border-2 border-main px-3 py-1 font-black text-[10px] uppercase">Projected teams based on current results</p>}
         </div>
 
         <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 sm:gap-4 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
