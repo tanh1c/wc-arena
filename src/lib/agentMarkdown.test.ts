@@ -16,9 +16,9 @@ test('renders README-style markdown used by agent responses', () => {
     '[Open match](https://example.com/match)',
   ].join('\n'));
 
-  assert.match(html, /<h2>Match preview<\/h2>/);
+  assert.match(html, /<h2 class="agent-md-heading">Match preview<\/h2>/);
   assert.match(html, /<strong>Brazil<\/strong>/);
-  assert.match(html, /<ul><li>Press high<\/li><li>Protect the box<\/li><\/ul>/);
+  assert.match(html, /<ul class="agent-md-list"><li>Press high<\/li><li>Protect the box<\/li><\/ul>/);
   assert.match(html, /<code>3-2<\/code>/);
   assert.match(html, /<a href="https:\/\/example\.com\/match" target="_blank" rel="noreferrer">Open match<\/a>/);
 });
@@ -32,7 +32,7 @@ test('renders markdown tables used by agent fixture responses', () => {
     '| 2026-06-29 02:00 +07:00 | RSA vs CAN | Round of 32 |',
   ].join('\n'));
 
-  assert.match(html, /<table>/);
+  assert.match(html, /<div class="agent-md-table-wrap"><table>/);
   assert.match(html, /<th>Giờ<\/th>/);
   assert.match(html, /<td>RSA vs CAN<\/td>/);
   assert.match(html, /<td>Round of 32<\/td>/);

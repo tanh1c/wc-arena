@@ -205,29 +205,85 @@
   }
 
   .agent-markdown h2 {
-    font-size: 1.125rem;
+    border: 3px solid var(--c-line-strong);
+    background: var(--c-yellow);
+    color: var(--c-accent-on);
+    box-shadow: 3px 3px 0 var(--c-shadow);
+    font-size: 1rem;
+    padding: 0.65rem 0.75rem;
   }
 
   .agent-markdown h3,
   .agent-markdown h4 {
-    font-size: 1rem;
+    border: 2px solid var(--c-line-strong);
+    background: var(--bg-muted);
+    box-shadow: 2px 2px 0 var(--c-shadow);
+    font-size: 0.9rem;
+    padding: 0.55rem 0.65rem;
   }
 
-  .agent-markdown ul,
-  .agent-markdown ol {
-    padding-left: 1.25rem;
+  .agent-markdown .agent-md-list {
+    display: grid;
+    gap: 0.35rem;
+    padding-left: 0;
+    list-style: none;
   }
 
-  .agent-markdown ul {
-    list-style: square;
+  .agent-markdown .agent-md-list li {
+    border: 2px solid var(--c-line);
+    background: var(--bg-muted);
+    padding: 0.55rem 0.65rem;
   }
 
-  .agent-markdown ol {
-    list-style: decimal;
+  .agent-markdown .agent-md-list li strong:first-child {
+    display: inline-block;
+    min-width: 5.5rem;
+    color: var(--c-faint);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
   }
 
-  .agent-markdown li + li {
-    margin-top: 0.35rem;
+  .agent-markdown ol.agent-md-list {
+    counter-reset: agent-list;
+  }
+
+  .agent-markdown ol.agent-md-list li {
+    counter-increment: agent-list;
+  }
+
+  .agent-markdown ol.agent-md-list li::before {
+    content: counter(agent-list) ". ";
+    font-weight: 900;
+  }
+
+  .agent-markdown .agent-md-table-wrap {
+    overflow-x: auto;
+    border: 2px solid var(--c-line-strong);
+    box-shadow: 3px 3px 0 var(--c-shadow);
+  }
+
+  .agent-markdown table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    font-size: 0.82rem;
+  }
+
+  .agent-markdown th,
+  .agent-markdown td {
+    border: 2px solid var(--c-line);
+    padding: 0.55rem 0.65rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .agent-markdown th {
+    background: var(--bg-muted);
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
   }
 
   .agent-markdown code {

@@ -55,7 +55,7 @@ function formatInline(value: string) {
 
 function renderList(items: string[], ordered: boolean) {
   const tag = ordered ? 'ol' : 'ul';
-  return `<${tag}>${items.map((item) => `<li>${formatInline(item)}</li>`).join('')}</${tag}>`;
+  return `<${tag} class="agent-md-list">${items.map((item) => `<li>${formatInline(item)}</li>`).join('')}</${tag}>`;
 }
 
 function splitTableRow(line: string) {
@@ -75,7 +75,7 @@ function renderTable(lines: string[]) {
   const [headerLine, , ...bodyLines] = lines;
   const headers = splitTableRow(headerLine);
   const rows = bodyLines.map(splitTableRow);
-  return `<table><thead><tr>${headers.map((cell) => `<th>${formatInline(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${formatInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  return `<div class="agent-md-table-wrap"><table><thead><tr>${headers.map((cell) => `<th>${formatInline(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${formatInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 export function renderAgentMarkdown(markdown: string) {
@@ -171,7 +171,7 @@ export function renderAgentMarkdown(markdown: string) {
       flushParagraph();
       flushLists();
       const level = headingMatch[1].length + 1;
-      blocks.push(`<h${level}>${formatInline(headingMatch[2])}</h${level}>`);
+      blocks.push(`<h${level} class="agent-md-heading">${formatInline(headingMatch[2])}</h${level}>`);
       continue;
     }
 

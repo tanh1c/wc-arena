@@ -87,31 +87,40 @@ class FallbackAnswerTest(unittest.TestCase):
         )
 
         self.assertIn("## Matches for World Cup tomorrow", answer)
-        self.assertIn("| Time | Match | Round | Location | Status |", answer)
-        self.assertIn("| 28/06 20:00 | Portugal vs Congo DR | - | Miami | - |", answer)
+        self.assertIn("### Portugal vs Congo DR", answer)
+        self.assertIn("- **Time:** 28/06 20:00", answer)
+        self.assertIn("- **Location:** Miami", answer)
 
     def test_formats_fixture_window_in_user_timezone(self):
         answer = _fallback_answer(
             {
+                "response_language": "Vietnamese",
                 "request_metadata": {"client": {"timezone": "Asia/Ho_Chi_Minh"}},
                 "tool_results": {
                     "fixture_window": {"label": "tomorrow", "timezone": "Asia/Ho_Chi_Minh"},
                     "fixtures": [
                         {
-                            "home_team": {"name": "Portugal"},
-                            "away_team": {"name": "Congo DR"},
-                            "kickoff_at": "2026-06-28T20:00:00+00:00",
-                            "city": "Miami",
+                            "home_team": {"name": "South Africa"},
+                            "away_team": {"name": "Canada"},
+                            "kickoff_at": "2026-06-28T19:00:00+00:00",
+                            "stage": "round32",
+                            "city": "Los Angeles (Inglewood)",
+                            "status": "open",
                         }
                     ],
                 },
             },
-            "cho tôi biết trận ngày mai",
+            "Ngày mai World Cup có trận nào?",
         )
 
-        self.assertIn("29/06 03:00", answer)
-        self.assertNotIn("+07", answer)
-        self.assertNotIn("2026-06-28T20:00:00+00:00", answer)
+        self.assertIn("## Trận đấu World Cup ngày mai", answer)
+        self.assertIn("### South Africa vs Canada", answer)
+        self.assertIn("- **Giờ:** 29/06 02:00", answer)
+        self.assertIn("- **Vòng:** Vòng 32 đội", answer)
+        self.assertIn("- **Địa điểm:** Los Angeles (Inglewood)", answer)
+        self.assertIn("- **Trạng thái:** Đang mở dự đoán", answer)
+        self.assertNotIn("| Giờ |", answer)
+        self.assertNotIn("2026-06-28T19:00:00+00:00", answer)
 
     def test_team_context_does_not_fabricate_unavailable_squad(self):
         answer = _fallback_answer(

@@ -598,6 +598,25 @@ def _markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
     )
 
 
+def _detail_list(rows: list[list[Any]]) -> str:
+    return "\n".join(f"- **{label}:** {_cell(value)}" for label, value in rows)
+
+
+def _match_details(match: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None, include_status: bool = True) -> list[list[Any]]:
+    rows = [
+        ["Giờ" if response_language == "Vietnamese" else "Time", _format_local_time(match.get("kickoff_at"), request_metadata)],
+        ["Vòng" if response_language == "Vietnamese" else "Round", _stage_label(match.get("stage"), response_language)],
+        ["Địa điểm" if response_language == "Vietnamese" else "Location", match.get("stadium") or match.get("city")],
+    ]
+    if include_status:
+        rows.append(["Trạng thái" if response_language == "Vietnamese" else "Status", _status_label(match.get("status"), response_language)])
+    return rows
+
+
+def _match_card(match: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None, include_status: bool = True) -> str:
+    return f"### {_match_name(match)}\n\n{_detail_list(_match_details(match, request_metadata, response_language, include_status))}"
+
+
 def _stage_label(stage: str | None, response_language: str | None = None) -> str:
     if response_language == "Vietnamese":
         return {
@@ -635,25 +654,14 @@ def _fixture_window_answer(context: dict[str, Any], request_metadata: dict[str, 
         scope = f"{stage_label} {label}" if stage_label else f"World Cup {label}"
         if not fixtures:
             return f"## Chưa có trận phù hợp\n\nTheo múi giờ của bạn, mình chưa thấy trận {scope} nào được lên lịch.\n\n{feature_suggestion_prompt(response_language)}"
-        headers = ["Giờ", "Trận", "Vòng", "Địa điểm", "Trạng thái"]
-        title = f"Lịch thi đấu {scope}"
+        title = f"Trận đấu {scope}"
     else:
         scope = f"{stage_label} {label}" if stage_label else f"World Cup {label}"
         if not fixtures:
             return f"## No matching matches\n\nI don't see any {scope} matches scheduled in your timezone.\n\n{feature_suggestion_prompt(response_language)}"
-        headers = ["Time", "Match", "Round", "Location", "Status"]
         title = f"Matches for {scope}"
-    rows = [
-        [
-            _format_local_time(match.get("kickoff_at"), request_metadata),
-            _match_name(match),
-            _stage_label(match.get("stage") or context.get("fixture_stage"), response_language),
-            match.get("city"),
-            _status_label(match.get("status"), response_language),
-        ]
-        for match in fixtures[:8]
-    ]
-    return f"## {title}\n\n" + _markdown_table(headers, rows)
+    cards = "\n\n".join(_match_card(match, request_metadata, response_language) for match in fixtures[:8])
+    return f"## {title}\n\n{cards}"
 
 
 def _reminder_answer(context: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None) -> str:
@@ -662,13 +670,17 @@ def _reminder_answer(context: dict[str, Any], request_metadata: dict[str, Any] |
         if response_language == "Vietnamese":
             return f"## Chưa có trận sắp khóa pick\n\nMình chưa thấy trận nào sắp khóa pick trong lịch hiện tại.\n\n{feature_suggestion_prompt(response_language)}"
         return f"## No upcoming pick locks\n\nI don't see any matches locking soon in the current schedule.\n\n{feature_suggestion_prompt(response_language)}"
-    rows = [
-        [_format_local_time(match.get("kickoff_at"), request_metadata), _format_local_time(match.get("lock_at"), request_metadata), _match_name(match)]
+    cards = "\n\n".join(
+        f"### {_match_name(match)}\n\n" + _detail_list([
+            ["Giờ đá" if response_language == "Vietnamese" else "Kickoff", _format_local_time(match.get("kickoff_at"), request_metadata)],
+            ["Giờ khóa" if response_language == "Vietnamese" else "Lock", _format_local_time(match.get("lock_at"), request_metadata)],
+            ["Trạng thái" if response_language == "Vietnamese" else "Status", _status_label(match.get("status"), response_language)],
+        ])
         for match in matches[:8]
-    ]
+    )
     if response_language == "Vietnamese":
-        return "## Các trận sắp khóa pick\n\n" + _markdown_table(["Giờ đá", "Giờ khóa", "Trận"], rows) + "\n\nMình có thể tóm tắt deadline ở đây, còn push notification thì hiện chưa được bật từ chat."
-    return "## Upcoming pick locks\n\n" + _markdown_table(["Kickoff", "Lock", "Match"], rows) + "\n\nI can summarize deadlines here, but push notifications are not enabled from chat yet."
+        return f"## Các trận sắp khóa pick\n\n{cards}\n\nMình có thể tóm tắt deadline ở đây, còn push notification thì hiện chưa được bật từ chat."
+    return f"## Upcoming pick locks\n\n{cards}\n\nI can summarize deadlines here, but push notifications are not enabled from chat yet."
 
 
 def _team_schedule_answer(context: dict[str, Any], response_language: str | None = None, request_metadata: dict[str, Any] | None = None) -> str:
@@ -681,10 +693,8 @@ def _team_schedule_answer(context: dict[str, Any], response_language: str | None
             return f"## No upcoming match for {team_name}\n\nI don't see an upcoming match for {team_name} in the current schedule.\n\n{feature_suggestion_prompt(response_language)}"
         return f"## Chưa có trận sắp tới của {team_name}\n\nTôi chưa có trận sắp tới của {team_name} trong dữ liệu hiện tại.\n\n{feature_suggestion_prompt(response_language)}"
 
-    headers = ["Time", "Match", "Stage", "Location"] if response_language == "English" else ["Giờ", "Trận", "Vòng", "Địa điểm"]
-    rows = [[_format_local_time(next_match.get("kickoff_at"), request_metadata), _match_name(next_match), _stage_label(next_match.get("stage"), response_language), next_match.get("city")]]
     title = f"Next match for {team_name}" if response_language == "English" else f"Trận tiếp theo của {team_name}"
-    return f"## {title}\n\n" + _markdown_table(headers, rows)
+    return f"## {title}\n\n{_match_card(next_match, request_metadata, response_language)}"
 
 
 def _team_context_answer(context: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None) -> str:
@@ -692,32 +702,24 @@ def _team_context_answer(context: dict[str, Any], request_metadata: dict[str, An
     team = team_context.get("team", {})
     name = team.get("name") or team.get("id") or "that team"
     if response_language == "Vietnamese":
-        details = _markdown_table(
-            ["Thông tin", "Giá trị"],
-            [
-                ["FIFA rank", team.get("fifa_rank")],
-                ["Đội hình", "Có dữ liệu" if team_context.get("squad_available") else "Chưa có dữ liệu"],
-                ["Phong độ gần đây", "Có dữ liệu" if team_context.get("form_available") else "Chưa có dữ liệu"],
-            ],
-        )
+        details = _detail_list([
+            ["FIFA rank", team.get("fifa_rank")],
+            ["Đội hình", "Có dữ liệu" if team_context.get("squad_available") else "Chưa có dữ liệu"],
+            ["Phong độ gần đây", "Có dữ liệu" if team_context.get("form_available") else "Chưa có dữ liệu"],
+        ])
         related_title = "Các trận liên quan"
-        headers = ["Giờ", "Trận", "Vòng"]
     else:
-        details = _markdown_table(
-            ["Info", "Value"],
-            [
-                ["FIFA rank", team.get("fifa_rank")],
-                ["Squad", "Available" if team_context.get("squad_available") else "Not available yet"],
-                ["Recent form", "Available" if team_context.get("form_available") else "Not available yet"],
-            ],
-        )
+        details = _detail_list([
+            ["FIFA rank", team.get("fifa_rank")],
+            ["Squad", "Available" if team_context.get("squad_available") else "Not available yet"],
+            ["Recent form", "Available" if team_context.get("form_available") else "Not available yet"],
+        ])
         related_title = "Related matches"
-        headers = ["Time", "Match", "Round"]
     matches = team_context.get("matches") or []
     if not matches:
         return f"## {name}\n\n{details}"
-    rows = [[_format_local_time(match.get("kickoff_at"), request_metadata), _match_name(match), _stage_label(match.get("stage"), response_language)] for match in matches[:5]]
-    return f"## {name}\n\n{details}\n\n### {related_title}\n\n" + _markdown_table(headers, rows)
+    cards = "\n\n".join(_match_card(match, request_metadata, response_language, include_status=False) for match in matches[:5])
+    return f"## {name}\n\n{details}\n\n## {related_title}\n\n{cards}"
 
 
 def _as_number(value: Any) -> float | None:
@@ -759,23 +761,7 @@ def _match_answer(context: dict[str, Any], intent: str | None = None, request_me
     home_name = home.get("name") or home.get("short_name") or match.get("home_team_id")
     away_name = away.get("name") or away.get("short_name") or match.get("away_team_id")
     title = f"{home_name} vs {away_name}"
-    if response_language == "Vietnamese":
-        info_headers = ["Thông tin", "Giá trị"]
-        info_rows = [
-            ["Giờ đá", _format_local_time(match.get("kickoff_at"), request_metadata)],
-            ["Vòng", _stage_label(match.get("stage"), response_language)],
-            ["Sân", match.get("stadium") or match.get("city")],
-            ["Trạng thái", _status_label(match.get("status"), response_language)],
-        ]
-    else:
-        info_headers = ["Info", "Value"]
-        info_rows = [
-            ["Kickoff", _format_local_time(match.get("kickoff_at"), request_metadata)],
-            ["Round", _stage_label(match.get("stage"), response_language)],
-            ["Venue", match.get("stadium") or match.get("city")],
-            ["Status", _status_label(match.get("status"), response_language)],
-        ]
-    info = _markdown_table(info_headers, info_rows)
+    info = _detail_list(_match_details(match, request_metadata, response_language))
     if intent != "prediction_help":
         if response_language == "Vietnamese":
             return f"## {title}\n\n{info}\n\n### Gợi ý xem nhanh\n- Xem thêm phong độ hai đội trước khi chọn tỉ số.\n- Nhớ gửi pick trước giờ khóa."
