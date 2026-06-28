@@ -29,6 +29,18 @@ class MatchupResolutionTest(unittest.TestCase):
         with patch("app.graph.nodes._call_llm", return_value='{"team_id": "ARG"}'):
             self.assertEqual(resolve_team_id_from_rows("á căn đình", teams), "ARG")
 
+    def test_uses_llm_for_common_vietnamese_team_names_without_static_mapping(self):
+        teams = [
+            {"id": "ESP", "name": "Spain", "short_name": "ESP", "country_code": "ES"},
+            {"id": "FRA", "name": "France", "short_name": "FRA", "country_code": "FR"},
+            {"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"},
+        ]
+        cases = [("tây ban nha", "ESP"), ("pháp", "FRA"), ("bồ đào nha", "POR")]
+
+        for query, team_id in cases:
+            with self.subTest(query=query), patch("app.graph.nodes._call_llm", return_value=f'{{"team_id": "{team_id}", "confidence": "high"}}'):
+                self.assertEqual(resolve_team_id_from_rows(query, teams), team_id)
+
     def test_accepts_case_insensitive_llm_team_id(self):
         teams = [{"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"}]
         with patch("app.graph.nodes._call_llm", return_value='{"team_id": "por", "confidence": "high"}'):

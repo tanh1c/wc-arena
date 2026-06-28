@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch
 
 from app.graph.nodes import analysis, data_gather, intent_router
+from app.graph.workflow import run_agent_turn
+from app.memory import save_session_context
 
 
 class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
@@ -98,16 +100,33 @@ class MemoryWriteSessionContextTest(unittest.IsolatedAsyncioTestCase):
             },
         }
 
-        with (
-            patch("app.graph.nodes.save_interaction", create=True) as unused_save_interaction,
-            patch("app.memory.get_memory_client", return_value=None),
-        ):
+        with patch("app.memory.get_memory_client", return_value=None):
             from app.graph.nodes import memory_write
             from app.memory import get_session_context
 
             await memory_write(state)
 
         self.assertEqual(get_session_context("user-2", "session-2")["match_id"], "m2")
+
+    async def test_saves_ambiguous_matchup_as_latest_match(self):
+        state = {
+            "messages": [{"role": "user", "content": "bồ đào nha và colombia"}],
+            "user_id": "user-ambiguous",
+            "session_id": "session-ambiguous",
+            "answer": "Bạn muốn hỏi Portugal vs Colombia?",
+            "intent": "team_context",
+            "tool_results": {"ambiguous_matchup": {"display_matchup": "Portugal vs Colombia", "match_id": "m3"}},
+        }
+
+        with patch("app.memory.get_memory_client", return_value=None):
+            from app.graph.nodes import memory_write
+            from app.memory import get_session_context
+
+            await memory_write(state)
+
+        context = get_session_context("user-ambiguous", "session-ambiguous")
+        self.assertEqual(context["match_id"], "m3")
+        self.assertEqual(context["match_label"], "Portugal vs Colombia")
 
 
 class AnalysisGuardrailTest(unittest.TestCase):
@@ -121,9 +140,9 @@ class AnalysisGuardrailTest(unittest.TestCase):
         with patch("app.graph.nodes._call_llm") as call_llm:
             result = analysis(state)
 
-        self.assertIn("fixtures by date", result["answer"])
-        self.assertIn("exact-score prediction", result["answer"])
-        self.assertIn("leaderboard climbing", result["answer"])
+        self.assertIn("Mình chưa hỗ trợ", result["answer"])
+        self.assertIn("Hôm nay World Cup có trận nào đáng xem?", result["answer"])
+        self.assertIn("leo leaderboard", result["answer"])
         call_llm.assert_not_called()
 
     def test_ambiguous_matchup_clarification_includes_feature_suggestions(self):
@@ -136,9 +155,9 @@ class AnalysisGuardrailTest(unittest.TestCase):
         with patch("app.graph.nodes._call_llm") as call_llm:
             result = analysis(state)
 
-        self.assertIn("Do you mean Portugal vs Colombia", result["answer"])
-        self.assertIn("fixtures by date", result["answer"])
-        self.assertIn("upcoming lock reminders", result["answer"])
+        self.assertIn("Bạn muốn hỏi Portugal vs Colombia", result["answer"])
+        self.assertIn("Hôm nay World Cup có trận nào đáng xem?", result["answer"])
+        self.assertIn("dự đoán tỉ số", result["answer"])
         call_llm.assert_not_called()
 
     def test_unmatched_matchup_returns_guardrail_without_entity_commentary(self):
@@ -151,8 +170,8 @@ class AnalysisGuardrailTest(unittest.TestCase):
         with patch("app.graph.nodes._call_llm") as call_llm:
             result = analysis(state)
 
-        self.assertIn("I can help with We Speak Football only", result["answer"])
-        self.assertIn("fixtures by date", result["answer"])
+        self.assertIn("Mình chưa hỗ trợ", result["answer"])
+        self.assertIn("Hôm nay World Cup có trận nào đáng xem?", result["answer"])
         self.assertNotIn("messi", result["answer"].lower())
         self.assertNotIn("ronaldo", result["answer"].lower())
         call_llm.assert_not_called()
@@ -274,6 +293,35 @@ class DataGatherTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("rules_context", result["tool_results"])
         self.assertEqual(result["used_tools"], ["get_leaderboard_context"])
+
+    async def test_short_confirmation_uses_latest_match_for_prediction(self):
+        for index, message in enumerate(("có", "chan đê", "let's go", "los geht")):
+            session_id = f"session-follow-{index}"
+            save_session_context("user-follow", session_id, {"pending_action": "prediction_help", "pending_match_id": "wc2026-073", "response_language": "Vietnamese"})
+            with (
+                self.subTest(message=message),
+                patch("app.graph.workflow.build_agent_graph", return_value=None),
+                patch("app.graph.nodes.memory_retrieve", side_effect=lambda state: state),
+                patch("app.graph.nodes.memory_write", side_effect=lambda state: state),
+                patch("app.graph.nodes._call_llm", return_value=None),
+                patch(
+                    "app.tools.football_tools.gather_match_context",
+                    return_value=(
+                        {
+                            "match": {"id": "wc2026-073", "home_team_id": "RSA", "away_team_id": "CAN", "kickoff_at": "2026-06-28T19:00:00+00:00", "stage": "round32"},
+                            "teams": {"home": {"short_name": "RSA"}, "away": {"short_name": "CAN"}},
+                            "prediction_signal": {"espn": {}},
+                        },
+                        ["get_match"],
+                    ),
+                ) as gather_match_context,
+            ):
+                result = await run_agent_turn(message, session_id, None, "user-follow", None, "token-1", {})
+
+            self.assertEqual(result["intent"], "prediction_help")
+            gather_match_context.assert_awaited_once()
+            self.assertEqual(gather_match_context.await_args.args[0], "wc2026-073")
+            self.assertIn("## Dự đoán: RSA vs CAN", result["answer"])
 
 
 if __name__ == "__main__":

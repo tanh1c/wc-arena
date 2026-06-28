@@ -13,7 +13,10 @@ VIETNAMESE_CUES = {
 ENGLISH_CUES = {
     "fixture", "fixtures", "leaderboard", "match", "next", "pick", "predict", "prediction", "rank", "rules", "schedule", "score", "team", "tomorrow", "what", "when", "who",
 }
-AMBIGUOUS_SHORT_RE = re.compile(r"^[a-z0-9\s?!.,-]{1,24}$", re.IGNORECASE)
+QUERY_CUES = (VIETNAMESE_CUES | ENGLISH_CUES) - {"co", "duoc", "muon", "ok", "pick", "yes"}
+AMBIGUOUS_SHORT_RE = re.compile(r"^[a-z0-9\s?!.,'-]{1,32}$", re.IGNORECASE)
+CONFIRMATION_WORDS = {"co", "ok", "oke", "yes", "yep", "yeah", "sure", "duoc", "muon"}
+CONFIRMATION_PHRASES = {"chan de", "chanh de", "lets go", "let s go", "los geht", "goi y di", "du doan di"}
 
 
 def _normalize_language_text(message: str) -> str:
@@ -42,6 +45,22 @@ def detect_response_language(message: str, previous_language: str | None = None)
     if previous_language and AMBIGUOUS_SHORT_RE.match(message.strip()):
         return previous_language
     return "Vietnamese"
+
+
+def _has_query_cue(normalized: str) -> bool:
+    return _language_score(normalized, QUERY_CUES) > 0
+
+
+def is_pending_action_followup(message: str) -> bool:
+    normalized = _normalize_language_text(message)
+    if not normalized:
+        return False
+    if normalized in CONFIRMATION_PHRASES:
+        return True
+    if _has_query_cue(normalized):
+        return False
+    words = normalized.split()
+    return any(word in CONFIRMATION_WORDS for word in words) or (len(words) <= 3 and bool(AMBIGUOUS_SHORT_RE.match(message.strip())))
 
 
 def build_agent_graph():
@@ -79,10 +98,16 @@ async def run_agent_turn(
     resolved_session_id = session_id or str(uuid4())
     session_context = get_session_context(user_id, resolved_session_id)
     context_match_source = None
+    follow_up_prediction = False
     if not match_id and FOLLOW_UP_MATCH_RE.search(message):
         match_id = session_context.get("match_id")
         if match_id:
             context_match_source = "session"
+    if not match_id and session_context.get("pending_action") == "prediction_help" and is_pending_action_followup(message):
+        match_id = session_context.get("pending_match_id")
+        if match_id:
+            context_match_source = "pending_action"
+            follow_up_prediction = True
 
     state: AgentState = {
         "messages": [{"role": "user", "content": message}],
@@ -95,6 +120,8 @@ async def run_agent_turn(
         "response_language": detect_response_language(message, session_context.get("response_language")),
         "request_metadata": request_metadata,
     }
+    if follow_up_prediction:
+        state["intent"] = "prediction_help"
 
     graph = build_agent_graph()
     if graph is not None:

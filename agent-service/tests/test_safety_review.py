@@ -45,10 +45,12 @@ class FallbackAnswerTest(unittest.TestCase):
             "foo vs bar",
         )
 
-        self.assertIn("## Tôi không hỗ trợ hỏi về foo vs bar", answer)
-        self.assertIn("Bạn có thể hỏi:", answer)
-        self.assertIn("- Vòng 32 đội hôm nay có trận gì?", answer)
-        self.assertNotIn("Argentina, Portugal", answer)
+        self.assertIn("## Mình chưa hỗ trợ chủ đề này", answer)
+        self.assertIn("Mình chưa hỗ trợ **nội dung này**", answer)
+        self.assertIn("Thử hỏi mình những câu như:", answer)
+        self.assertIn("- Hôm nay World Cup có trận nào đáng xem?", answer)
+        self.assertNotIn("foo vs bar", answer.lower())
+        self.assertNotIn("**foo", answer.lower())
 
     def test_off_topic_returns_english_examples_for_english_message(self):
         answer = _fallback_answer(
@@ -56,9 +58,10 @@ class FallbackAnswerTest(unittest.TestCase):
             "Tell me about crypto trading",
         )
 
-        self.assertIn("## I can't help with Tell me about crypto trading", answer)
-        self.assertIn("You can ask:", answer)
-        self.assertIn("- What round of 32 matches are today?", answer)
+        self.assertIn("## I can't help with that topic yet", answer)
+        self.assertIn("I can't help with **Tell me about crypto trading**", answer)
+        self.assertIn("Try asking me things like:", answer)
+        self.assertIn("- Which World Cup matches are worth watching today?", answer)
 
     def test_lists_fixture_window_from_tool_context(self):
         answer = _fallback_answer(
@@ -78,8 +81,8 @@ class FallbackAnswerTest(unittest.TestCase):
             "cho tôi biết trận ngày mai",
         )
 
-        self.assertIn("## World Cup fixtures for tomorrow", answer)
-        self.assertIn("| Time | Match | Stage | Location | Status |", answer)
+        self.assertIn("## Matches for World Cup tomorrow", answer)
+        self.assertIn("| Time | Match | Round | Location | Status |", answer)
         self.assertIn("| 2026-06-28 20:00 +00:00 | Portugal vs Congo DR | - | Miami | - |", answer)
 
     def test_formats_fixture_window_in_user_timezone(self):
@@ -120,8 +123,39 @@ class FallbackAnswerTest(unittest.TestCase):
         )
 
         self.assertIn("Argentina", answer)
-        self.assertIn("squad", answer.lower())
-        self.assertIn("not available", answer.lower())
+        self.assertIn("Squad", answer)
+        self.assertIn("Not available yet", answer)
+
+    def test_team_context_answer_uses_only_available_match_rows(self):
+        answer = _fallback_answer(
+            {
+                "response_language": "Vietnamese",
+                "tool_results": {
+                    "team_context": {
+                        "team": {"name": "Spain", "fifa_rank": 2},
+                        "squad_available": False,
+                        "form_available": False,
+                        "matches": [
+                            {
+                                "home_team_id": "ESP",
+                                "away_team_id": "AUT",
+                                "home_team": {"name": "Spain"},
+                                "away_team": {"name": "Austria"},
+                                "kickoff_at": "2026-07-03T19:00:00+00:00",
+                                "stage": "round32",
+                            }
+                        ],
+                    }
+                },
+            },
+            "tây ban nha thế nào",
+        )
+
+        self.assertIn("Spain", answer)
+        self.assertIn("Spain vs Austria", answer)
+        self.assertIn("Chưa có dữ liệu", answer)
+        self.assertNotIn("Brazil", answer)
+        self.assertNotIn("Tổng kết", answer)
 
 
 class SafetyReviewTextTest(unittest.TestCase):
