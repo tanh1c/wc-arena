@@ -26,10 +26,12 @@ VALID_INTENTS: set[AgentIntent] = {
     "prediction_help",
     "team_context",
     "rules_help",
+    "greeting",
     "general_chat",
 }
 
 INTENT_PATTERNS: list[tuple[AgentIntent, re.Pattern[str]]] = [
+    ("greeting", re.compile(r"^(?:hi|hello|hey|yo|chao|xin\s+chao|chao\s+ban|alo|bonjour|hola|hallo)(?:\s+.*)?$", re.IGNORECASE)),
     ("rules_help", re.compile(r"\b(rule|rules|point|points|score|scoring|rank|ranking|leaderboard|deadline|lock|table|luat|diem|xep\s+hang|bang|khoa|han)\b", re.IGNORECASE)),
     ("prediction_help", re.compile(r"\b(predict|prediction|pick|tip|confidence|suggest|du\s+doan|ti\s+so|ty\s+so|chon|goi\s+y)\b", re.IGNORECASE)),
     ("team_context", re.compile(r"\b(team|squad|player|players|lineup|form|h2h|head\s*to\s*head|history|doi|doi\s+hinh|phong\s+do|doi\s+dau|lich\s+su)\b", re.IGNORECASE)),
@@ -67,13 +69,13 @@ def classify_intent_with_llm(message: str, match_id: str | None = None) -> Agent
     prompt = "\n".join(
         [
             "Classify this Predict 2026 assistant message into exactly one executable backend route.",
-            "Allowed routes: match_preview, prediction_help, team_context, rules_help, general_chat.",
+            "Allowed routes: match_preview, prediction_help, team_context, rules_help, greeting, general_chat.",
             "Available backend tool routes:",
             "- match_preview executes DB tools for selected match context, natural-language matchup resolution, fixture/date windows, and upcoming reminder summaries.",
             "- prediction_help executes match context, ESPN/community signals, user prediction history, and leaderboard context before suggesting scores.",
             "- team_context executes team lookup, team schedule/context, and head-to-head matchup resolution when two teams are present.",
             "- rules_help executes rules and leaderboard context tools.",
-            "Use general_chat only when no executable football/app route applies.",
+            "Use greeting for salutations. Use general_chat only when no executable football/app route applies.",
             f"Has selected match: {'yes' if match_id else 'no'}",
             f"Message: {message}",
             "Return only the intent string.",
@@ -138,11 +140,13 @@ async def data_gather(state: AgentState) -> AgentState:
         gather_ambiguous_matchup_context,
         gather_fixture_list_context,
         gather_match_context,
+        gather_prediction_fixture_list_context,
         gather_reminder_context,
         gather_rules_context,
         gather_team_context,
         gather_team_schedule_context,
         is_fixture_list_query,
+        is_prediction_fixture_list_query,
         is_reminder_query,
         is_team_schedule_query,
         resolve_matchup_context,
@@ -188,6 +192,13 @@ async def data_gather(state: AgentState) -> AgentState:
                     message,
                     state.get("access_token", ""),
                 )
+        elif intent == "prediction_help" and is_prediction_fixture_list_query(message):
+            tool_branch = "prediction_fixture_list"
+            tool_results, used_tools = await gather_prediction_fixture_list_context(
+                message,
+                state.get("access_token", ""),
+                request_metadata=state.get("request_metadata", {}),
+            )
         elif is_team_schedule_query(message):
             tool_branch = "team_schedule_context"
             tool_results, used_tools = await gather_team_schedule_context(
@@ -243,6 +254,8 @@ def analysis(state: AgentState) -> AgentState:
 
     context = state.get("tool_results", {})
     fallback = _fallback_answer(state, message)
+    if state.get("intent") == "greeting":
+        return {**state, "answer": fallback}
     if should_use_deterministic_answer(context) and fallback:
         if should_polish_deterministic_answer(context):
             return {**state, "answer": _polish_deterministic_answer(state, message, fallback) or fallback}
@@ -279,6 +292,40 @@ def off_topic_guardrail_answer(topic: str | None = None, response_language: str 
     if response_language == "English":
         return f"## I can't help with that topic yet\n\nI can't help with **{clean_topic}**, but I can help with We Speak Football, World Cup match schedules, teams, scoring rules, leaderboards, and exact-score predictions.\n\n{feature_suggestion_prompt(response_language)}"
     return f"## Mình chưa hỗ trợ chủ đề này\n\nMình chưa hỗ trợ **{clean_topic}**, nhưng có thể giúp về We Speak Football, World Cup, lịch thi đấu, đội tuyển, luật điểm, leaderboard và dự đoán tỉ số.\n\n{feature_suggestion_prompt(response_language)}"
+
+
+def _greeting_answer(response_language: str | None = None) -> str:
+    if response_language == "English":
+        return "\n\n".join(
+            [
+                "## Hi, I'm We Speak Football",
+                "I can help you follow the World Cup and play the exact-score prediction game.",
+                _detail_list(
+                    [
+                        ["Fixtures", "today, tomorrow, upcoming matches, knockout rounds"],
+                        ["Teams", "team schedule, squad availability, form context"],
+                        ["Predictions", "exact-score suggestions with ESPN and community signals"],
+                        ["Rules", "scoring, pick deadlines, leaderboard context"],
+                    ]
+                ),
+                feature_suggestion_prompt(response_language),
+            ]
+        )
+    return "\n\n".join(
+        [
+            "## Chào bạn, mình là We Speak Football",
+            "Mình có thể giúp bạn theo dõi World Cup và chơi dự đoán tỉ số chính xác.",
+            _detail_list(
+                [
+                    ["Lịch thi đấu", "hôm nay, ngày mai, các trận sắp diễn ra, vòng knock-out"],
+                    ["Đội tuyển", "lịch đá, đội hình nếu có dữ liệu, phong độ liên quan"],
+                    ["Dự đoán", "gợi ý tỉ số với tín hiệu ESPN và cộng đồng"],
+                    ["Luật chơi", "cách tính điểm, deadline pick, leaderboard"],
+                ]
+            ),
+            feature_suggestion_prompt(response_language),
+        ]
+    )
 
 
 def should_use_deterministic_answer(context: dict[str, Any]) -> bool:
@@ -526,6 +573,8 @@ def _fallback_answer(state: AgentState, message: str) -> str:
         return off_topic_guardrail_answer(None, response_language)
     if context.get("fixture_window"):
         return _fixture_window_answer(context, state.get("request_metadata"), response_language)
+    if context.get("prediction_fixture_list"):
+        return _prediction_fixture_list_answer(context, state.get("request_metadata"), response_language)
     if context.get("reminder_context"):
         return _reminder_answer(context, state.get("request_metadata"), response_language)
     if context.get("team_context"):
@@ -538,6 +587,8 @@ def _fallback_answer(state: AgentState, message: str) -> str:
         return _rules_context_answer(context, response_language)
     if match and teams:
         return _match_answer(context, state.get("intent"), state.get("request_metadata"), response_language)
+    if state.get("intent") == "greeting":
+        return _greeting_answer(response_language)
     if state.get("intent") == "rules_help":
         return _rules_context_answer({}, response_language)
     return off_topic_guardrail_answer(message, response_language)
@@ -645,6 +696,12 @@ def _window_label(label: str, response_language: str | None = None) -> str:
     return {"today": "today", "tomorrow": "tomorrow", "upcoming": "the next 7 days"}.get(label, label)
 
 
+def _prediction_window_label(label: str, response_language: str | None = None) -> str:
+    if response_language == "Vietnamese":
+        return {"today": "hôm nay", "tomorrow": "ngày mai", "upcoming": "sắp tới"}.get(label, label)
+    return {"today": "today", "tomorrow": "tomorrow", "upcoming": "upcoming"}.get(label, label)
+
+
 def _fixture_window_answer(context: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None) -> str:
     window = context.get("fixture_window", {})
     fixtures = context.get("fixtures") or []
@@ -662,6 +719,32 @@ def _fixture_window_answer(context: dict[str, Any], request_metadata: dict[str, 
         title = f"Matches for {scope}"
     cards = "\n\n".join(_match_card(match, request_metadata, response_language) for match in fixtures[:8])
     return f"## {title}\n\n{cards}"
+
+
+def _prediction_fixture_list_answer(context: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None) -> str:
+    matches = context.get("prediction_matches") or []
+    fixture_context = context.get("prediction_fixture_list") or {}
+    stage_label = _stage_label(fixture_context.get("stage"), response_language) if fixture_context.get("stage") else None
+    label = _prediction_window_label(fixture_context.get("label", "upcoming"), response_language)
+    scope = f"{stage_label} {label}" if stage_label else label
+    if not matches:
+        if response_language == "Vietnamese":
+            return f"## Chưa có trận phù hợp\n\nMình chưa thấy trận nào để gợi ý tỉ số cho {scope}.\n\n{feature_suggestion_prompt(response_language)}"
+        return f"## No matching matches\n\nI don't see any matches to suggest scores for {scope}.\n\n{feature_suggestion_prompt(response_language)}"
+
+    cards = []
+    for match in matches[:8]:
+        home_name = (match.get("home_team") or {}).get("name") or (match.get("home_team") or {}).get("short_name") or match.get("home_team_id")
+        away_name = (match.get("away_team") or {}).get("name") or (match.get("away_team") or {}).get("short_name") or match.get("away_team_id")
+        score, reason = _score_pick(home_name, away_name, ((match.get("prediction_signal") or {}).get("espn") or {}), response_language)
+        cards.append(
+            f"### {home_name} vs {away_name}\n\n"
+            f"**{score}**\n\n"
+            f"{reason}\n\n"
+            f"{_detail_list(_match_details(match, request_metadata, response_language))}"
+        )
+    title = f"Gợi ý tỉ số cho các trận {scope}" if response_language == "Vietnamese" else f"Score suggestions for {scope} matches"
+    return f"## {title}\n\n" + "\n\n".join(cards)
 
 
 def _reminder_answer(context: dict[str, Any], request_metadata: dict[str, Any] | None = None, response_language: str | None = None) -> str:
