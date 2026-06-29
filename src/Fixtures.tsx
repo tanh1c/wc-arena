@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
 import { buildKnockoutTeamProjection, type ProjectedMatchTeams } from './lib/knockoutAdvancement';
+import { getDefaultStageFilter, type StageFilter } from './lib/matchesDefaultStage';
 import { getErrorMessage } from './services/serviceTypes';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
 import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type MatchRow } from './services/matches';
@@ -43,7 +44,6 @@ type FixturesProps = {
   setHasFrame: (v: boolean) => void;
 };
 
-type StageFilter = 'group' | 'round32' | 'round16' | 'quarter' | 'semi' | 'third_place' | 'final';
 type StatusFilter = 'all' | 'open' | 'locked' | 'live' | 'finished';
 type TranslationFn = ReturnType<typeof useTranslation>['t'];
 
@@ -206,6 +206,9 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
       .then(([nextMatches, nextTeams, nextPredictions, nextLeaderboard]) => {
         if (!active) return;
         setMatches(nextMatches);
+        setStageFilter(getDefaultStageFilter(nextMatches));
+        setMatchdayFilter('all');
+        setPage(1);
         setTeams(nextTeams);
         setPredictions(nextPredictions);
         setLeaderboard(nextLeaderboard.slice(0, 5));
