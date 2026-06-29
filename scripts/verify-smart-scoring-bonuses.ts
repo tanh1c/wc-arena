@@ -129,4 +129,28 @@ assert.equal(missed.outcome, 'missed');
 assert.equal(missed.underdog_bonus, 0, 'missed picks should not receive underdog bonus');
 assert.equal(missed.total, 0, 'missed picks should stay at zero even with a risk multiplier');
 
+const knockoutWinner = calculatePredictionScores([
+  prediction({
+    id: 'knockout-winner',
+    predicted_outcome: 'home',
+    matches: { ...prediction({}).matches, stage: 'round32', home_score: 1, away_score: 1, espn_home_winner: true, espn_away_winner: false },
+  }),
+  prediction({
+    id: 'knockout-draw',
+    predicted_outcome: 'draw',
+    matches: { ...prediction({}).matches, stage: 'round32', home_score: 1, away_score: 1, espn_home_winner: true, espn_away_winner: false },
+  }),
+  prediction({
+    id: 'knockout-exact-draw-score',
+    prediction_type: 'exact_score',
+    home_score: 1,
+    away_score: 1,
+    predicted_outcome: 'home',
+    matches: { ...prediction({}).matches, stage: 'round32', home_score: 1, away_score: 1, espn_home_winner: true, espn_away_winner: false },
+  }),
+], { teams });
+assert.equal(knockoutWinner[0].outcome, 'correct', 'knockout outcome should use ESPN winner when scores are tied');
+assert.equal(knockoutWinner[1].outcome, 'missed', 'knockout draw outcome should lose when ESPN has a penalty winner');
+assert.equal(knockoutWinner[2].outcome, 'exact', 'exact score should still use the 120-minute scoreline');
+
 console.log('Smart scoring bonuses verified.');

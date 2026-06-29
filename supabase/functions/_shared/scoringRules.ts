@@ -8,6 +8,9 @@ export type MatchScoringRow = {
   kickoff_at: string;
   home_team_id: string;
   away_team_id: string;
+  stage?: string | null;
+  espn_home_winner?: boolean | null;
+  espn_away_winner?: boolean | null;
   espn_home_win_pct: number | null;
   espn_draw_pct: number | null;
   espn_away_win_pct: number | null;
@@ -54,9 +57,15 @@ export type CalculatedScore = {
   calculated_at: string;
 };
 
-export const SCORING_VERSION = 'smart-2026-06-23-bonuses';
+export const SCORING_VERSION = 'smart-2026-06-30-knockout-winners';
 
-function getOutcome(score: { home_score: number; away_score: number }): PredictionOutcome {
+const KNOCKOUT_STAGES = new Set(['round32', 'round16', 'quarter', 'semi', 'third_place', 'final']);
+
+function getOutcome(score: MatchScoringRow): PredictionOutcome {
+  if (KNOCKOUT_STAGES.has(score.stage ?? '')) {
+    if (score.espn_home_winner === true) return 'home';
+    if (score.espn_away_winner === true) return 'away';
+  }
   if (score.home_score > score.away_score) return 'home';
   if (score.home_score < score.away_score) return 'away';
   return 'draw';

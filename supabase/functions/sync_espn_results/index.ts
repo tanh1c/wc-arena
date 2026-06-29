@@ -935,7 +935,7 @@ function buildAggregates(scores: CalculatedScore[], rewardPointsByUser: Map<stri
 async function recalculateScores(supabase: ReturnType<typeof createClient>) {
   const { data: predictions, error: predictionsError } = await supabase
     .from('predictions')
-    .select('id, user_id, match_id, prediction_type, home_score, away_score, predicted_outcome, is_risk_pick, matches!inner(home_score, away_score, kickoff_at, home_team_id, away_team_id, espn_home_win_pct, espn_draw_pct, espn_away_win_pct)')
+    .select('id, user_id, match_id, prediction_type, home_score, away_score, predicted_outcome, is_risk_pick, matches!inner(home_score, away_score, kickoff_at, home_team_id, away_team_id, stage, espn_home_winner, espn_away_winner, espn_home_win_pct, espn_draw_pct, espn_away_win_pct)')
     .eq('matches.status', 'finished');
 
   if (predictionsError) throw predictionsError;
