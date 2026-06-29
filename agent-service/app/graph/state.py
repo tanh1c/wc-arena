@@ -1,7 +1,7 @@
 from typing import Any, Literal, TypedDict
 
 
-AgentIntent = Literal["match_preview", "prediction_help", "team_context", "rules_help", "general_chat"]
+AgentIntent = Literal["match_preview", "prediction_help", "team_context", "rules_help", "greeting", "general_chat"]
 
 
 class AgentState(TypedDict, total=False):

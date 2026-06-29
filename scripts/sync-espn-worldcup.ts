@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildNormalizedStatistics, buildPlayerTournamentStats, buildTeamTournamentStats, type EspnSummaryPayload, type NormalizedEventParticipant, type NormalizedMatchEvent, type NormalizedMatchTeamStat, type StatisticsTeamRow } from '../supabase/functions/_shared/espnStatistics';
+import { reconcileMatchTeamsFromEspn } from '../supabase/functions/_shared/espnMatchReconciliation';
 import type { Database, Json } from '../src/types/supabase';
 
 type Supabase = SupabaseClient<Database>;
@@ -482,6 +483,7 @@ function buildUpdatePlan(matches: MatchRow[], candidates: EspnCandidate[], teamM
       espn_home_record: best.candidate.homeRecord,
       espn_away_record: best.candidate.awayRecord,
       espn_updated_at: new Date().toISOString(),
+      ...reconcileMatchTeamsFromEspn(match, best.candidate, teamMap),
     };
 
     if (best.candidate.predictionSignal) {

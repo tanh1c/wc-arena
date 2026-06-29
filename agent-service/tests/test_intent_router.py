@@ -32,17 +32,18 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["intent"], "prediction_help")
 
-    async def test_returns_general_chat_when_no_route_matches(self):
+    async def test_routes_greeting_without_llm(self):
         state = {
             "messages": [{"role": "user", "content": "hello there"}],
             "user_id": "user-1",
             "session_id": "session-1",
         }
 
-        with patch("app.graph.nodes._call_llm", return_value="unclear"):
+        with patch("app.graph.nodes._call_llm") as call_llm:
             result = await intent_router(state)
 
-        self.assertEqual(result["intent"], "general_chat")
+        self.assertEqual(result["intent"], "greeting")
+        call_llm.assert_not_called()
 
     async def test_routes_tomorrow_fixture_question(self):
         state = {"messages": [{"role": "user", "content": "cho tôi biết trận ngày mai"}]}
@@ -76,6 +77,14 @@ class IntentRouterTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["intent"], "team_context")
         call_llm.assert_not_called()
+
+    async def test_routes_country_team_name_as_supported_context(self):
+        state = {"messages": [{"role": "user", "content": "Croatia"}]}
+
+        with patch("app.graph.nodes._call_llm", return_value="team_context"):
+            result = await intent_router(state)
+
+        self.assertEqual(result["intent"], "team_context")
 
     async def test_routes_leaderboard_climb_question(self):
         state = {"messages": [{"role": "user", "content": "làm sao leo bảng xếp hạng"}]}
@@ -152,6 +161,22 @@ class AnalysisGuardrailTest(unittest.TestCase):
         self.assertIn("Mình chưa hỗ trợ", result["answer"])
         self.assertIn("Hôm nay World Cup có trận nào?", result["answer"])
         self.assertIn("Bảng xếp hạng hiện tại của tôi ra sao?", result["answer"])
+        call_llm.assert_not_called()
+
+    def test_greeting_general_chat_returns_intro_without_llm(self):
+        state = {
+            "messages": [{"role": "user", "content": "hello nha"}],
+            "intent": "greeting",
+            "response_language": "Vietnamese",
+            "tool_results": {},
+        }
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = analysis(state)
+
+        self.assertIn("Chào bạn", result["answer"])
+        self.assertIn("Lịch thi đấu", result["answer"])
+        self.assertNotIn("Mình chưa hỗ trợ", result["answer"])
         call_llm.assert_not_called()
 
     def test_ambiguous_matchup_clarification_includes_feature_suggestions(self):
@@ -260,6 +285,29 @@ class DataGatherTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["tool_results"]["resolved_matchup"]["match_id"], "wc2026-101")
         self.assertEqual(result["used_tools"], ["find_match_by_team_ids"])
+
+    async def test_prediction_intent_gathers_broad_fixture_prediction_list(self):
+        state = {
+            "messages": [{"role": "user", "content": "dự đoán tỉ số tất cả các trận ở vòng sau"}],
+            "intent": "prediction_help",
+            "user_id": "user-1",
+            "access_token": "token-1",
+        }
+
+        with patch("app.tools.football_tools.gather_prediction_fixture_list_context", return_value=({"prediction_fixture_list": {"label": "upcoming"}}, ["list_upcoming_matches", "list_team_rows"])):
+            result = await data_gather(state)
+
+        self.assertEqual(result["tool_results"]["prediction_fixture_list"]["label"], "upcoming")
+        self.assertEqual(result["used_tools"], ["list_upcoming_matches", "list_team_rows"])
+
+    async def test_routes_broad_prediction_query_without_llm(self):
+        state = {"messages": [{"role": "user", "content": "predict all upcoming matches"}]}
+
+        with patch("app.graph.nodes._call_llm") as call_llm:
+            result = await intent_router(state)
+
+        self.assertEqual(result["intent"], "prediction_help")
+        call_llm.assert_not_called()
 
     async def test_gathers_short_vietnamese_tomorrow_fixture_list(self):
         state = {

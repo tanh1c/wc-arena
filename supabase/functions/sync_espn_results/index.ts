@@ -6,6 +6,7 @@ import { acquireLock, releaseLock } from '../_shared/redis.ts';
 import { buildCommunityDistributions, calculatePredictionScores, type CalculatedScore, type PredictionScoringRow, type TeamSignalRow } from '../_shared/scoringRules.ts';
 import { buildNormalizedStatistics, buildPlayerTournamentStats, buildTeamTournamentStats, type EspnSummaryPayload, type NormalizedEventParticipant, type NormalizedMatchEvent, type NormalizedMatchTeamStat, type StatisticsTeamRow } from '../_shared/espnStatistics.ts';
 import { buildConfirmedBracketAdvancement, type BracketMatchRow, type BracketTeamRow } from '../_shared/bracketAdvancement.ts';
+import { reconcileMatchTeamsFromEspn } from '../_shared/espnMatchReconciliation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,6 +63,8 @@ type JsonRecord = Record<string, unknown>;
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 type MatchUpdate = Partial<{
   status: MatchRow['status'];
+  home_team_id: string;
+  away_team_id: string;
   home_score: number | null;
   away_score: number | null;
   result_updated_at: string;
@@ -480,6 +483,7 @@ function buildUpdatePlans(matches: MatchRow[], candidates: EspnCandidate[], team
       espn_home_record: best.candidate.homeRecord,
       espn_away_record: best.candidate.awayRecord,
       espn_updated_at: now,
+      ...reconcileMatchTeamsFromEspn(match, best.candidate, teamMap),
     };
 
     if (best.candidate.predictionSignal) {
@@ -496,8 +500,9 @@ function buildUpdatePlans(matches: MatchRow[], candidates: EspnCandidate[], team
       && (match.espn_home_win_pct !== best.candidate.predictionSignal?.home
         || match.espn_draw_pct !== best.candidate.predictionSignal?.draw
         || match.espn_away_win_pct !== best.candidate.predictionSignal?.away);
+    const teamsChanged = Boolean(update.home_team_id || update.away_team_id);
     const needsSummaryRefresh = !match.espn_summary_updated_at || nextStatus === 'live' || nextStatus === 'finished';
-    const shouldUpdate = nextStatus === 'live' || statusChanged || scoreChanged || signalChanged || needsSummaryRefresh;
+    const shouldUpdate = nextStatus === 'live' || statusChanged || scoreChanged || signalChanged || teamsChanged || needsSummaryRefresh;
 
     if (!shouldUpdate) continue;
     if (nextStatus) update.status = nextStatus;

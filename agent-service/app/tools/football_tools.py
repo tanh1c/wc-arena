@@ -98,11 +98,11 @@ def resolve_team_id_with_llm(query: str, teams: list[dict[str, Any]]) -> str | N
             "Use multilingual football knowledge, common local names, Vietnamese names, transliterations, abbreviations, and nicknames.",
             "Never invent a team outside the provided list.",
             "Few-shot examples:",
-            "- 'arg' => {\"team_id\": \"ARG\", \"matched_name\": \"Argentina\", \"confidence\": \"high\"} when Argentina is in the list.",
-            "- 'á căn đình' => {\"team_id\": \"ARG\", \"matched_name\": \"Argentina\", \"confidence\": \"high\"} when Argentina is in the list.",
-            "- 'bồ đào nha' or 'bo dao nha' => {\"team_id\": \"POR\", \"matched_name\": \"Portugal\", \"confidence\": \"high\"} when Portugal is in the list.",
-            "- 'hàn quốc' or 'han quoc' => {\"team_id\": \"KOR\", \"matched_name\": \"Korea Republic\", \"confidence\": \"high\"} when Korea Republic is in the list.",
-            "Return ONLY JSON: {\"team_id\": \"<id or null>\", \"matched_name\": \"<database name or null>\", \"confidence\": \"high|low\"}.",
+            "- 'arg' => {\"team_id\": \"ARG\", \"matched_name\": \"Argentina\", \"canonical_country\": \"Argentina\", \"confidence\": \"high\"} when Argentina is in the list.",
+            "- 'á căn đình' => {\"team_id\": \"ARG\", \"matched_name\": \"Argentina\", \"canonical_country\": \"Argentina\", \"confidence\": \"high\"} when Argentina is in the list.",
+            "- 'phú lãng sa' => {\"team_id\": null, \"matched_name\": \"Pháp\", \"canonical_country\": \"France\", \"confidence\": \"high\"} when France is in the list.",
+            "- 'nam hàn' => {\"team_id\": null, \"matched_name\": \"Hàn Quốc\", \"canonical_country\": \"Korea Republic\", \"confidence\": \"high\"} when Korea Republic is in the list.",
+            "Return ONLY JSON: {\"team_id\": \"<id or null>\", \"matched_name\": \"<input/local name or database name or null>\", \"canonical_country\": \"<canonical database-like team/country name or null>\", \"confidence\": \"high|low\"}.",
             f"Query: {query}",
             f"Teams: {json.dumps(team_options, ensure_ascii=False, default=str)[:6000]}",
         ]
@@ -130,9 +130,11 @@ def _validated_llm_team_id(data: dict[str, Any], teams: list[dict[str, Any]]) ->
         if resolved_id:
             return resolved_id
 
-    matched_name = data.get("matched_name")
-    if matched_name:
-        normalized_name = normalize_team_query(str(matched_name))
+    for field in ("matched_name", "canonical_country"):
+        name = data.get(field)
+        if not name:
+            continue
+        normalized_name = normalize_team_query(str(name))
         for team in teams:
             candidates = [team.get("name"), team.get("short_name"), team.get("country_code")]
             if any(normalize_team_query(str(candidate)) == normalized_name for candidate in candidates if candidate):
@@ -189,6 +191,13 @@ def resolve_fixture_stage(message: str) -> str | None:
 
 def is_fixture_list_query(message: str) -> bool:
     return bool(FIXTURE_QUERY_RE.search(message))
+
+
+def is_prediction_fixture_list_query(message: str) -> bool:
+    normalized = normalize_team_query(message)
+    has_prediction = bool(re.search(r"\b(?:predict|prediction|pick|suggest|du doan|ti so|ty so|chon|goi y)\b", normalized))
+    has_scope = bool(re.search(r"\b(?:all|tat ca|cac tran|fixtures?|matches?|upcoming|today|tomorrow|hom nay|ngay mai|mai|vong sau|vong toi|vong tiep)\b", normalized))
+    return has_prediction and (has_scope or resolve_fixture_stage(message) is not None)
 
 
 def is_reminder_query(message: str) -> bool:
@@ -329,6 +338,33 @@ async def gather_reminder_context(message: str, user_id: str, access_token: str)
         },
         "reminder_matches": reminder_matches,
     }, ["list_upcoming_matches", "list_team_rows"]
+
+
+async def gather_prediction_fixture_list_context(message: str, access_token: str, now_utc: datetime | None = None, request_metadata: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[str]]:
+    client = get_user_supabase_client(access_token)
+    stage = resolve_fixture_stage(message)
+    window = resolve_relative_date_window(message, now_utc, request_metadata)
+    tools = ["list_team_rows"]
+    if window:
+        matches = await list_matches_by_window(client, window["start_iso"], window["end_iso"], stage, limit=8)
+        label = window.get("label", "requested window")
+        tools.insert(0, "list_matches_by_window")
+    else:
+        matches = await list_upcoming_matches(client, datetime.now(timezone.utc).isoformat(), limit=8)
+        label = "upcoming"
+        tools.insert(0, "list_upcoming_matches")
+        if stage:
+            matches = [match for match in matches if match.get("stage") == stage]
+
+    teams = await list_team_rows(client)
+    attached_matches = _attach_match_teams(matches, teams)
+    for match in attached_matches:
+        match["prediction_signal"] = await get_prediction_signal(client, match["id"])
+    _log_resolution("prediction_fixture_list_resolved", message=message, label=label, stage=stage, match_count=len(attached_matches))
+    return {
+        "prediction_fixture_list": {"label": label, "stage": stage, "timezone": (window or {}).get("timezone")},
+        "prediction_matches": attached_matches,
+    }, [*tools, "get_prediction_signal"]
 
 
 async def gather_ambiguous_matchup_context(message: str, access_token: str) -> tuple[dict[str, Any], list[str]]:

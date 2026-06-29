@@ -41,6 +41,27 @@ class MatchupResolutionTest(unittest.TestCase):
             with self.subTest(query=query), patch("app.graph.nodes._call_llm", return_value=f'{{"team_id": "{team_id}", "confidence": "high"}}'):
                 self.assertEqual(resolve_team_id_from_rows(query, teams), team_id)
 
+    def test_uses_llm_for_multi_step_localized_country_names(self):
+        teams = [
+            {"id": "ARG", "name": "Argentina", "short_name": "ARG", "country_code": "AR"},
+            {"id": "FRA", "name": "France", "short_name": "FRA", "country_code": "FR"},
+            {"id": "KOR", "name": "Korea Republic", "short_name": "KOR", "country_code": "KR"},
+        ]
+        cases = [
+            ("á căn đình", '{"matched_name": "Argentina", "canonical_country": "Argentina", "confidence": "high"}', "ARG"),
+            ("phú lãng sa", '{"matched_name": "Pháp", "canonical_country": "France", "confidence": "high"}', "FRA"),
+            ("nam hàn", '{"matched_name": "Hàn Quốc", "canonical_country": "Korea Republic", "confidence": "high"}', "KOR"),
+        ]
+
+        for query, raw_llm, team_id in cases:
+            with self.subTest(query=query), patch("app.graph.nodes._call_llm", return_value=raw_llm):
+                self.assertEqual(resolve_team_id_from_rows(query, teams), team_id)
+
+    def test_rejects_llm_canonical_country_not_in_database_rows(self):
+        teams = [{"id": "FRA", "name": "France", "short_name": "FRA", "country_code": "FR"}]
+        with patch("app.graph.nodes._call_llm", return_value='{"matched_name": "Brazil", "canonical_country": "Brazil", "confidence": "high"}'):
+            self.assertIsNone(resolve_team_id_from_rows("ba tây", teams))
+
     def test_accepts_case_insensitive_llm_team_id(self):
         teams = [{"id": "POR", "name": "Portugal", "short_name": "POR", "country_code": "PT"}]
         with patch("app.graph.nodes._call_llm", return_value='{"team_id": "por", "confidence": "high"}'):

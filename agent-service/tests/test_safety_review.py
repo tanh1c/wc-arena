@@ -31,6 +31,18 @@ class BuildPromptTest(unittest.TestCase):
 
 
 class FallbackAnswerTest(unittest.TestCase):
+    def test_greeting_returns_intro_and_suggestions(self):
+        answer = _fallback_answer(
+            {"response_language": "Vietnamese", "intent": "greeting", "tool_results": {}},
+            "hello nha",
+        )
+
+        self.assertIn("## Chào bạn", answer)
+        self.assertIn("We Speak Football", answer)
+        self.assertIn("- **Lịch thi đấu:**", answer)
+        self.assertIn("Hôm nay World Cup có trận nào?", answer)
+        self.assertNotIn("Mình chưa hỗ trợ", answer)
+
     def test_unmatched_matchup_returns_localized_examples(self):
         answer = _fallback_answer(
             {
@@ -204,6 +216,47 @@ class FallbackAnswerTest(unittest.TestCase):
         self.assertIn("Đang mở dự đoán", answer)
         self.assertNotIn("POR vs CRO", answer)
         self.assertNotIn("open", answer)
+
+    def test_bulk_prediction_answer_formats_multiple_matches(self):
+        answer = _fallback_answer(
+            {
+                "response_language": "Vietnamese",
+                "request_metadata": {"client": {"timezone": "Asia/Ho_Chi_Minh"}},
+                "intent": "prediction_help",
+                "tool_results": {
+                    "prediction_fixture_list": {"label": "upcoming"},
+                    "prediction_matches": [
+                        {
+                            "home_team": {"name": "Portugal"},
+                            "away_team": {"name": "Croatia"},
+                            "kickoff_at": "2026-07-02T23:00:00+00:00",
+                            "stage": "round32",
+                            "city": "Toronto",
+                            "status": "open",
+                            "prediction_signal": {"espn": {"home_win_pct": 52, "draw_pct": 27, "away_win_pct": 21}},
+                        },
+                        {
+                            "home_team": {"name": "Spain"},
+                            "away_team": {"name": "Austria"},
+                            "kickoff_at": "2026-07-03T19:00:00+00:00",
+                            "stage": "round32",
+                            "city": "Miami",
+                            "status": "open",
+                            "prediction_signal": {"espn": {"home_win_pct": 35, "draw_pct": 32, "away_win_pct": 33}},
+                        },
+                    ],
+                },
+            },
+            "dự đoán tỉ số tất cả các trận ở vòng sau",
+        )
+
+        self.assertIn("## Gợi ý tỉ số cho các trận sắp tới", answer)
+        self.assertIn("### Portugal vs Croatia", answer)
+        self.assertIn("**Portugal 2-1 Croatia**", answer)
+        self.assertIn("### Spain vs Austria", answer)
+        self.assertIn("**Spain 1-1 Austria**", answer)
+        self.assertIn("03/07 06:00", answer)
+        self.assertNotIn("Mình chưa hỗ trợ", answer)
 
 
 class SafetyReviewTextTest(unittest.TestCase):
