@@ -13,6 +13,7 @@ import { getEffectiveMatchStatus, getMatch, listMatches, type MatchRow } from '.
 import { getMatchPredictionOutcomeSummary, listCurrentUserPredictions, submitPrediction, type MatchPredictionOutcomeSummary, type PredictionRow } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
+import { formatActualResult, getPenaltyWinnerLabel } from '../utils/predictionDisplay';
 import { getTeamFlag } from '../utils/teamFlags';
 import type { ThemeControls } from '../App';
 import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
@@ -113,7 +114,7 @@ function formatMatchDate(value: string) {
 
 function getMatchResult(match: MatchRow): MatchResult | undefined {
   if (match.status !== 'finished' || typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return undefined;
-  return { homeScore: match.home_score, awayScore: match.away_score };
+  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner };
 }
 
 function toPrediction(row: PredictionRow): Prediction {
@@ -436,6 +437,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
   const communityDrawPct = toPercent(communitySignal?.draw_predictions ?? 0, communityTotal);
   const communityAwayPct = toPercent(communitySignal?.away_predictions ?? 0, communityTotal);
   const hasEspnSignal = typeof match?.espn_home_win_pct === 'number' && typeof match.espn_draw_pct === 'number' && typeof match.espn_away_win_pct === 'number';
+  const penaltyWinner = match ? getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id) : null;
 
   const groupCode = match?.group_code ?? homeTeam?.group_code ?? awayTeam?.group_code;
   const recentGroupMatches = useMemo(() => {
@@ -592,8 +594,11 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                       <div className="font-bold text-subtle uppercase text-[9px] sm:text-[10px] mt-1 sm:mt-2">FIFA #{homeTeam.fifa_rank ?? '—'}</div>
                     </div>
                   </div>
-                  <div className="border-[3px] sm:border-4 border-main bg-page shadow-[3px_3px_0_var(--color-shadow)] sm:shadow-[4px_4px_0_var(--color-shadow)] px-3 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-4 font-black text-xl sm:text-2xl lg:text-5xl">
-                    {result ? `${result.homeScore} - ${result.awayScore}` : 'VS'}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="border-[3px] sm:border-4 border-main bg-page shadow-[3px_3px_0_var(--color-shadow)] sm:shadow-[4px_4px_0_var(--color-shadow)] px-3 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-4 font-black text-xl sm:text-2xl lg:text-5xl">
+                      {result ? formatActualResult(match, homeTeam.short_name, awayTeam.short_name, ' - ') : 'VS'}
+                    </div>
+                    {penaltyWinner && <div className="bg-c2 text-inv border-2 border-main px-2 py-1 font-black uppercase text-[9px] sm:text-[10px] text-center">{penaltyWinner}</div>}
                   </div>
                   <div className="flex flex-col items-start gap-2 sm:gap-3 min-w-0">
                     <TeamFlag team={awayTeam} align="items-start" />
@@ -705,7 +710,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                                 <SmallTeamFlag team={recentHomeTeam} />
                                 <span className="truncate">{recentHomeTeam?.short_name ?? recentMatch.home_team_id}</span>
                               </span>
-                              <span className="bg-page border-2 border-main px-2 py-1 text-main shrink-0">{recentMatch.home_score} - {recentMatch.away_score}</span>
+                              <span className="bg-page border-2 border-main px-2 py-1 text-main shrink-0 text-center">{formatActualResult(recentMatch, recentHomeTeam?.short_name ?? recentMatch.home_team_id, recentAwayTeam?.short_name ?? recentMatch.away_team_id, ' - ')}</span>
                               <span className={`flex items-center justify-end gap-1.5 min-w-0 ${recentMatch.away_team_id === homeTeam.id || recentMatch.away_team_id === awayTeam.id ? 'text-c2' : ''}`}>
                                 <span className="truncate">{recentAwayTeam?.short_name ?? recentMatch.away_team_id}</span>
                                 <SmallTeamFlag team={recentAwayTeam} />

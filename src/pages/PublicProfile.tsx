@@ -12,7 +12,7 @@ import { getPublicProfile, type PublicProfileRow } from '../services/profile';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
 import { getPublicDisplayName, getPublicInitials } from '../utils/displayName';
-import { formatPredictionPick } from '../utils/predictionDisplay';
+import { formatActualResult, formatPredictionPick } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
 import type { MatchOutcome, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
 
@@ -239,6 +239,12 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
                   const homeShortName = getTeamShortName(teams, row.match_home_team_id);
                   const awayShortName = getTeamShortName(teams, row.match_away_team_id);
                   const pickText = formatPredictionPick(prediction, homeShortName, awayShortName);
+                  const actualResult = {
+                    home_score: row.match_home_score,
+                    away_score: row.match_away_score,
+                    espn_home_winner: row.match_espn_home_winner,
+                    espn_away_winner: row.match_espn_away_winner,
+                  };
                   const status = getStatusFromScore(row);
 
                   return (
@@ -261,7 +267,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
                           </div>
                           <div className="px-3 py-2 bg-card border-x-4 border-main flex flex-col items-center justify-center min-w-[70px]">
                             <div className="text-[9px] uppercase font-black text-subtle">Actual</div>
-                            <div className="text-xl font-black">{row.match_home_score}-{row.match_away_score}</div>
+                            <div className="text-xl font-black text-center leading-tight">{formatActualResult(actualResult, homeShortName, awayShortName)}</div>
                           </div>
                           <div className="p-3 bg-c2 text-inv text-right min-w-0">
                             <div className="text-[9px] uppercase font-black tracking-widest opacity-70 truncate">{awayTeam?.name ?? row.match_away_team_id}</div>
@@ -289,7 +295,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
                           <div className="text-xs text-subtle uppercase mt-1">{row.match_stadium} • {row.match_city}</div>
                         </div>
                         <div className="p-3 lg:border-r-2 border-main text-center font-black">{pickText}</div>
-                        <div className="p-3 lg:border-r-2 border-main text-center font-black">{row.match_home_score} - {row.match_away_score}</div>
+                        <div className="p-3 lg:border-r-2 border-main text-center font-black">{formatActualResult(actualResult, homeShortName, awayShortName, ' - ')}</div>
                         <div className="p-3 lg:border-r-2 border-main flex justify-center"><StatusPill status={status} /></div>
                         <div className="p-3 text-center font-black text-lg">{row.score_total}</div>
                       </div>

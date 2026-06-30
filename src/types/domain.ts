@@ -69,6 +69,9 @@ export type Prediction = {
 export type MatchResult = {
   homeScore: number;
   awayScore: number;
+  stage?: MatchStage | string | null;
+  espnHomeWinner?: boolean | null;
+  espnAwayWinner?: boolean | null;
 };
 
 export type ScoreBreakdown = {

@@ -7,7 +7,13 @@ export type ScoringOptions = {
   calculatedAt?: string;
 };
 
+const KNOCKOUT_STAGES = new Set(['round32', 'round16', 'quarter', 'semi', 'third_place', 'final']);
+
 export function getOutcome(score: MatchResult): MatchOutcome {
+  if (KNOCKOUT_STAGES.has(score.stage ?? '')) {
+    if (score.espnHomeWinner === true) return 'home';
+    if (score.espnAwayWinner === true) return 'away';
+  }
   if (score.homeScore > score.awayScore) return 'home';
   if (score.homeScore < score.awayScore) return 'away';
   return 'draw';

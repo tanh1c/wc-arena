@@ -28,6 +28,7 @@ import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type Match
 import { listCurrentUserPredictions, type PredictionWithMatch } from './services/predictions';
 import { getTeamMap, type TeamRow } from './services/teams';
 import { getPublicDisplayName } from './utils/displayName';
+import { getPenaltyWinnerLabel } from './utils/predictionDisplay';
 import { getTeamFlag } from './utils/teamFlags';
 
 type FixturesProps = {
@@ -104,13 +105,18 @@ function TeamFlag({ team }: { team?: TeamRow }) {
   );
 }
 
-function MatchScore({ match }: { match: MatchRow }) {
+function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow }) {
   if (typeof match.home_score === 'number' && typeof match.away_score === 'number') {
+    const penaltyWinner = getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id);
+
     return (
-      <div className={`flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.home_score}</div>
-        <div className="font-black text-base sm:text-xl">-</div>
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
+      <div className={`flex flex-col items-center gap-1 ${match.status === 'live' ? 'text-c4' : ''}`}>
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.home_score}</div>
+          <div className="font-black text-base sm:text-xl">-</div>
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
+        </div>
+        {penaltyWinner && <div className="font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap">{penaltyWinner}</div>}
       </div>
     );
   }
@@ -161,7 +167,7 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, featured, onNavig
             <TeamFlag team={homeTeam} />
           </div>
           <div className="flex flex-col items-center gap-1 shrink-0">
-            <MatchScore match={match} />
+            <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
             {isLive && <span className="text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
             {isFinished && <span className="text-[8px] uppercase text-subtle font-black">{t('ui.fullTime')}</span>}
           </div>

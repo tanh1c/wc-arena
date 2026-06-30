@@ -1864,6 +1864,8 @@ export type Database = {
         Returns: {
           match_away_score: number
           match_away_team_id: string
+          match_espn_away_winner: boolean | null
+          match_espn_home_winner: boolean | null
           match_city: string
           match_espn_display_clock: string
           match_espn_state: string
