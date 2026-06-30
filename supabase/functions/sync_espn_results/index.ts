@@ -7,6 +7,7 @@ import { buildCommunityDistributions, calculatePredictionScores, type Calculated
 import { buildNormalizedStatistics, buildPlayerTournamentStats, buildTeamTournamentStats, type EspnSummaryPayload, type NormalizedEventParticipant, type NormalizedMatchEvent, type NormalizedMatchTeamStat, type StatisticsTeamRow } from '../_shared/espnStatistics.ts';
 import { buildConfirmedBracketAdvancement, type BracketMatchRow, type BracketTeamRow } from '../_shared/bracketAdvancement.ts';
 import { reconcileMatchTeamsFromEspn } from '../_shared/espnMatchReconciliation.ts';
+import { getScoreboardNoteShootoutScore, getShootoutScore, type ShootoutScore } from '../_shared/espnShootout.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,9 +102,8 @@ type EspnEvent = {
   status?: { displayClock?: string; type?: { name?: string; state?: string; completed?: boolean; detail?: string; shortDetail?: string } };
   competitions?: EspnCompetition[];
 };
-type EspnCompetition = { id?: string; attendance?: number; playByPlayAvailable?: boolean; competitors?: EspnCompetitor[] };
+type EspnCompetition = { id?: string; attendance?: number; playByPlayAvailable?: boolean; competitors?: EspnCompetitor[]; notes?: unknown[] };
 type EspnPredictionSignal = { home: number; draw: number; away: number };
-type ShootoutScore = { home: number; away: number };
 
 type EspnCompetitor = {
   homeAway?: 'home' | 'away';
@@ -127,6 +127,7 @@ type EspnCandidate = {
   awayScore: number | null;
   homeWinner: boolean | null;
   awayWinner: boolean | null;
+  shootoutScore: ShootoutScore | null;
   homeLogo: string | null;
   awayLogo: string | null;
   homeColor: string | null;
@@ -400,6 +401,7 @@ function buildCandidates(scoreboards: EspnScoreboard[]) {
         awayScore: parseScore(away?.score),
         homeWinner: home?.winner ?? null,
         awayWinner: away?.winner ?? null,
+        shootoutScore: getScoreboardNoteShootoutScore({ homeWinner: home?.winner, awayWinner: away?.winner, notes: competition.notes }),
         homeLogo: getTeamLogo(home),
         awayLogo: getTeamLogo(away),
         homeColor: home?.team?.color ?? home?.team?.alternateColor ?? null,
@@ -670,24 +672,6 @@ function sanitizeBoxscoreTeams(value: unknown) {
   return Object.fromEntries(entries);
 }
 
-function getShootoutScore(summary: unknown): ShootoutScore | null {
-  if (!isRecord(summary)) return null;
-  const boxscore = isRecord(summary.boxscore) ? summary.boxscore : undefined;
-  const form = toArray(boxscore?.form);
-
-  for (const section of form) {
-    if (!isRecord(section)) continue;
-    for (const event of toArray(section.events)) {
-      if (!isRecord(event)) continue;
-      const home = numberValue(event.homeShootoutScore);
-      const away = numberValue(event.awayShootoutScore);
-      if (home !== null && away !== null) return { home, away };
-    }
-  }
-
-  return null;
-}
-
 function sanitizeSummary(summary: unknown): Json | null {
   if (!isRecord(summary)) return null;
 
@@ -732,7 +716,7 @@ async function enrichPlansWithSummaries(plans: { candidate: EspnCandidate; updat
   await Promise.all(plans.map(async (plan) => {
     try {
       const summary = await fetchSummary(plan.candidate.eventId);
-      const shootout = getShootoutScore(summary);
+      const shootout = getShootoutScore(summary, plan.candidate.shootoutScore);
       if (shootout) {
         plan.update.espn_home_shootout_score = shootout.home;
         plan.update.espn_away_shootout_score = shootout.away;

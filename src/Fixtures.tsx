@@ -95,6 +95,10 @@ function statusMatchesFilter(statusFilter: StatusFilter, effectiveStatus: string
   return effectiveStatus === statusFilter;
 }
 
+function getDefaultOpenStage(matches: Pick<MatchRow, 'lock_at' | 'stage' | 'status'>[]) {
+  return (matches.find((match) => isMatchPredictionOpen(match))?.stage as StageFilter | undefined) ?? getDefaultStageFilter(matches as MatchRow[]);
+}
+
 function TeamFlag({ team }: { team?: TeamRow }) {
   const FlagIcon = getTeamFlag(team?.country_code, team?.short_name);
 
@@ -111,14 +115,12 @@ function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?:
     const penaltyWinner = getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id);
 
     return (
-      <div className={`flex flex-col items-center gap-1 ${match.status === 'live' ? 'text-c4' : ''}`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.home_score}</div>
-          <div className="font-black text-base sm:text-xl">-</div>
-          <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
-        </div>
-        {penaltyScore && <div className="bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] sm:text-[10px] uppercase whitespace-nowrap">{penaltyScore}</div>}
-        {!penaltyScore && penaltyWinner && <div className="font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap">{penaltyWinner}</div>}
+      <div className={`relative flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.home_score}</div>
+        <div className="font-black text-base sm:text-xl">-</div>
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
+        {penaltyScore && <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] sm:text-[10px] uppercase whitespace-nowrap z-10">{penaltyScore}</div>}
+        {!penaltyScore && penaltyWinner && <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap z-10">{penaltyWinner}</div>}
       </div>
     );
   }
@@ -214,8 +216,9 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
       .then(([nextMatches, nextTeams, nextPredictions, nextLeaderboard]) => {
         if (!active) return;
         setMatches(nextMatches);
-        setStageFilter(getDefaultStageFilter(nextMatches));
+        setStageFilter(getDefaultOpenStage(nextMatches));
         setMatchdayFilter('all');
+        setStatusFilter('open');
         setPage(1);
         setTeams(nextTeams);
         setPredictions(nextPredictions);

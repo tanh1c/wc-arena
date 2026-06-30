@@ -25,6 +25,20 @@ test('formats penalty shootout scores compactly', () => {
   assert.equal(formatActualResult(match, 'NED', 'MAR', ' - '), '1 - 1 (PEN 2 - 3)');
 });
 
+test('does not show placeholder penalty shootout scores', () => {
+  const match = {
+    home_score: 0,
+    away_score: 0,
+    espn_home_winner: null,
+    espn_away_winner: null,
+    espn_home_shootout_score: 0,
+    espn_away_shootout_score: 0,
+  };
+
+  assert.equal(getPenaltyScoreLabel(match), null);
+  assert.equal(formatActualResult(match, 'GER', 'PAR'), '0-0');
+});
+
 test('keeps normal score labels unchanged', () => {
   assert.equal(formatActualResult({ home_score: 2, away_score: 0, espn_home_winner: true }, 'FRA', 'SWE', ' - '), '2 - 0');
   assert.equal(formatActualResult({ home_score: null, away_score: null }, 'FRA', 'SWE'), '—');

@@ -3,6 +3,7 @@ import type { Database } from '../types/supabase';
 import { cached } from './cache';
 
 export type MatchRow = Database['public']['Tables']['matches']['Row'];
+type MatchStatusInput = Pick<MatchRow, 'lock_at' | 'status'>;
 export type EffectiveMatchStatus = MatchRow['status'];
 
 const MATCH_SUMMARY_FIELDS = `
@@ -51,13 +52,13 @@ const MATCH_DETAIL_FIELDS = `
   espn_summary
 `;
 
-export function getEffectiveMatchStatus(match: MatchRow, now = new Date()): EffectiveMatchStatus {
+export function getEffectiveMatchStatus(match: MatchStatusInput, now = new Date()): EffectiveMatchStatus {
   if (['finished', 'live', 'postponed', 'cancelled'].includes(match.status)) return match.status;
   if (new Date(match.lock_at) <= now) return 'locked';
   return match.status;
 }
 
-export function isMatchPredictionOpen(match: MatchRow, now = new Date()) {
+export function isMatchPredictionOpen(match: MatchStatusInput, now = new Date()) {
   return getEffectiveMatchStatus(match, now) === 'open';
 }
 
