@@ -72,6 +72,8 @@ export type MatchResult = {
   stage?: MatchStage | string | null;
   espnHomeWinner?: boolean | null;
   espnAwayWinner?: boolean | null;
+  espnHomeShootoutScore?: number | null;
+  espnAwayShootoutScore?: number | null;
 };
 
 export type ScoreBreakdown = {

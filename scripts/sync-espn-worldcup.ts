@@ -77,6 +77,7 @@ type EspnPredictionSignal = {
   draw: number;
   away: number;
 };
+type ShootoutScore = { home: number; away: number };
 
 type EspnCandidate = {
   eventId: string;
@@ -655,6 +656,24 @@ function sanitizeBoxscoreTeams(value: unknown) {
   return Object.fromEntries(entries);
 }
 
+function getShootoutScore(summary: unknown): ShootoutScore | null {
+  if (!isRecord(summary)) return null;
+  const boxscore = isRecord(summary.boxscore) ? summary.boxscore : undefined;
+  const form = toArray(boxscore?.form);
+
+  for (const section of form) {
+    if (!isRecord(section)) continue;
+    for (const event of toArray(section.events)) {
+      if (!isRecord(event)) continue;
+      const home = numberValue(event.homeShootoutScore);
+      const away = numberValue(event.awayShootoutScore);
+      if (home !== null && away !== null) return { home, away };
+    }
+  }
+
+  return null;
+}
+
 function sanitizeSummary(summary: unknown): Json | null {
   if (!isRecord(summary)) return null;
 
@@ -722,6 +741,11 @@ async function enrichPlansWithSummaries(plans: MatchUpdatePlan[]) {
   await Promise.all(plans.map(async (plan) => {
     try {
       const summary = await fetchSummary(plan.candidate.eventId);
+      const shootout = getShootoutScore(summary);
+      if (shootout) {
+        plan.update.espn_home_shootout_score = shootout.home;
+        plan.update.espn_away_shootout_score = shootout.away;
+      }
       const sanitized = sanitizeSummary(summary);
       if (!sanitized) return;
       plan.update.espn_summary = sanitized;
@@ -732,7 +756,7 @@ async function enrichPlansWithSummaries(plans: MatchUpdatePlan[]) {
   }));
 }
 
-const MATCH_FIELDS = 'id, home_team_id, away_team_id, kickoff_at, lock_at, status, home_score, away_score, espn_attendance, espn_away_color, espn_away_logo, espn_away_record, espn_away_win_pct, espn_away_winner, espn_competition_id, espn_display_clock, espn_draw_pct, espn_event_id, espn_home_color, espn_home_logo, espn_home_record, espn_home_win_pct, espn_home_winner, espn_play_by_play_available, espn_prediction_updated_at, espn_state, espn_status, espn_status_detail, espn_summary, espn_stats_normalized_at, espn_summary_updated_at, espn_updated_at, group_code, matchday, result_updated_at, stage, stadium, city';
+const MATCH_FIELDS = 'id, home_team_id, away_team_id, kickoff_at, lock_at, status, home_score, away_score, espn_attendance, espn_away_color, espn_away_logo, espn_away_record, espn_away_shootout_score, espn_away_win_pct, espn_away_winner, espn_competition_id, espn_display_clock, espn_draw_pct, espn_event_id, espn_home_color, espn_home_logo, espn_home_record, espn_home_shootout_score, espn_home_win_pct, espn_home_winner, espn_play_by_play_available, espn_prediction_updated_at, espn_state, espn_status, espn_status_detail, espn_summary, espn_stats_normalized_at, espn_summary_updated_at, espn_updated_at, group_code, matchday, result_updated_at, stage, stadium, city';
 const TEAM_FIELDS = 'id, name, short_name, country_code, fifa_rank, group_code';
 const SELECT_PAGE_SIZE = 1000;
 

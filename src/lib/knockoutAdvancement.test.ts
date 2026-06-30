@@ -50,6 +50,8 @@ function match(input: Partial<MatchRow> & Pick<MatchRow, 'id' | 'home_team_id' |
     espn_away_color: null,
     espn_home_winner: input.espn_home_winner ?? null,
     espn_away_winner: input.espn_away_winner ?? null,
+    espn_home_shootout_score: input.espn_home_shootout_score ?? null,
+    espn_away_shootout_score: input.espn_away_shootout_score ?? null,
     espn_attendance: null,
     espn_play_by_play_available: null,
     espn_summary_updated_at: null,

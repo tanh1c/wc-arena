@@ -10,7 +10,7 @@ import { calculatePredictionScore, getPredictionOutcome } from '../lib/scoring';
 import { getPrediction, type PredictionWithMatch } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
-import { formatActualResult, formatPredictionPick } from '../utils/predictionDisplay';
+import { formatActualResult, formatPredictionPick, getPenaltyScoreLabel } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
 import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
 
@@ -49,7 +49,7 @@ function toPrediction(row: PredictionWithMatch): Prediction {
 function getMatchResult(row: PredictionWithMatch): MatchResult | undefined {
   const match = row.matches;
   if (!match || match.status !== 'finished' || typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return undefined;
-  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner };
+  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner, espnHomeShootoutScore: match.espn_home_shootout_score, espnAwayShootoutScore: match.espn_away_shootout_score };
 }
 
 function getDisplayStatus(prediction: Prediction, result?: MatchResult): PredictionDisplayStatus {
@@ -174,6 +174,7 @@ export default function PredictionBreakdown({ themeControls }: PredictionBreakdo
   } : fallbackScore;
   const status = storedScore?.outcome ? storedScore.outcome as PredictionDisplayStatus : getDisplayStatus(prediction, result);
   const actualResultText = formatActualResult(match, homeTeam.short_name, awayTeam.short_name);
+  const penaltyScore = getPenaltyScoreLabel(match);
 
   return (
     <AppShell themeControls={themeControls}>
@@ -197,7 +198,7 @@ export default function PredictionBreakdown({ themeControls }: PredictionBreakdo
             </div>
             <div className="flex items-center gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-4 lg:p-5 bg-c2 text-inv">
               <Trophy size={36} strokeWidth={2.5} />
-              <div><div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.actualResult')}</div><div className="text-2xl sm:text-3xl font-black leading-none">{result ? actualResultText : t('ui.pending')}</div><div className="text-[10px] font-bold uppercase mt-1">{match.espn_status_detail ?? match.status}</div></div>
+              <div><div className="text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{t('ui.actualResult')}</div><div className="text-2xl sm:text-3xl font-black leading-none">{result ? (penaltyScore ? `${match.home_score}-${match.away_score}` : actualResultText) : t('ui.pending')}</div>{result && penaltyScore && <div className="mt-1 inline-flex bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] uppercase whitespace-nowrap">{penaltyScore}</div>}<div className="text-[10px] font-bold uppercase mt-1">{match.espn_status_detail ?? match.status}</div></div>
             </div>
             <div className="flex items-center gap-4 border-b-4 sm:border-b-0 sm:border-r-4 border-main p-4 lg:p-5 bg-c3 text-main">
               <BarChart2 size={36} strokeWidth={2.5} />

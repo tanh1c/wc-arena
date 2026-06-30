@@ -5,6 +5,8 @@ type MatchResultLike = {
   away_score?: number | null;
   espn_home_winner?: boolean | null;
   espn_away_winner?: boolean | null;
+  espn_home_shootout_score?: number | null;
+  espn_away_shootout_score?: number | null;
 };
 
 export function formatOutcomeLabel(outcome: MatchOutcome, homeLabel: string, awayLabel: string) {
@@ -21,6 +23,11 @@ export function formatPredictionPick(prediction: Prediction, homeLabel: string, 
   return formatOutcomeLabel(prediction.predictedOutcome, homeLabel, awayLabel);
 }
 
+export function getShootoutScoreLabel(match: MatchResultLike, separator = '-') {
+  if (typeof match.espn_home_shootout_score !== 'number' || typeof match.espn_away_shootout_score !== 'number') return null;
+  return `${match.espn_home_shootout_score}${separator}${match.espn_away_shootout_score}`;
+}
+
 export function getPenaltyWinnerLabel(match: MatchResultLike, homeLabel: string, awayLabel: string) {
   if (typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return null;
   if (match.home_score !== match.away_score) return null;
@@ -29,9 +36,18 @@ export function getPenaltyWinnerLabel(match: MatchResultLike, homeLabel: string,
   return null;
 }
 
+export function getPenaltyScoreLabel(match: MatchResultLike, separator = '-') {
+  if (typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return null;
+  if (match.home_score !== match.away_score) return null;
+  const shootoutScore = getShootoutScoreLabel(match, separator);
+  return shootoutScore ? `PEN ${shootoutScore}` : null;
+}
+
 export function formatActualResult(match: MatchResultLike, homeLabel: string, awayLabel: string, separator = '-') {
   if (typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return '—';
   const score = `${match.home_score}${separator}${match.away_score}`;
+  const penaltyScore = getPenaltyScoreLabel(match, separator);
   const winnerLabel = getPenaltyWinnerLabel(match, homeLabel, awayLabel);
+  if (penaltyScore) return `${score} (${penaltyScore})`;
   return winnerLabel ? `${score} (${winnerLabel})` : score;
 }

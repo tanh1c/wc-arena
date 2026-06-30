@@ -13,7 +13,7 @@ import { getEffectiveMatchStatus, getMatch, listMatches, type MatchRow } from '.
 import { getMatchPredictionOutcomeSummary, listCurrentUserPredictions, submitPrediction, type MatchPredictionOutcomeSummary, type PredictionRow } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
-import { formatActualResult, getPenaltyWinnerLabel } from '../utils/predictionDisplay';
+import { formatActualResult, getPenaltyScoreLabel, getPenaltyWinnerLabel } from '../utils/predictionDisplay';
 import { getTeamFlag } from '../utils/teamFlags';
 import type { ThemeControls } from '../App';
 import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
@@ -114,7 +114,7 @@ function formatMatchDate(value: string) {
 
 function getMatchResult(match: MatchRow): MatchResult | undefined {
   if (match.status !== 'finished' || typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return undefined;
-  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner };
+  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner, espnHomeShootoutScore: match.espn_home_shootout_score, espnAwayShootoutScore: match.espn_away_shootout_score };
 }
 
 function toPrediction(row: PredictionRow): Prediction {
@@ -437,6 +437,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
   const communityDrawPct = toPercent(communitySignal?.draw_predictions ?? 0, communityTotal);
   const communityAwayPct = toPercent(communitySignal?.away_predictions ?? 0, communityTotal);
   const hasEspnSignal = typeof match?.espn_home_win_pct === 'number' && typeof match.espn_draw_pct === 'number' && typeof match.espn_away_win_pct === 'number';
+  const penaltyScore = match ? getPenaltyScoreLabel(match, ' - ') : null;
   const penaltyWinner = match ? getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id) : null;
 
   const groupCode = match?.group_code ?? homeTeam?.group_code ?? awayTeam?.group_code;
@@ -596,9 +597,10 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                   </div>
                   <div className="flex flex-col items-center gap-2">
                     <div className="border-[3px] sm:border-4 border-main bg-page shadow-[3px_3px_0_var(--color-shadow)] sm:shadow-[4px_4px_0_var(--color-shadow)] px-3 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-4 font-black text-xl sm:text-2xl lg:text-5xl">
-                      {result ? formatActualResult(match, homeTeam.short_name, awayTeam.short_name, ' - ') : 'VS'}
+                      {result ? `${match.home_score} - ${match.away_score}` : 'VS'}
                     </div>
-                    {penaltyWinner && <div className="bg-c2 text-inv border-2 border-main px-2 py-1 font-black uppercase text-[9px] sm:text-[10px] text-center">{penaltyWinner}</div>}
+                    {penaltyScore && <div className="bg-main text-inv border-2 border-main px-3 py-1 font-black uppercase text-[10px] sm:text-xs text-center tracking-wider">{penaltyScore}</div>}
+                    {!penaltyScore && penaltyWinner && <div className="bg-c2 text-inv border-2 border-main px-2 py-1 font-black uppercase text-[9px] sm:text-[10px] text-center">{penaltyWinner}</div>}
                   </div>
                   <div className="flex flex-col items-start gap-2 sm:gap-3 min-w-0">
                     <TeamFlag team={awayTeam} align="items-start" />

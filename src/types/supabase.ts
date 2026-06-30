@@ -1015,6 +1015,7 @@ export type Database = {
           espn_away_color: string | null
           espn_away_logo: string | null
           espn_away_record: string | null
+          espn_away_shootout_score: number | null
           espn_away_win_pct: number | null
           espn_away_winner: boolean | null
           espn_competition_id: string | null
@@ -1024,6 +1025,7 @@ export type Database = {
           espn_home_color: string | null
           espn_home_logo: string | null
           espn_home_record: string | null
+          espn_home_shootout_score: number | null
           espn_home_win_pct: number | null
           espn_home_winner: boolean | null
           espn_play_by_play_available: boolean | null
@@ -1055,6 +1057,7 @@ export type Database = {
           espn_away_color?: string | null
           espn_away_logo?: string | null
           espn_away_record?: string | null
+          espn_away_shootout_score?: number | null
           espn_away_win_pct?: number | null
           espn_away_winner?: boolean | null
           espn_competition_id?: string | null
@@ -1064,6 +1067,7 @@ export type Database = {
           espn_home_color?: string | null
           espn_home_logo?: string | null
           espn_home_record?: string | null
+          espn_home_shootout_score?: number | null
           espn_home_win_pct?: number | null
           espn_home_winner?: boolean | null
           espn_play_by_play_available?: boolean | null
@@ -1095,6 +1099,7 @@ export type Database = {
           espn_away_color?: string | null
           espn_away_logo?: string | null
           espn_away_record?: string | null
+          espn_away_shootout_score?: number | null
           espn_away_win_pct?: number | null
           espn_away_winner?: boolean | null
           espn_competition_id?: string | null
@@ -1104,6 +1109,7 @@ export type Database = {
           espn_home_color?: string | null
           espn_home_logo?: string | null
           espn_home_record?: string | null
+          espn_home_shootout_score?: number | null
           espn_home_win_pct?: number | null
           espn_home_winner?: boolean | null
           espn_play_by_play_available?: boolean | null
@@ -1866,6 +1872,8 @@ export type Database = {
           match_away_team_id: string
           match_espn_away_winner: boolean | null
           match_espn_home_winner: boolean | null
+          match_espn_away_shootout_score: number | null
+          match_espn_home_shootout_score: number | null
           match_city: string
           match_espn_display_clock: string
           match_espn_state: string

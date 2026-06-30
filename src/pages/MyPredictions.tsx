@@ -9,7 +9,7 @@ import { calculatePredictionScore, getPredictionOutcome } from '../lib/scoring';
 import { listCurrentUserPredictions, type PredictionWithMatch } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
-import { formatActualResult, formatPredictionPick } from '../utils/predictionDisplay';
+import { formatActualResult, formatPredictionPick, getPenaltyScoreLabel } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
 import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
 
@@ -53,7 +53,7 @@ function toPrediction(row: PredictionWithMatch): Prediction {
 function getMatchResult(row: PredictionWithMatch): MatchResult | undefined {
   const match = row.matches;
   if (!match || match.status !== 'finished' || typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return undefined;
-  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner };
+  return { homeScore: match.home_score, awayScore: match.away_score, stage: match.stage, espnHomeWinner: match.espn_home_winner, espnAwayWinner: match.espn_away_winner, espnHomeShootoutScore: match.espn_home_shootout_score, espnAwayShootoutScore: match.espn_away_shootout_score };
 }
 
 function getDisplayStatus(prediction: Prediction, result?: MatchResult): PredictionDisplayStatus {
@@ -234,6 +234,7 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                   const awayShortName = getTeamShortName(teams, match.away_team_id, t('appPages.common.unknownTeam'));
                   const pickText = formatPredictionPick(prediction, homeShortName, awayShortName);
                   const actualResultText = formatActualResult(match, homeShortName, awayShortName);
+                  const penaltyScore = getPenaltyScoreLabel(match);
 
                   return (
                     <div key={prediction.id} className="border-4 lg:border-0 lg:border-b-4 border-main last:border-b-4 lg:last:border-b-0 font-bold text-sm hover:bg-muted transition-colors bg-card shadow-[4px_4px_0_var(--color-shadow)] lg:shadow-none">
@@ -255,7 +256,8 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                           </div>
                           <div className="px-3 py-2 bg-card border-x-4 border-main flex flex-col items-center justify-center min-w-[70px]">
                             <div className="text-[9px] uppercase font-black text-subtle">{t('appPages.common.actual')}</div>
-                            <div className="text-xl font-black text-center leading-tight">{result ? actualResultText : '—'}</div>
+                            <div className="text-xl font-black text-center leading-tight">{result ? `${match.home_score}-${match.away_score}` : '—'}</div>
+                            {result && penaltyScore && <div className="mt-1 bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] uppercase whitespace-nowrap">{penaltyScore}</div>}
                           </div>
                           <div className="p-3 bg-c2 text-inv text-right min-w-0">
                             <div className="text-[9px] uppercase font-black tracking-widest opacity-70">{awayTeam?.name ?? match.away_team_id}</div>
@@ -287,7 +289,9 @@ export default function MyPredictions({ themeControls }: MyPredictionsProps) {
                           <div className="text-xs text-subtle uppercase mt-1">{match.stadium} • {match.city}</div>
                         </div>
                         <div className="p-3 lg:border-r-2 border-main text-center font-black">{pickText}</div>
-                        <div className="p-3 lg:border-r-2 border-main text-center font-black">{result ? formatActualResult(match, homeShortName, awayShortName, ' - ') : '—'}</div>
+                        <div className="p-3 lg:border-r-2 border-main text-center font-black flex flex-col items-center gap-1">
+                          {result ? (penaltyScore ? <><span>{match.home_score} - {match.away_score}</span><span className="bg-main text-inv border-2 border-main px-2 py-0.5 text-[9px] uppercase whitespace-nowrap">{getPenaltyScoreLabel(match, ' - ')}</span></> : formatActualResult(match, homeShortName, awayShortName, ' - ')) : '—'}
+                        </div>
                         <div className="p-3 lg:border-r-2 border-main flex justify-center"><StatusPill status={status} /></div>
                         <div className="p-3 lg:border-r-2 border-main text-center font-black text-lg">{points}</div>
                         <div className="p-3 flex justify-center">

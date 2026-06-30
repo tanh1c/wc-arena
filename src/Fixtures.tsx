@@ -28,7 +28,7 @@ import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type Match
 import { listCurrentUserPredictions, type PredictionWithMatch } from './services/predictions';
 import { getTeamMap, type TeamRow } from './services/teams';
 import { getPublicDisplayName } from './utils/displayName';
-import { getPenaltyWinnerLabel } from './utils/predictionDisplay';
+import { getPenaltyScoreLabel, getPenaltyWinnerLabel } from './utils/predictionDisplay';
 import { getTeamFlag } from './utils/teamFlags';
 
 type FixturesProps = {
@@ -107,6 +107,7 @@ function TeamFlag({ team }: { team?: TeamRow }) {
 
 function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow }) {
   if (typeof match.home_score === 'number' && typeof match.away_score === 'number') {
+    const penaltyScore = getPenaltyScoreLabel(match);
     const penaltyWinner = getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id);
 
     return (
@@ -116,7 +117,8 @@ function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?:
           <div className="font-black text-base sm:text-xl">-</div>
           <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
         </div>
-        {penaltyWinner && <div className="font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap">{penaltyWinner}</div>}
+        {penaltyScore && <div className="bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] sm:text-[10px] uppercase whitespace-nowrap">{penaltyScore}</div>}
+        {!penaltyScore && penaltyWinner && <div className="font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap">{penaltyWinner}</div>}
       </div>
     );
   }

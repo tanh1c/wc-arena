@@ -38,6 +38,8 @@ const MATCH_SUMMARY_FIELDS = `
   espn_away_color,
   espn_home_winner,
   espn_away_winner,
+  espn_home_shootout_score,
+  espn_away_shootout_score,
   espn_attendance,
   espn_play_by_play_available,
   espn_summary_updated_at,
