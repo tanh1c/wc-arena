@@ -1,6 +1,6 @@
 {
-  "name": "Predict 2026",
-  "description": "A brutalist landing page for a sports prediction tournament",
+  "name": "We Know Ball",
+  "description": "A brutalist World Cup prediction game for proving ball knowledge",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

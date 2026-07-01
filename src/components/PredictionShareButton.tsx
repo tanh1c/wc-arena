@@ -168,7 +168,7 @@ async function createPredictionShareBlob({ prediction, match, homeTeam, awayTeam
   context.fillStyle = '#ffffff';
   context.textAlign = 'left';
   context.font = '900 44px Arial Black, Impact, sans-serif';
-  context.fillText('PREDICT 2026', 116, 142);
+  context.fillText('WE KNOW BALL', 116, 142);
   context.font = '900 22px Arial, sans-serif';
   context.fillStyle = '#facc15';
   context.fillText('WORLD CUP PREDICTION SLIP', 116, 190);
@@ -235,7 +235,7 @@ export default function PredictionShareButton({ prediction, match, homeTeam, awa
   const [creating, setCreating] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileName = `predict-2026-${homeTeam.shortName}-${awayTeam.shortName}.png`;
+  const fileName = `we-know-ball-${homeTeam.shortName}-${awayTeam.shortName}.png`;
   const canNativeShare = typeof navigator !== 'undefined' && Boolean(navigator.share);
 
   useEffect(() => {
@@ -299,7 +299,7 @@ export default function PredictionShareButton({ prediction, match, homeTeam, awa
       const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
 
       if (navigator.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
-        await navigator.share({ files: [file], title: 'Predict 2026', text: t('ui.sharePredictionText') });
+        await navigator.share({ files: [file], title: 'We Know Ball', text: t('ui.sharePredictionText') });
         return;
       }
 

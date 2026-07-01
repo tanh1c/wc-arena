@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 const Landing = lazy(() => import('./Landing'));
 const Leaderboard = lazy(() => import('./Leaderboard'));
@@ -51,6 +51,48 @@ type LegacyRouteProps = {
   Component: React.ComponentType<LegacyPageProps>;
   themeControls: ThemeControls;
 };
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+const gaMeasurementId = import.meta.env.VITE_GA_MEASUREMENT_ID;
+
+function gtag(...args: unknown[]) {
+  window.dataLayer = window.dataLayer ?? [];
+  window.dataLayer.push(args);
+}
+
+function GoogleAnalytics() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!gaMeasurementId || window.gtag) return;
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaMeasurementId)}`;
+    document.head.append(script);
+
+    window.gtag = gtag;
+    window.gtag('js', new Date());
+    window.gtag('config', gaMeasurementId, { send_page_view: false });
+  }, []);
+
+  useEffect(() => {
+    if (!gaMeasurementId || !window.gtag) return;
+    window.gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: `${location.pathname}${location.search}`,
+    });
+  }, [location.pathname, location.search]);
+
+  return null;
+}
 
 function pageToPath(page: string) {
   return page === 'landing' ? '/' : `/${page}`;
@@ -104,6 +146,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <GoogleAnalytics />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LegacyRoute Component={Landing} themeControls={themeControls} />} />

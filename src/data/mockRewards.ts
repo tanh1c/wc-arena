@@ -84,7 +84,7 @@ export const mockRewardTrustNotes: RewardTrustNote[] = [
   {
     id: 'trust-free-entry',
     title: 'Free to enter',
-    description: 'Predict 2026 is free to play. Points are virtual and cannot be exchanged.'
+    description: 'We Know Ball is free to play. Points are virtual and cannot be exchanged.'
   },
   {
     id: 'trust-virtual-points',

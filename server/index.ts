@@ -16,7 +16,7 @@ const port = Number(process.env.API_PORT ?? 4000);
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'predict-2026-api' });
+  res.json({ ok: true, service: 'we-know-ball-api' });
 });
 
 app.use('/api', meRouter);
@@ -31,5 +31,5 @@ app.use('/api', rewardsRouter);
 app.use('/api', adminRouter);
 
 app.listen(port, () => {
-  console.log(`Predict 2026 API listening on http://127.0.0.1:${port}`);
+  console.log(`We Know Ball API listening on http://127.0.0.1:${port}`);
 });
