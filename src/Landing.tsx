@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trophy, Users, Clock, ArrowRight, User, Target, CheckCircle, TrendingUp, Pencil, Lock } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
+import LegacyPageHeader from './components/layout/LegacyPageHeader';
 import { useAuth } from './lib/auth';
 import { supabase } from './lib/supabaseClient';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
@@ -143,7 +144,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
           <div className="w-3 h-3 rounded-full bg-c3"></div>
         </div>
 
-        <nav className="flex items-center justify-between border-b-4 border-main px-6 py-4 bg-card z-20 relative">
+        <LegacyPageHeader className="relative z-20">
           <div className="text-2xl md:text-3xl font-black uppercase tracking-tighter cursor-pointer" onClick={() => onNavigate('landing')}>{t('common.product')}</div>
           <div className="hidden lg:flex space-x-10 font-bold uppercase text-sm tracking-wide">
             <button className="hover:text-c2 transition-colors pb-1 text-main" onClick={() => onNavigate('matches')}>{t('nav.public.matches')}</button>
@@ -157,7 +158,7 @@ export default function Landing({ onNavigate, isVintage, setIsVintage, isDark, s
               {t('landing.joinNow')} <ArrowRight size={18} strokeWidth={3} />
             </button>
           </div>
-        </nav>
+        </LegacyPageHeader>
 
         <div className="relative border-b-4 border-main bg-card overflow-hidden min-h-[350px] flex items-center">
           <RainbowGraphic alt={t('ui.backgroundGraphic')} />

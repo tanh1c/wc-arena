@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Lock, Mail, ShieldCheck, Trophy } from 'lucide-react';
 import LegacySettingsMenu from './components/LegacySettingsMenu';
+import LegacyPageHeader from './components/layout/LegacyPageHeader';
 import GoogleIcon from './components/ui/GoogleIcon';
 import { useAuth } from './lib/auth';
 import { setRememberAuth, supabase } from './lib/supabaseClient';
@@ -98,7 +99,7 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
       <div className="absolute inset-0 z-0 bg-page/15 pointer-events-none" />
 
       <div className="relative z-10 min-h-screen flex flex-col p-4 lg:p-6">
-        <header className="flex items-center justify-between bg-card border-4 border-main px-4 md:px-6 py-4 shadow-[8px_8px_0_var(--color-shadow)]">
+        <LegacyPageHeader>
           <button type="button" onClick={() => onNavigate('landing')} className="text-xl md:text-3xl font-black uppercase tracking-tighter text-main hover:text-c2 transition-colors">
             {t('common.product')}
           </button>
@@ -108,7 +109,7 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
             </button>
             <LegacySettingsMenu {...themeControls} />
           </div>
-        </header>
+        </LegacyPageHeader>
 
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-5 lg:gap-10 items-start lg:items-center w-full max-w-6xl mx-auto py-5 lg:py-12">
           <section className="order-2 lg:order-1 bg-card border-4 border-main p-5 lg:p-10 shadow-[8px_8px_0_var(--color-shadow)] max-w-2xl">
