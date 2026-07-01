@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { AGENT_UNAVAILABLE_MESSAGE } from './agentMessages';
 
 const agentApiUrl = (import.meta.env.VITE_AGENT_API_URL as string | undefined)?.replace(/\/$/, '') || 'http://localhost:8000';
 
@@ -43,7 +44,7 @@ export async function sendAgentMessage(payload: AgentChatPayload): Promise<Agent
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    throw new Error('We Speak Football service is offline. Start the Python agent service on port 8000.');
+    throw new Error(AGENT_UNAVAILABLE_MESSAGE);
   }
 
   const data = await response.json().catch(() => null);

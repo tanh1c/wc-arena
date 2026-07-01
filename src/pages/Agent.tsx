@@ -192,41 +192,45 @@ export default function Agent({ themeControls }: AgentProps) {
             )}
 
             {selectedMatch && (
-              <div className="border-[3px] border-main bg-c1 text-main p-3 font-black uppercase text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[4px_4px_0_var(--color-shadow)]">
-                <div>
-                  <div className="text-[10px] text-subtle mb-1">{t('appPages.agent.selectedMatch')}</div>
-                  <div>{getAgentMatchSelectionPrompt(selectedMatch, teams)}</div>
+              <div className="border-[3px] border-main bg-c1 text-main p-3 font-black uppercase text-xs flex items-center justify-between gap-3 shadow-[3px_3px_0_var(--color-shadow)]">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] text-subtle">{t('appPages.agent.selectedMatch')}</span>
+                    <span className="truncate">{getAgentMatchSelectionPrompt(selectedMatch, teams)}</span>
+                  </div>
+                  <div className="mt-1 text-[10px] text-subtle normal-case">{t('appPages.agent.selectedMatchHint')}</div>
                 </div>
-                <button type="button" onClick={() => setSelectedMatchId('')} className="border-2 border-main bg-card px-3 py-2 shadow-[2px_2px_0_var(--color-shadow)] flex items-center justify-center gap-2">
+                <button type="button" onClick={() => setSelectedMatchId('')} className="h-8 w-8 shrink-0 border-2 border-main bg-card shadow-[2px_2px_0_var(--color-shadow)] flex items-center justify-center" aria-label={t('appPages.agent.clearMatch')}>
                   <X size={14} strokeWidth={3} />
-                  {t('appPages.agent.clearMatch')}
                 </button>
               </div>
             )}
 
             {messages.length === 0 && (
               <>
-                <div className="border-4 border-main bg-card p-4 shadow-[4px_4px_0_var(--color-shadow)]">
-                  <div className="font-black uppercase text-lg">{t('appPages.agent.emptyTitle')}</div>
-                  <p className="mt-2 text-sm font-bold text-subtle leading-relaxed">{t('appPages.agent.emptyIntro')}</p>
-                </div>
+                <p className="border-[3px] border-main bg-card px-3 py-2 shadow-[3px_3px_0_var(--color-shadow)] text-sm font-bold text-subtle leading-relaxed">
+                  {t('appPages.agent.emptyIntro')}
+                </p>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
                   {[
                     { label: t('appPages.agent.quickStarts.matchPreview'), prompt: t('appPages.agent.quickPrompts.matchPreview') },
                     { label: t('appPages.agent.quickStarts.predictionHelp'), prompt: t('appPages.agent.quickPrompts.predictionHelp') },
                     { label: t('appPages.agent.quickStarts.teamContext'), prompt: t('appPages.agent.quickPrompts.teamContext') },
-                  ].map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => setInput((current) => appendAgentPromptText(current, item.prompt))}
-                      className="border-4 border-main bg-card hover:bg-muted p-4 text-left font-black uppercase shadow-[4px_4px_0_var(--color-shadow)]"
-                    >
-                      <span className="text-xs text-subtle block mb-2">{t('appPages.agent.start')}</span>
-                      <span className="text-lg">{item.label}</span>
-                    </button>
-                  ))}
+                  ].map((item) => {
+                    const needsMatch = item.prompt === t('appPages.agent.quickPrompts.matchPreview');
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        disabled={needsMatch && !selectedMatch}
+                        onClick={() => setInput((current) => appendAgentPromptText(current, item.prompt))}
+                        className="border-[3px] border-main bg-card hover:bg-muted disabled:bg-muted disabled:text-subtle disabled:cursor-not-allowed p-3 text-left font-black uppercase shadow-[3px_3px_0_var(--color-shadow)]"
+                      >
+                        <span className="text-sm">{item.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {upcomingMatches.length > 0 && (
