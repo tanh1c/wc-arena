@@ -296,20 +296,33 @@ function KnockoutMatchCard({ match, projection, teamMap, t }: { match: MatchRow;
 
 function KnockoutRoundColumn({ round, projection, teamMap, t }: { round: KnockoutRound; projection: Map<string, ProjectedMatchTeams>; teamMap: Map<string, TeamRow>; t: TranslationFn }) {
   return (
-    <div className="min-w-[220px] lg:min-w-0 flex flex-col gap-2">
+    <div className="min-w-[190px] lg:min-w-0 flex flex-col gap-2 h-full">
       <div className="bg-c1 text-main border-2 border-main rounded-sm px-3 py-2 font-black uppercase text-xs shadow-[2px_2px_0_0_var(--color-shadow)]">
         <div>{getStageTitle(round.stage, t)}</div>
         <div className="text-[9px] text-subtle">{t('appPages.statistics.knockoutMatches', { count: round.matches.length })}</div>
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col justify-around gap-3 flex-1">
         {round.matches.map((match) => <div key={match.id}><KnockoutMatchCard match={match} projection={projection} teamMap={teamMap} t={t} /></div>)}
       </div>
     </div>
   );
 }
 
+function splitBracketRound(round: KnockoutRound, side: 'left' | 'right'): KnockoutRound {
+  const split = Math.ceil(round.matches.length / 2);
+  return {
+    stage: round.stage,
+    matches: side === 'left' ? round.matches.slice(0, split) : round.matches.slice(split),
+  };
+}
+
 function KnockoutBracket({ rounds, projection, teamMap, t }: { rounds: KnockoutRound[]; projection: Map<string, ProjectedMatchTeams>; teamMap: Map<string, TeamRow>; t: TranslationFn }) {
   const matchCount = rounds.reduce((sum, round) => sum + round.matches.length, 0);
+  const roundsByStage = new Map(rounds.map((round) => [round.stage, round]));
+  const pathStages = KNOCKOUT_STAGE_ORDER.filter((stage) => !['third_place', 'final'].includes(stage) && roundsByStage.has(stage));
+  const leftRounds = pathStages.map((stage) => splitBracketRound(roundsByStage.get(stage)!, 'left')).filter((round) => round.matches.length > 0);
+  const rightRounds = [...pathStages].reverse().map((stage) => splitBracketRound(roundsByStage.get(stage)!, 'right')).filter((round) => round.matches.length > 0);
+  const centerRounds = [roundsByStage.get('final'), roundsByStage.get('third_place')].filter((round): round is KnockoutRound => Boolean(round));
   if (rounds.length === 0) return null;
 
   return (
@@ -320,8 +333,12 @@ function KnockoutBracket({ rounds, projection, teamMap, t }: { rounds: KnockoutR
       </div>
       <div className="bg-c1 text-main px-3 py-2 border-b-4 border-main font-bold uppercase text-[10px] sm:text-xs">{t('appPages.statistics.knockoutBracketDescription')}</div>
       <div className="overflow-x-auto bg-muted [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-main/30 hover:[&::-webkit-scrollbar-thumb]:bg-main/50">
-        <div className="grid grid-flow-col auto-cols-[minmax(220px,1fr)] lg:auto-cols-fr gap-3 p-3 min-w-max lg:min-w-0">
-          {rounds.map((round) => <div key={round.stage}><KnockoutRoundColumn round={round} projection={projection} teamMap={teamMap} t={t} /></div>)}
+        <div className="grid grid-flow-col auto-cols-[minmax(190px,1fr)] lg:auto-cols-fr gap-2 lg:gap-3 p-3 min-w-max lg:min-w-0 items-stretch">
+          {leftRounds.map((round) => <div key={`left-${round.stage}`}><KnockoutRoundColumn round={round} projection={projection} teamMap={teamMap} t={t} /></div>)}
+          <div className="min-w-[210px] lg:min-w-0 flex flex-col justify-center gap-4">
+            {centerRounds.map((round) => <div key={round.stage}><KnockoutRoundColumn round={round} projection={projection} teamMap={teamMap} t={t} /></div>)}
+          </div>
+          {rightRounds.map((round) => <div key={`right-${round.stage}`}><KnockoutRoundColumn round={round} projection={projection} teamMap={teamMap} t={t} /></div>)}
         </div>
       </div>
     </div>
