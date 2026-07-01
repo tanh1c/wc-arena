@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Clock,
   Flag,
+  HelpCircle,
   MonitorPlay,
   Pencil,
   Star,
@@ -20,8 +21,11 @@ import {
   User,
 } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
+import { useAuth } from './lib/auth';
 import { buildKnockoutTeamProjection, type ProjectedMatchTeams } from './lib/knockoutAdvancement';
 import { getDefaultStageFilter, type StageFilter } from './lib/matchesDefaultStage';
+import { MATCHES_TOUR_ID, getMatchesTutorialSteps } from './lib/matchesTutorial';
+import { hasSeenTour, markTourSeen, shouldAutoRunTour, startTutorialTour } from './lib/tutorialTour';
 import { getErrorMessage } from './services/serviceTypes';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from './services/leaderboard';
 import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type MatchRow } from './services/matches';
@@ -195,6 +199,7 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, featured, onNavig
 
 export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame }: FixturesProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const themeControls = { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame };
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
@@ -238,6 +243,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   }, []);
 
   const knockoutProjection = useMemo(() => buildKnockoutTeamProjection(matches, teams), [matches, teams]);
+  const matchesTutorialSteps = useMemo(() => getMatchesTutorialSteps(t), [t]);
 
   const filteredMatches = useMemo(() => matches.filter((match) => {
     const effectiveStatus = getEffectiveMatchStatus(match);
@@ -260,6 +266,19 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   const nextHomeTeam = nextDeadline ? teams.get(nextDeadline.home_team_id) : undefined;
   const nextAwayTeam = nextDeadline ? teams.get(nextDeadline.away_team_id) : undefined;
   const firstOpenMatchId = filteredMatches.find(isMatchPredictionOpen)?.id;
+
+  function startMatchesTutorial() {
+    startTutorialTour(MATCHES_TOUR_ID, matchesTutorialSteps);
+  }
+
+  useEffect(() => {
+    if (!shouldAutoRunTour({ loading, error, seen: hasSeenTour(MATCHES_TOUR_ID) })) return;
+    const timer = window.setTimeout(() => {
+      startMatchesTutorial();
+      markTourSeen(MATCHES_TOUR_ID);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [error, loading, matchesTutorialSteps]);
   const slipItems = [
     { label: t('ui.submittedPicks'), calculation: t('ui.savedCount', { count: submittedCount }), value: t('ui.picksCount', { count: submittedCount }), icon: <Star size={16} /> },
     { label: t('ui.openMatches'), calculation: t('ui.editableCount', { count: openMatches }), value: `${openMatches}`, icon: <CheckCircle size={16} className="text-c2" /> },
@@ -269,14 +288,18 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   return (
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-        <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
+        <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
           <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main">
             {t('nav.public.matches')}
           </h1>
+          <button type="button" onClick={startMatchesTutorial} className="border-2 border-main bg-c1 text-main px-4 py-2 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c3 inline-flex items-center justify-center gap-2">
+            <HelpCircle size={16} strokeWidth={3} />
+            {t('tutorial.start')}
+          </button>
         </div>
 
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
-          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
+          <div data-tour="matches-summary" className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
             <div className="flex items-center gap-2 sm:gap-4 border-b-4 border-r-4 xl:border-b-0 border-main p-2.5 sm:p-4 lg:p-5 bg-c3 text-main min-w-0">
               <div className="shrink-0"><MonitorPlay size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5} /></div>
               <div className="flex flex-col justify-center min-w-0">
@@ -309,7 +332,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
 
           <div className="flex flex-col lg:flex-row flex-1 items-stretch">
             <div className="flex-1 border-r-0 lg:border-r-4 border-main flex flex-col min-w-0 bg-muted">
-              <div className="flex overflow-x-auto border-b-4 border-main font-black text-xs sm:text-sm md:text-base uppercase">
+              <div data-tour="matches-stage-tabs" className="flex overflow-x-auto border-b-4 border-main font-black text-xs sm:text-sm md:text-base uppercase">
                 {(Object.keys(stageLabelKeys) as StageFilter[]).map((stage) => (
                   <button key={stage} onClick={() => { setStageFilter(stage); setMatchdayFilter('all'); setPage(1); }} className={`${stageFilter === stage ? 'bg-c2 text-accent-inv' : 'bg-card text-main hover:bg-elevated'} px-3 sm:px-4 md:px-6 py-3 border-r-4 border-main shrink-0 whitespace-nowrap`}>
                     {t(stageLabelKeys[stage])}
@@ -317,7 +340,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between p-3 border-b-4 border-main bg-card gap-3 relative z-20">
+              <div data-tour="matches-filters" className="flex flex-col sm:flex-row items-center justify-between p-3 border-b-4 border-main bg-card gap-3 relative z-20">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 w-full">
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
                     {stageFilter === 'group' && (
@@ -344,7 +367,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                 </div>
               </div>
 
-              <div className="flex flex-col bg-card">
+              <div data-tour="matches-list" className="flex flex-col bg-card">
                 {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingMatches')}</div>}
                 {error && <div className="p-6 font-black uppercase text-sm bg-c5 text-main border-b-4 border-main">{error}</div>}
                 {!loading && !error && filteredMatches.length === 0 && <div className="p-6 font-black uppercase text-sm">{t('ui.noMatchesForFilter')}</div>}
@@ -383,7 +406,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
             </div>
 
             <div className="w-full lg:w-[420px] bg-card flex flex-col shrink-0 self-stretch relative z-20">
-              <div className="flex flex-col border-b-4 border-main bg-page">
+              <div data-tour="matches-deadline" className="flex flex-col border-b-4 border-main bg-page">
                 <div className="bg-main text-inv font-black uppercase text-xs py-3 px-4 min-h-[48px] flex items-center border-b-4 border-main">
                   {t('appPages.predictions.nextDeadline')}
                 </div>
@@ -399,7 +422,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                 </div>
               </div>
 
-              <div className="flex flex-col border-b-4 border-main">
+              <div data-tour="matches-slip" className="flex flex-col border-b-4 border-main">
                 <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm flex justify-between items-center border-b-4 border-main">
                   <span>{t('ui.mySlip')}</span>
                   <span className="text-c1 font-bold text-xs"><span className="text-accent-inv">{submittedCount}/64</span> {t('ui.picksMade')}</span>
@@ -489,7 +512,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row border-t-4 border-main bg-card overflow-hidden w-full uppercase shrink-0">
+          <div data-tour="matches-how-to-play" className="flex flex-col lg:flex-row border-t-4 border-main bg-card overflow-hidden w-full uppercase shrink-0">
             <div className="flex-1 flex border-b-4 lg:border-b-0 lg:border-r-4 border-main min-h-[90px] xl:min-h-[100px]">
               <div className="w-[4.5rem] bg-c3 flex justify-center items-center border-r-4 border-main shrink-0 text-main pb-1"><span className="font-black text-6xl leading-none">1</span></div>
               <div className="w-16 bg-c3 flex justify-center items-center border-r-4 border-main shrink-0 text-main"><Binoculars size={28} strokeWidth={2.5}/></div>

@@ -1,4 +1,4 @@
-import { Activity, Award, Bot, BarChart3, ClipboardList, Gift, Medal, ScrollText, ShieldCheck, Star, Trophy, User, Users } from 'lucide-react';
+import { Activity, Award, Bot, BarChart3, Gift, Medal, ScrollText, Star, Trophy, User, Users } from 'lucide-react';
 
 export type NavigationItem = {
   labelKey: string;
@@ -17,6 +17,12 @@ export const publicNavigation: NavigationItem[] = [
   { labelKey: 'nav.public.leaderboard', to: '/leaderboard' },
   { labelKey: 'nav.public.rules', to: '/rules' },
   { labelKey: 'nav.public.pointsGuide', to: '/points-guide' },
+];
+
+export const headerNavigation: NavigationItem[] = [
+  { labelKey: 'nav.items.matches', shortLabelKey: 'nav.items.matches', to: '/matches', icon: Trophy },
+  { labelKey: 'nav.items.leaderboard', shortLabelKey: 'nav.items.rank', to: '/leaderboard', icon: Award },
+  { labelKey: 'nav.items.leagues', to: '/leagues', icon: Users },
 ];
 
 export const appNavigationGroups: NavigationGroup[] = [
@@ -49,13 +55,15 @@ export const appNavigationGroups: NavigationGroup[] = [
       { labelKey: 'nav.items.rewards', to: '/rewards', icon: Star },
     ],
   },
-  {
-    labelKey: 'nav.groups.admin',
-    items: [
-      { labelKey: 'nav.items.controlRoom', to: '/admin', icon: ShieldCheck },
-      { labelKey: 'nav.items.auditLog', to: '/admin/audit', icon: ClipboardList },
-    ],
-  },
 ];
+
+const headerNavigationPaths = new Set(headerNavigation.map((item) => item.to));
+
+export const secondaryHeaderNavigationGroups: NavigationGroup[] = appNavigationGroups
+  .map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !headerNavigationPaths.has(item.to)),
+  }))
+  .filter((group) => group.items.length > 0);
 
 export const mobileNavigation = appNavigationGroups[0].items;

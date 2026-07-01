@@ -1,9 +1,11 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Crown, LockKeyhole, Plus, Shield, Trophy, Users } from 'lucide-react';
+import { Crown, HelpCircle, LockKeyhole, Plus, Shield, Trophy, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../lib/auth';
+import { LEAGUES_TOUR_ID, getLeaguesTutorialSteps } from '../lib/leaguesTutorial';
+import { hasSeenTour, markTourSeen, shouldAutoRunTour, startTutorialTour } from '../lib/tutorialTour';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { joinLeague, listCurrentUserLeagueMemberships, listLeagues, type LeagueRow } from '../services/leagues';
 import { getErrorMessage } from '../services/serviceTypes';
@@ -93,19 +95,39 @@ export default function Leagues({ themeControls }: LeaguesProps) {
   const publicCount = leagues.length - privateCount;
   const topEntry = leaderboard[0];
   const topUsername = topEntry ? getPublicDisplayName(topEntry.profiles, topEntry.user_id) : null;
+  const leaguesTutorialSteps = useMemo(() => getLeaguesTutorialSteps(t), [t]);
+
+  function startLeaguesTutorial() {
+    startTutorialTour(LEAGUES_TOUR_ID, leaguesTutorialSteps);
+  }
+
+  useEffect(() => {
+    if (!shouldAutoRunTour({ loading, error, seen: hasSeenTour(LEAGUES_TOUR_ID) })) return;
+    const timer = window.setTimeout(() => {
+      startLeaguesTutorial();
+      markTourSeen(LEAGUES_TOUR_ID);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [error, leaguesTutorialSteps, loading]);
 
   return (
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
-        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">
-            {t('ui.leagues')}
-          </h1>
-          <p className="font-bold text-sm text-subtle max-w-xl">{t('ui.leaguesHubBody')}</p>
+        <div data-tour="leagues-header" className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
+          <div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">
+              {t('ui.leagues')}
+            </h1>
+            <p className="font-bold text-sm text-subtle max-w-xl">{t('ui.leaguesHubBody')}</p>
+          </div>
+          <button type="button" onClick={startLeaguesTutorial} className="border-2 border-main bg-c1 text-main px-4 py-2 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c3 inline-flex items-center justify-center gap-2 rounded-lg">
+            <HelpCircle size={16} strokeWidth={3} />
+            {t('tutorial.start')}
+          </button>
         </div>
 
         <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
-          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
+          <div data-tour="leagues-summary" className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
             <div className="flex items-center gap-2 sm:gap-4 border-b-4 border-r-4 xl:border-b-0 border-main p-2.5 sm:p-4 lg:p-5 bg-c1 text-main min-w-0">
               <Trophy size={24} className="sm:w-9 sm:h-9 shrink-0" strokeWidth={2.5} />
               <div className="min-w-0"><div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90 truncate">{t('ui.activeLeagues')}</div><div className="text-lg sm:text-3xl font-black leading-none">{leagues.length}</div></div>
@@ -125,10 +147,10 @@ export default function Leagues({ themeControls }: LeaguesProps) {
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
-            <div className="border-4 border-main bg-card min-w-0">
+            <div data-tour="leagues-directory" className="border-4 border-main bg-card min-w-0">
               <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
                 <span>{t('ui.leagueDirectory')}</span>
-                <Link to="/leagues/create" className="bg-c1 text-main border-2 border-main px-3 py-1 inline-flex items-center gap-2"><Plus size={14} /> {t('ui.createLeague')}</Link>
+                <Link data-tour="leagues-create" to="/leagues/create" className="bg-c1 text-main border-2 border-main px-3 py-1 inline-flex items-center gap-2"><Plus size={14} /> {t('ui.createLeague')}</Link>
               </div>
               <div className="flex flex-col bg-card">
                 {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingLeague')}</div>}
@@ -137,7 +159,7 @@ export default function Leagues({ themeControls }: LeaguesProps) {
                 {!loading && !error && leagues.map((league) => {
                   const isMember = membershipLeagueIds.has(league.id);
                   return (
-                    <article key={league.id} className="grid grid-cols-1 lg:grid-cols-[1fr_220px] border-b-4 border-main last:border-b-0 hover:bg-muted transition-colors">
+                    <article key={league.id} data-tour="leagues-card" className="grid grid-cols-1 lg:grid-cols-[1fr_220px] border-b-4 border-main last:border-b-0 hover:bg-muted transition-colors">
                       <div className="p-3 sm:p-4 lg:p-5 lg:border-r-2 border-main flex flex-col gap-3 sm:gap-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -171,7 +193,7 @@ export default function Leagues({ themeControls }: LeaguesProps) {
               </div>
             </div>
 
-            <div className="bg-card border-4 border-main flex flex-col">
+            <div data-tour="leagues-join-code" className="bg-card border-4 border-main flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('ui.joinByCode')}
               </div>
@@ -179,7 +201,7 @@ export default function Leagues({ themeControls }: LeaguesProps) {
                 <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} className="bg-page border-2 border-main p-3 font-black uppercase outline-none" placeholder={t('ui.inviteCode')} />
                 <button className="bg-c2 text-inv border-2 border-main px-4 py-3 font-black uppercase">{t('ui.joinLeague')}</button>
               </form>
-              <div className="p-4 bg-c3 text-main font-black uppercase text-xs leading-relaxed flex items-start gap-3 flex-1">
+              <div data-tour="leagues-safety" className="p-4 bg-c3 text-main font-black uppercase text-xs leading-relaxed flex items-start gap-3 flex-1">
                 <Shield size={22} className="shrink-0" />
                 <span>{t('ui.leagueSafetyBody', { publicCount, privateCount })}</span>
               </div>

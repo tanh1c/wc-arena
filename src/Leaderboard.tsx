@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Medal, Star, Trophy, Users } from 'lucide-react';
+import { HelpCircle, Medal, Star, Trophy, Users } from 'lucide-react';
 import AppShell from './components/layout/AppShell';
 import PointsCoin from './components/ui/PointsCoin';
 import RankBadge from './components/ui/RankBadge';
 import StreakBadge from './components/ui/StreakBadge';
 import UserAvatar from './components/ui/UserAvatar';
 import { useAuth } from './lib/auth';
+import { LEADERBOARD_TOUR_ID, getLeaderboardTutorialSteps } from './lib/leaderboardTutorial';
+import { hasSeenTour, markTourSeen, shouldAutoRunTour, startTutorialTour } from './lib/tutorialTour';
 import {
   listGlobalLeaderboard,
   listPredictionLeaderboard,
@@ -180,6 +182,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     topRank ? { ...topRank, color: 'bg-c1', textColor: 'text-accent-on' } : undefined,
     thirdRank ? { ...thirdRank, color: 'bg-c4', textColor: 'text-accent-on' } : undefined,
   ], [secondRank, thirdRank, topRank]);
+  const leaderboardTutorialSteps = useMemo(() => getLeaderboardTutorialSteps(t), [t]);
   const leaderboardRest = leaderboard.filter((entry) => entry.rank > 3);
   const totalPlayers = leaderboard.length;
   const leaderboardCurrentEntry = user ? leaderboard.find((entry) => entry.user_id === user.id) : undefined;
@@ -202,17 +205,34 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
   const currentRankLabel = currentEntry?.rank ? t('ui.outOfPlayers', { count: totalPlayers.toLocaleString() }) : mode === 'prediction' && metric === 'efficiency' ? t('ui.notEligibleYet') : t('ui.notRankedYet');
   const totalPoints = leaderboard.reduce((sum, entry) => sum + entry.points, 0);
 
+  function startLeaderboardTutorial() {
+    startTutorialTour(LEADERBOARD_TOUR_ID, leaderboardTutorialSteps);
+  }
+
+  useEffect(() => {
+    if (!shouldAutoRunTour({ loading, error, seen: hasSeenTour(LEADERBOARD_TOUR_ID) })) return;
+    const timer = window.setTimeout(() => {
+      startLeaderboardTutorial();
+      markTourSeen(LEADERBOARD_TOUR_ID);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [error, leaderboardTutorialSteps, loading]);
+
   return (
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
-        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
+        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">
             {t('nav.public.leaderboard')}
           </h1>
+          <button type="button" onClick={startLeaderboardTutorial} className="border-2 border-main bg-c1 text-main px-4 py-2 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c3 inline-flex items-center justify-center gap-2 rounded-lg">
+            <HelpCircle size={16} strokeWidth={3} />
+            {t('tutorial.start')}
+          </button>
         </div>
 
         <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
-          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
+          <div data-tour="leaderboard-summary" className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
             <div className="flex items-center gap-2 sm:gap-4 border-b-4 border-r-4 xl:border-b-0 border-main p-2.5 sm:p-4 lg:p-5 bg-c1 text-main min-w-0">
               <div className="shrink-0"><Trophy size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5}/></div>
               <div className="flex flex-col justify-center min-w-0">
@@ -249,7 +269,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
 
           <div className="flex flex-col xl:flex-row flex-1 items-stretch">
             <div className="order-2 xl:order-1 flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
-              <div className="grid grid-cols-2 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-wide border-b-4 border-main">
+              <div data-tour="leaderboard-mode-tabs" className="grid grid-cols-2 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-wide border-b-4 border-main">
                 <button onClick={() => setMode('global')} className={`${mode === 'global' ? 'bg-c2 text-accent-inv' : 'text-main hover:bg-elevated'} px-4 sm:px-2 py-2 md:py-3 border-r-4 border-main text-center`}>{t('ui.global')}</button>
                 <button onClick={() => setMode('prediction')} className={`${mode === 'prediction' ? 'bg-c2 text-accent-inv' : 'text-main hover:bg-elevated'} px-4 sm:px-2 py-2 md:py-3 text-center`}>{t('ui.predictionLeaderboard')}</button>
               </div>
@@ -270,7 +290,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                 </div>
               )}
 
-              <div className="bg-card flex flex-col">
+              <div data-tour="leaderboard-list" className="bg-card flex flex-col">
                 {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingLeaderboard')}</div>}
                 {error && <div className="p-6 font-black uppercase text-sm bg-c5 text-main border-b-4 border-main">{error}</div>}
                 {!loading && !error && leaderboard.length === 0 && <div className="p-6 font-black uppercase text-sm">{t('ui.noLeaderboardPublished')}</div>}
@@ -294,7 +314,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                       })}
                     </div>
 
-                    <div className="hidden sm:flex flex-col sm:flex-row items-end p-4 md:p-6 lg:p-8 pb-0 gap-4 md:gap-0 justify-center">
+                    <div data-tour="leaderboard-podium" className="hidden sm:flex flex-col sm:flex-row items-end p-4 md:p-6 lg:p-8 pb-0 gap-4 md:gap-0 justify-center">
                       <PodiumCard item={podium[0]} heightClass="sm:-mr-2 sm:shadow-[2px_0px_0_0_var(--color-shadow)]" mode={mode} metric={metric} t={t} />
                       <PodiumCard item={podium[1]} heightClass="" mode={mode} metric={metric} primary t={t} />
                       <PodiumCard item={podium[2]} heightClass="sm:-ml-2 sm:shadow-[-2px_0px_0_0_var(--color-shadow)]" mode={mode} metric={metric} t={t} />
@@ -356,7 +376,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                         })}
 
                         {currentEntry && (
-                          <div className="flex flex-col sm:flex-row sm:items-center p-2.5 sm:p-3 lg:p-3 bg-c1 border-y-4 border-main hover:opacity-90">
+                          <div data-tour="leaderboard-current-player" className="flex flex-col sm:flex-row sm:items-center p-2.5 sm:p-3 lg:p-3 bg-c1 border-y-4 border-main hover:opacity-90">
                             <Link to={getProfilePath(currentEntry)} className="flex items-center flex-1 sm:w-auto mb-2 sm:mb-0 text-main min-w-0 hover:text-c2 transition-colors">
                               <div className="w-8 sm:w-16 font-black text-lg text-center shrink-0">{currentRank}</div>
                               <Avatar entry={currentEntry} />
@@ -383,7 +403,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
             </div>
 
             <div className="order-1 xl:order-2 w-full xl:w-[350px] bg-card flex flex-col flex-shrink-0 self-stretch border-b-4 xl:border-b-0 border-main">
-              <div className="bg-card flex flex-col border-b-4 border-main">
+              <div data-tour="leaderboard-stats" className="bg-card flex flex-col border-b-4 border-main">
                 <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs flex justify-between items-center border-b-4 border-main min-h-[48px]">
                   <span>{t('ui.yourStats')}</span>
                   <span className="text-faint font-bold hover:text-inv cursor-pointer lowercase hover:underline">{t('ui.viewFullStats')}</span>
@@ -421,7 +441,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                 </div>
               </div>
 
-              <div className="hidden xl:flex bg-card flex-col flex-1">
+              <div data-tour="leaderboard-recognition" className="hidden xl:flex bg-card flex-col flex-1">
                 <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs border-b-4 border-main min-h-[48px] flex items-center">
                   {t('ui.topRewardReview')}
                 </div>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Bot, CalendarClock, Lock, MapPin, Save, ShieldCheck, Target, Trophy } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarClock, HelpCircle, Lock, MapPin, Save, ShieldCheck, Target, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import PredictionShareButton from '../components/PredictionShareButton';
 import StatusPill from '../components/ui/StatusPill';
@@ -9,6 +9,8 @@ import { buildGroupStandings, getRecentCompletedGroupMatchesForTeams } from '../
 import { buildKnockoutTeamProjection } from '../lib/knockoutAdvancement';
 import { calculatePredictionScore, getPredictionOutcome } from '../lib/scoring';
 import { useAuth } from '../lib/auth';
+import { MATCH_DETAIL_TOUR_ID, getMatchDetailTutorialSteps } from '../lib/matchDetailTutorial';
+import { hasSeenTour, markTourSeen, shouldAutoRunTour, startTutorialTour } from '../lib/tutorialTour';
 import { getEffectiveMatchStatus, getMatch, listMatches, type MatchRow } from '../services/matches';
 import { getMatchPredictionOutcomeSummary, listCurrentUserPredictions, submitPrediction, type MatchPredictionOutcomeSummary, type PredictionRow } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
@@ -459,6 +461,20 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
     if (!submittedPrediction || !result) return undefined;
     return calculatePredictionScore(submittedPrediction, result, { riskMultiplier: submittedPrediction.isRiskPick ? 1 : 1 });
   }, [submittedPrediction, result]);
+  const matchDetailTutorialSteps = useMemo(() => getMatchDetailTutorialSteps(t), [t]);
+
+  function startMatchDetailTutorial() {
+    startTutorialTour(MATCH_DETAIL_TOUR_ID, matchDetailTutorialSteps);
+  }
+
+  useEffect(() => {
+    if (!match || !homeTeam || !awayTeam || !shouldAutoRunTour({ loading, error, seen: hasSeenTour(MATCH_DETAIL_TOUR_ID) })) return;
+    const timer = window.setTimeout(() => {
+      startMatchDetailTutorial();
+      markTourSeen(MATCH_DETAIL_TOUR_ID);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [awayTeam, error, homeTeam, loading, match, matchDetailTutorialSteps]);
 
   if (loading) {
     return (
@@ -548,10 +564,14 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
   return (
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
+        <div data-tour="match-detail-header" className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <Link to="/matches" className="bg-card hover:bg-muted border-2 border-main p-2 shadow-[3px_3px_0_var(--color-shadow)]"><ArrowLeft size={18} /></Link>
             <div className={`border-2 border-main px-3 py-1 font-black uppercase text-[10px] sm:text-xs ${getStatusTone(effectiveStatus)}`}>{effectiveStatus}</div>
+            <button type="button" onClick={startMatchDetailTutorial} className="ml-auto border-2 border-main bg-c1 text-main px-3 py-2 font-black uppercase text-xs shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c3 inline-flex items-center justify-center gap-2 rounded-lg">
+              <HelpCircle size={16} strokeWidth={3} />
+              {t('tutorial.start')}
+            </button>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter mb-1 text-main leading-none">
             {homeTeam.short_name} vs {awayTeam.short_name}
@@ -561,7 +581,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
         </div>
 
         <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 sm:gap-4 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
-          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
+          <div data-tour="match-detail-summary" className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
             <div className="flex items-center gap-2 sm:gap-4 border-b-4 border-r-4 xl:border-b-0 border-main p-2.5 sm:p-4 lg:p-5 bg-c1 text-main min-w-0">
               <CalendarClock size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5} />
               <div className="min-w-0"><div className="text-[9px] sm:text-xs uppercase font-black tracking-wide sm:tracking-widest leading-none mb-0.5 sm:mb-1 opacity-90">{t('ui.kickoff')}</div><div className="text-sm sm:text-2xl font-black leading-none truncate">{formatDateTime(match.kickoff_at)}</div><div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1">{t('ui.worldCup2026')}</div></div>
@@ -585,7 +605,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('ui.matchCard')}
               </div>
-              <div className="bg-card p-3 sm:p-5 lg:p-8 border-b-4 border-main flex flex-col gap-4 lg:gap-6">
+              <div data-tour="match-detail-card" className="bg-card p-3 sm:p-5 lg:p-8 border-b-4 border-main flex flex-col gap-4 lg:gap-6">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 lg:gap-6">
                   <div className="flex flex-col items-end text-right gap-2 sm:gap-3 min-w-0">
                     <TeamFlag team={homeTeam} align="items-end" />
@@ -670,7 +690,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 border-t-4 border-main bg-card">
+              <div data-tour="match-detail-signals" className="grid grid-cols-1 xl:grid-cols-2 border-t-4 border-main bg-card">
                 <div className="xl:border-r-4 border-main">
                   <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">{t('ui.communitySignal')}</div>
                   <div className="bg-card">
@@ -693,7 +713,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
               </div>
 
               {(recentGroupMatches.length > 0 || groupStandings.length > 0 || espnSummary.news?.length) && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 border-t-4 border-main bg-card">
+                <div data-tour="match-detail-context" className="grid grid-cols-1 xl:grid-cols-3 border-t-4 border-main bg-card">
                   <div className="xl:border-r-4 border-main">
                     <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">{t('ui.recentGroupMatches')}</div>
                     <div className="bg-card">
@@ -782,7 +802,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
               )}
             </div>
 
-            <div className="order-1 xl:order-2 w-full xl:w-[420px] bg-card flex flex-col border-b-4 xl:border-b-0 border-main">
+            <div data-tour="match-detail-prediction" className="order-1 xl:order-2 w-full xl:w-[420px] bg-card flex flex-col border-b-4 xl:border-b-0 border-main">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('ui.yourPrediction')}
               </div>
@@ -863,7 +883,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('ui.actions')}
               </div>
-              <div className="p-4 bg-card flex flex-col gap-3">
+              <div data-tour="match-detail-actions" className="p-4 bg-card flex flex-col gap-3">
                 <Link to={`/agent?match_id=${encodeURIComponent(match.id)}`} className="text-center bg-c3 hover:bg-c1 text-main font-black uppercase py-3 px-4 border-2 border-main shadow-[3px_3px_0_var(--color-shadow)] text-xs flex items-center justify-center gap-2">
                   <Bot size={16} strokeWidth={3} /> Ask Agent About This Match
                 </Link>

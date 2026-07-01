@@ -4,7 +4,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Bot, CalendarCheck, ChevronDown, MoreHorizontal, Settings, User, X } from 'lucide-react';
 import type { ThemeControls } from '../../App';
 import DailyLoginRewardPopup from '../DailyLoginRewardPopup';
-import { appNavigationGroups } from '../../config/navigation';
+import { appNavigationGroups, headerNavigation, secondaryHeaderNavigationGroups } from '../../config/navigation';
 import { useAuth } from '../../lib/auth';
 import { claimDailyLoginReward, getTodayDailyLoginReward, type ClaimDailyLoginRewardResponse } from '../../services/dailyLoginReward';
 import { getCurrentProfile, type ProfileRow } from '../../services/profile';
@@ -21,53 +21,70 @@ type AppShellProps = {
 };
 
 function HeaderNavigation() {
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!openGroup) return;
+    if (!showMore) return;
 
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!navRef.current?.contains(event.target as Node)) setOpenGroup(null);
+      if (!navRef.current?.contains(event.target as Node)) setShowMore(false);
     };
 
     document.addEventListener('mousedown', closeOnOutsideClick);
     return () => document.removeEventListener('mousedown', closeOnOutsideClick);
-  }, [openGroup]);
+  }, [showMore]);
 
   return (
     <nav ref={navRef} className="hidden lg:flex items-center gap-2 ml-6">
-      {appNavigationGroups.map((group) => (
-        <div key={group.labelKey} className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenGroup(openGroup === group.labelKey ? null : group.labelKey)}
-            className={`border-2 border-main px-4 py-2 font-black uppercase text-xs flex items-center gap-2 shadow-[3px_3px_0_var(--color-shadow)] transition-all ${openGroup === group.labelKey ? 'bg-c2 text-inv translate-x-[2px] translate-y-[2px] shadow-none' : 'bg-page hover:bg-muted text-main'}`}
+      {headerNavigation.map((item) => {
+        const Icon = item.icon;
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `border-2 border-main px-4 py-2 font-black uppercase text-xs flex items-center gap-2 shadow-[3px_3px_0_var(--color-shadow)] transition-all ${isActive ? 'bg-c2 text-inv translate-x-[2px] translate-y-[2px] shadow-none' : 'bg-page hover:bg-muted text-main'}`}
           >
-            {t(group.labelKey)}
-            <ChevronDown size={15} strokeWidth={3} />
-          </button>
-          {openGroup === group.labelKey && (
-            <div className="absolute left-0 top-12 w-64 bg-card border-4 border-main p-3 shadow-[8px_8px_0_var(--color-shadow)] z-50 flex flex-col gap-2">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setOpenGroup(null)}
-                    className={({ isActive }) => `border-2 border-main px-3 py-2 font-black uppercase text-xs flex items-center gap-3 transition-all ${isActive ? 'bg-c2 text-inv' : 'bg-page hover:bg-muted text-main'}`}
-                  >
-                    {Icon && <Icon size={17} strokeWidth={2.5} />}
-                    <span>{t(item.labelKey)}</span>
-                  </NavLink>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ))}
+            {Icon && <Icon size={15} strokeWidth={3} />}
+            <span>{t(item.labelKey)}</span>
+          </NavLink>
+        );
+      })}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setShowMore(!showMore)}
+          className={`border-2 border-main px-4 py-2 font-black uppercase text-xs flex items-center gap-2 shadow-[3px_3px_0_var(--color-shadow)] transition-all ${showMore ? 'bg-c2 text-inv translate-x-[2px] translate-y-[2px] shadow-none' : 'bg-page hover:bg-muted text-main'}`}
+        >
+          <MoreHorizontal size={15} strokeWidth={3} />
+          <span>More</span>
+          <ChevronDown size={15} strokeWidth={3} />
+        </button>
+        {showMore && (
+          <div className="absolute left-0 top-12 w-72 bg-card border-4 border-main p-3 shadow-[8px_8px_0_var(--color-shadow)] z-50 flex flex-col gap-3">
+            {secondaryHeaderNavigationGroups.map((group) => (
+              <div key={group.labelKey} className="flex flex-col gap-2">
+                <div className="font-black uppercase text-[10px] tracking-widest text-subtle px-1">{t(group.labelKey)}</div>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setShowMore(false)}
+                      className={({ isActive }) => `border-2 border-main px-3 py-2 font-black uppercase text-xs flex items-center gap-3 transition-all ${isActive ? 'bg-c2 text-inv' : 'bg-page hover:bg-muted text-main'}`}
+                    >
+                      {Icon && <Icon size={17} strokeWidth={2.5} />}
+                      <span>{t(item.labelKey)}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </nav>
   );
 }
@@ -277,7 +294,6 @@ export default function AppShell({ children, themeControls, fullHeight = false }
 
   const mobilePrimaryNavigation = appNavigationGroups.flatMap((group) => group.items).filter((item) => mobilePrimaryPaths.includes(item.to));
   const mobileMoreGroups = appNavigationGroups
-    .filter((group) => group.labelKey !== 'nav.groups.admin' || profile?.role === 'admin')
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => !mobilePrimaryPaths.includes(item.to)),
