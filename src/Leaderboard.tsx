@@ -256,13 +256,13 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
 
               {mode === 'prediction' && (
                 <div className="border-b-4 border-main bg-muted p-2 sm:p-3 flex flex-col gap-2">
-                  <div className="grid grid-cols-2 border-2 border-main font-black text-[10px] sm:text-xs uppercase">
+                  <div className="grid grid-cols-2 border-2 border-main font-black text-[10px] sm:text-xs uppercase rounded-sm overflow-hidden shadow-[2px_2px_0_0_var(--color-shadow)]">
                     <button onClick={() => setMetric('total')} className={`${metric === 'total' ? 'bg-c1 text-main' : 'bg-card text-main hover:bg-elevated'} px-3 py-2 border-r-2 border-main`}>{t('ui.totalPredictionPoints')}</button>
                     <button onClick={() => setMetric('efficiency')} className={`${metric === 'efficiency' ? 'bg-c1 text-main' : 'bg-card text-main hover:bg-elevated'} px-3 py-2`}>{t('ui.predictionEfficiency')}</button>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {predictionStages.map((option) => (
-                      <button key={option.value} onClick={() => setStage(option.value)} className={`${stage === option.value ? 'bg-c2 text-accent-inv' : 'bg-card text-main hover:bg-elevated'} shrink-0 border-2 border-main px-3 py-2 font-black text-[10px] sm:text-xs uppercase shadow-[2px_2px_0_0_var(--color-shadow)]`}>
+                      <button key={option.value} onClick={() => setStage(option.value)} className={`${stage === option.value ? 'bg-c2 text-accent-inv' : 'bg-card text-main hover:bg-elevated'} shrink-0 border-2 border-main px-3 py-2 font-black text-[10px] sm:text-xs uppercase rounded-sm shadow-[2px_2px_0_0_var(--color-shadow)]`}>
                         {t(option.labelKey)}
                       </button>
                     ))}
