@@ -187,7 +187,7 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, featured, onNavig
         </div>
         <div className="w-full md:w-auto mt-3 md:mt-0 md:ml-6 grid grid-cols-2 md:flex items-center gap-2 md:gap-3 shrink-0">
           <span className={`${getStatusClass(effectiveStatus)} px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px]`}>{getStatusLabel(effectiveStatus, t)}</span>
-          {isProjected && <span className="bg-c1 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">Projected</span>}
+          {isProjected && <span className="bg-c1 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.projected')}</span>}
           <button onClick={() => onNavigate(`matches/${match.id}`)} className={`${effectiveStatus === 'open' ? 'bg-c2 text-inv hover:opacity-90' : 'bg-card hover:bg-page text-main'} font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 min-w-0 md:min-w-24 focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all`}>
             {effectiveStatus === 'open' ? t('matches.predict') : isFinished ? t('matches.results') : t('matches.details')} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
           </button>

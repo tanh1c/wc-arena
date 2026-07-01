@@ -19,6 +19,7 @@ import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
 import { getBadgeImageSrc } from '../utils/badgeImages';
 import { getPublicAvatarUrl, getPublicDisplayName, getPublicInitials } from '../utils/displayName';
+import { getLeagueVisibilityLabelKey } from '../utils/leagueLabels';
 import { formatPredictionPick } from '../utils/predictionDisplay';
 import type { ThemeControls } from '../App';
 import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType } from '../types/domain';
@@ -376,7 +377,7 @@ export default function Profile({ themeControls }: ProfileProps) {
                   return (
                     <Link key={membership.league_id} to={`/leagues/${league.slug}`} className="p-3 sm:p-4 border-b-2 sm:border-r-2 xl:border-r-0 border-line last:border-b-0 hover:bg-muted min-w-0">
                       <div className="font-black uppercase text-sm truncate">{league.name}</div>
-                      <div className="text-[10px] sm:text-xs font-bold text-subtle uppercase mt-1 truncate">{t('ui.memberCount', { count: league.member_count.toLocaleString() })} • {league.visibility}</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-subtle uppercase mt-1 truncate">{t('ui.memberCount', { count: league.member_count.toLocaleString() })} • {t(getLeagueVisibilityLabelKey(league.visibility))}</div>
                     </Link>
                   );
                 })}

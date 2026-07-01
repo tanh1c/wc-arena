@@ -577,7 +577,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
             {homeTeam.short_name} vs {awayTeam.short_name}
           </h1>
           <p className="font-bold text-xs sm:text-sm text-subtle max-w-xl">{t('ui.matchHelper')}</p>
-          {isProjectedMatchup && <p className="mt-2 inline-flex bg-c1 border-2 border-main px-3 py-1 font-black text-[10px] uppercase">Projected teams based on current results</p>}
+          {isProjectedMatchup && <p className="mt-2 inline-flex bg-c1 border-2 border-main px-3 py-1 font-black text-[10px] uppercase">{t('ui.projectedTeamsBody')}</p>}
         </div>
 
         <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 sm:gap-4 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
@@ -885,7 +885,7 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
               </div>
               <div data-tour="match-detail-actions" className="p-4 bg-card flex flex-col gap-3">
                 <Link to={`/agent?match_id=${encodeURIComponent(match.id)}`} className="text-center bg-c3 hover:bg-c1 text-main font-black uppercase py-3 px-4 border-2 border-main shadow-[3px_3px_0_var(--color-shadow)] text-xs flex items-center justify-center gap-2">
-                  <Bot size={16} strokeWidth={3} /> Ask Agent About This Match
+                  <Bot size={16} strokeWidth={3} /> {t('ui.askAgentAboutMatch')}
                 </Link>
                 <Link to="/my-predictions" className="text-center bg-card hover:bg-muted text-main font-black uppercase py-3 px-4 border-2 border-main shadow-[3px_3px_0_var(--color-shadow)] text-xs">{t('ui.myPredictions')}</Link>
                 {submittedPrediction && (

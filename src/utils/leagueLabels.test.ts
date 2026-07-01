@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resources } from '../i18n/resources';
-import { getLeagueJoinPolicyLabelKey } from './leagueLabels';
+import { getLeagueJoinPolicyLabelKey, getLeagueVisibilityLabelKey } from './leagueLabels';
 
 test('league join policies use user-facing label keys', () => {
   assert.equal(getLeagueJoinPolicyLabelKey('auto'), 'ui.joinPolicyOpen');
   assert.equal(getLeagueJoinPolicyLabelKey('approval'), 'ui.joinPolicyApproval');
+});
+
+test('league visibility uses user-facing label keys', () => {
+  assert.equal(getLeagueVisibilityLabelKey('public'), 'ui.publicLabel');
+  assert.equal(getLeagueVisibilityLabelKey('private'), 'ui.privateLabel');
 });
 
 test('league UX copy explains user questions instead of technical policy names', () => {
@@ -15,6 +20,9 @@ test('league UX copy explains user questions instead of technical policy names',
   assert.equal(resources.en.translation.ui.leagueSafetyBody, 'Free game · virtual points only.');
   assert.equal(resources.en.translation.ui.joinPolicyOpen, 'Open to join');
   assert.equal(resources.en.translation.ui.joinPolicyApproval, 'Request approval');
+  assert.equal(resources.en.translation.ui.projected, 'Projected');
+  assert.equal(resources.en.translation.ui.projectedTeamsBody, 'Projected teams based on current results');
+  assert.equal(resources.en.translation.ui.askAgentAboutMatch, 'Ask the assistant about this match');
 
   assert.equal(resources.vi.translation.ui.joinPolicy, 'Ai được vào?');
   assert.equal(resources.vi.translation.ui.postJoinScoring, 'Điểm từ lúc tham gia');
@@ -22,4 +30,7 @@ test('league UX copy explains user questions instead of technical policy names',
   assert.equal(resources.vi.translation.ui.leagueSafetyBody, 'Miễn phí · chỉ dùng điểm ảo.');
   assert.equal(resources.vi.translation.ui.joinPolicyOpen, 'Vào ngay');
   assert.equal(resources.vi.translation.ui.joinPolicyApproval, 'Cần chủ giải duyệt');
+  assert.equal(resources.vi.translation.ui.projected, 'Dự kiến');
+  assert.equal(resources.vi.translation.ui.projectedTeamsBody, 'Đội dự kiến theo kết quả hiện tại');
+  assert.equal(resources.vi.translation.ui.askAgentAboutMatch, 'Hỏi trợ lý về trận này');
 });

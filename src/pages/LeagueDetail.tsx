@@ -16,7 +16,7 @@ import { getCurrentProfile, type ProfileRow } from '../services/profile';
 import { listCurrentUserPredictionsForMatches } from '../services/predictions';
 import { getTeamMap, type TeamRow } from '../services/teams';
 import { getPublicDisplayName } from '../utils/displayName';
-import { getLeagueJoinPolicyLabelKey } from '../utils/leagueLabels';
+import { getLeagueJoinPolicyLabelKey, getLeagueVisibilityLabelKey } from '../utils/leagueLabels';
 import { getTeamFlag } from '../utils/teamFlags';
 import type { ThemeControls } from '../App';
 
@@ -689,7 +689,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
               <Link to="/leagues" className="bg-card hover:bg-muted border-2 border-main p-2 shadow-[3px_3px_0_var(--color-shadow)] shrink-0 rounded-sm"><ArrowLeft size={18} /></Link>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <div className="border-2 border-main bg-c3 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{league.visibility}</div>
+                  <div className="border-2 border-main bg-c3 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{t(getLeagueVisibilityLabelKey(league.visibility))}</div>
                   <div className="border-2 border-main bg-c1 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{t(getLeagueJoinPolicyLabelKey(league.join_policy))}</div>
                   {isArchived && <div className="border-2 border-main bg-c5 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{t('ui.archivedLeague')}</div>}
                   {isOwner && <div className="border-2 border-main bg-c4 px-2.5 py-1 font-black uppercase text-[10px] sm:text-xs">{t('ui.owner')}</div>}
@@ -745,7 +745,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
             <div className="border-4 border-main bg-card rounded-sm overflow-hidden">
               <div className="bg-main text-inv font-black px-3 py-2.5 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">{t('ui.leagueInfo')}</div>
               <div className="p-3 bg-card flex flex-col gap-2 text-xs sm:text-sm font-bold">
-                <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('ui.visibility')}</span><span className="font-black uppercase">{league.visibility}</span></div>
+                <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('ui.visibility')}</span><span className="font-black uppercase">{t(getLeagueVisibilityLabelKey(league.visibility))}</span></div>
                 <div className="flex justify-between border-b-2 border-line pb-2"><span>{t('ui.joinPolicy')}</span><span className="font-black uppercase text-right">{t(getLeagueJoinPolicyLabelKey(league.join_policy))}</span></div>
                 <div className="flex justify-between"><span>{t('ui.created')}</span><span className="font-black">{formatDate(league.created_at)}</span></div>
               </div>

@@ -10,7 +10,7 @@ import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../serv
 import { joinLeague, listCurrentUserLeagueMemberships, listLeagues, type LeagueRow } from '../services/leagues';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getPublicDisplayName } from '../utils/displayName';
-import { getLeagueJoinPolicyLabelKey } from '../utils/leagueLabels';
+import { getLeagueJoinPolicyLabelKey, getLeagueVisibilityLabelKey } from '../utils/leagueLabels';
 import type { ThemeControls } from '../App';
 
 type LeaguesProps = {
@@ -167,7 +167,7 @@ export default function Leagues({ themeControls }: LeaguesProps) {
                             <div className="font-bold uppercase text-[10px] sm:text-xs text-subtle mt-1 truncate">/{league.slug}</div>
                             {league.description && <div className="font-bold text-xs text-subtle mt-2 line-clamp-2 normal-case">{league.description}</div>}
                           </div>
-                          <div className="bg-c1 border-2 border-main px-2.5 sm:px-3 py-1 font-black uppercase text-[9px] sm:text-[10px] w-fit shrink-0">{league.visibility}</div>
+                          <div className="bg-c1 border-2 border-main px-2.5 sm:px-3 py-1 font-black uppercase text-[9px] sm:text-[10px] w-fit shrink-0">{t(getLeagueVisibilityLabelKey(league.visibility))}</div>
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 border-2 border-main text-xs sm:text-sm font-bold overflow-hidden">
                           <div className="p-2.5 sm:p-3 border-r-2 border-b-2 lg:border-b-0 border-main"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.members')}</div>{league.member_count.toLocaleString()}</div>

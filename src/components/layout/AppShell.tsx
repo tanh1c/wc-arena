@@ -58,7 +58,7 @@ function HeaderNavigation() {
           className={`border-2 border-main px-4 py-2 font-black uppercase text-xs flex items-center gap-2 shadow-[3px_3px_0_var(--color-shadow)] transition-all ${showMore ? 'bg-c2 text-inv translate-x-[2px] translate-y-[2px] shadow-none' : 'bg-page hover:bg-muted text-main'}`}
         >
           <MoreHorizontal size={15} strokeWidth={3} />
-          <span>More</span>
+          <span>{t('common.more')}</span>
           <ChevronDown size={15} strokeWidth={3} />
         </button>
         {showMore && (
