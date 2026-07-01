@@ -95,7 +95,7 @@ function HeaderUserStats({ profile }: { profile: ProfileRow | null }) {
   return (
     <Link to="/profile" className="hidden xl:grid grid-cols-[auto_auto_auto] items-center border-2 border-main bg-card shadow-[3px_3px_0_var(--color-shadow)] hover:bg-muted transition-colors divide-x-2 divide-main overflow-hidden">
       <div className="px-3 py-2 flex items-center gap-2">
-        <RankBadge points={profile.points} size="sm" showPoints={false} className="text-[10px] text-main" />
+        <RankBadge points={profile.points} size="sm" showLabel={false} showPoints={false} className="text-[10px] text-main" />
       </div>
       <div className="px-3 py-2 flex items-center gap-2 font-black text-xs uppercase text-main">
         <StreakBadge streak={profile.current_streak} size="sm" showValue={false} />
