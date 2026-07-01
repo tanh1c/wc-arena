@@ -113,15 +113,27 @@ function TeamFlag({ team }: { team?: TeamRow }) {
   );
 }
 
-function MatchScore({ match }: { match: MatchRow }) {
-  const hasScore = typeof match.home_score === 'number' && typeof match.away_score === 'number';
-  const scoreClass = match.status === 'live' ? 'border-c4' : 'border-main';
+function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow }) {
+  if (typeof match.home_score === 'number' && typeof match.away_score === 'number') {
+    const penaltyScore = getPenaltyScoreLabel(match);
+    const penaltyWinner = getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id);
+
+    return (
+      <div className={`relative flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.home_score}</div>
+        <div className="font-black text-base sm:text-xl">-</div>
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
+        {penaltyScore && <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] sm:text-[10px] uppercase whitespace-nowrap z-10">{penaltyScore}</div>}
+        {!penaltyScore && penaltyWinner && <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap z-10">{penaltyWinner}</div>}
+      </div>
+    );
+  }
 
   return (
-    <div className={`flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
-      <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${scoreClass} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{hasScore ? match.home_score : '-'}</div>
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-base sm:text-xl bg-card">-</div>
       <div className="font-black text-base sm:text-xl">-</div>
-      <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${scoreClass} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{hasScore ? match.away_score : '-'}</div>
+      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-base sm:text-xl bg-card">-</div>
     </div>
   );
 }
@@ -133,8 +145,6 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
   const isProjected = Boolean(projection && (projection.home.projected || projection.away.projected));
   const homeLabel = homeTeam?.short_name ?? match.home_team_id;
   const awayLabel = awayTeam?.short_name ?? match.away_team_id;
-  const penaltyScore = getPenaltyScoreLabel(match);
-  const penaltyWinner = getPenaltyWinnerLabel(match, homeLabel, awayLabel);
 
   return (
     <div className={`flex flex-col sm:flex-row border-b-4 border-main relative hover:bg-page transition-colors overflow-hidden ${isLive ? 'bg-[#f0f9ff]' : 'bg-card'} ${isFinished ? 'opacity-80' : ''}`}>
@@ -160,20 +170,16 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
         </div>
       </div>
       <div className={`flex-1 flex flex-col md:flex-row items-center p-2 sm:p-3 lg:p-6 min-w-0 ${featured ? 'pt-8 lg:pt-8' : ''}`}>
-        <div className="flex-1 flex flex-col items-center gap-2 w-full min-w-0">
+        <div className="flex-1 flex flex-col items-center gap-3 w-full min-w-0">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 w-full min-w-0">
             <div className="flex items-center justify-end gap-1.5 sm:gap-2 text-right min-w-0">
               <span className="font-black text-sm lg:text-lg uppercase tracking-wide hidden sm:block truncate">{homeTeam?.name ?? match.home_team_id}</span>
               <span className="font-black text-xs uppercase sm:hidden truncate">{homeTeam?.short_name ?? match.home_team_id}</span>
               <TeamFlag team={homeTeam} />
             </div>
-            <div className="flex flex-col items-center gap-1 shrink-0">
-              <MatchScore match={match} />
-              <div className="min-h-10 flex flex-col items-center gap-1">
-                {isLive && <span className="bg-c4 text-inv px-2 py-0.5 font-black text-[8px] uppercase leading-none whitespace-nowrap">{t('ui.live')}</span>}
-                {penaltyScore && <span className="bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] sm:text-[10px] uppercase whitespace-nowrap">{penaltyScore}</span>}
-                {!penaltyScore && penaltyWinner && <span className="font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap">{penaltyWinner}</span>}
-              </div>
+            <div className="relative flex flex-col items-center gap-1 shrink-0">
+              <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
+              {isLive && <span className="absolute top-full mt-1 text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
             </div>
             <div className="flex items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
               <TeamFlag team={awayTeam} />
