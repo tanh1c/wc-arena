@@ -1,6 +1,10 @@
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 import { cached } from './cache';
+import { mapPredictionEfficiencyRow } from './leaderboardMapper';
+import type { PredictionEfficiencyLeaderboardEntry, PredictionEfficiencyLeaderboardRow } from './leaderboardMapper';
+
+export { mapPredictionEfficiencyRow, type PredictionEfficiencyLeaderboardEntry, type PredictionEfficiencyLeaderboardRow } from './leaderboardMapper';
 
 export type LeaderboardEntryRow = Database['public']['Tables']['leaderboard_entries']['Row'];
 export type LeaderboardProfile = Pick<Database['public']['Tables']['profiles']['Row'], 'username' | 'display_name' | 'avatar_url' | 'avatar_bg_color' | 'country_code'>;
@@ -37,5 +41,14 @@ export async function listLeagueLeaderboard(leagueId: string) {
 
     if (error) throw error;
     return data as LeaderboardEntryWithProfile[];
+  });
+}
+
+export async function listPredictionEfficiencyLeaderboard() {
+  return cached('leaderboard:prediction-efficiency', 60_000, async () => {
+    const { data, error } = await supabase.rpc('get_prediction_efficiency_leaderboard');
+
+    if (error) throw error;
+    return (data ?? []).map(mapPredictionEfficiencyRow);
   });
 }
