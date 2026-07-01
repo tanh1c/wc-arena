@@ -406,7 +406,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
               <div data-tour="leaderboard-stats" className="bg-card flex flex-col border-b-4 border-main">
                 <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-xs flex justify-between items-center border-b-4 border-main min-h-[48px]">
                   <span>{t('ui.yourStats')}</span>
-                  <span className="text-faint font-bold lowercase">{t('ui.viewFullStats')}</span>
+                  <span className="text-faint font-bold lowercase">{t('ui.statsSummary')}</span>
                 </div>
                 <div className="p-4 flex flex-col gap-3 font-bold text-sm">
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">

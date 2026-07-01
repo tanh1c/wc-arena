@@ -15,6 +15,7 @@ import { getEffectiveMatchStatus, getMatch, listMatches, type MatchRow } from '.
 import { getMatchPredictionOutcomeSummary, listCurrentUserPredictions, submitPrediction, type MatchPredictionOutcomeSummary, type PredictionRow } from '../services/predictions';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getTeamMap, type TeamRow } from '../services/teams';
+import { getMatchStatLabelKey, type MatchStatKey } from '../utils/matchStatLabels';
 import { formatActualResult, getPenaltyScoreLabel, getPenaltyWinnerLabel } from '../utils/predictionDisplay';
 import { getTeamFlag } from '../utils/teamFlags';
 import type { ThemeControls } from '../App';
@@ -74,8 +75,8 @@ type EspnSummaryPayload = {
 };
 
 type MatchStatRow = {
-  key: string;
-  label: string;
+  key: MatchStatKey;
+  labelKey: string;
   homeValue: string | null;
   awayValue: string | null;
   homeNumber: number | null;
@@ -199,15 +200,15 @@ function getStatValue(summary: EspnSummaryPayload, side: 'home' | 'away', aliase
 }
 
 function buildMatchStats(summary: EspnSummaryPayload): MatchStatRow[] {
-  const definitions = [
-    { key: 'possession', label: 'Possession', aliases: ['possessionpct', 'possession'] },
-    { key: 'shots', label: 'Total Shots', aliases: ['totalshots', 'shots'] },
-    { key: 'shotsOnTarget', label: 'Shots on Target', aliases: ['shotsontarget'] },
-    { key: 'corners', label: 'Corners', aliases: ['woncorners', 'corners'] },
-    { key: 'fouls', label: 'Fouls', aliases: ['foulscommitted', 'fouls'] },
-    { key: 'yellowCards', label: 'Yellow Cards', aliases: ['yellowcards'] },
-    { key: 'saves', label: 'Saves', aliases: ['saves'] },
-    { key: 'passAccuracy', label: 'Pass Accuracy', aliases: ['passpct', 'passingaccuracy'] },
+  const definitions: { key: MatchStatKey; aliases: string[] }[] = [
+    { key: 'possession', aliases: ['possessionpct', 'possession'] },
+    { key: 'shots', aliases: ['totalshots', 'shots'] },
+    { key: 'shotsOnTarget', aliases: ['shotsontarget'] },
+    { key: 'corners', aliases: ['woncorners', 'corners'] },
+    { key: 'fouls', aliases: ['foulscommitted', 'fouls'] },
+    { key: 'yellowCards', aliases: ['yellowcards'] },
+    { key: 'saves', aliases: ['saves'] },
+    { key: 'passAccuracy', aliases: ['passpct', 'passingaccuracy'] },
   ];
 
   return definitions.flatMap((definition) => {
@@ -216,7 +217,7 @@ function buildMatchStats(summary: EspnSummaryPayload): MatchStatRow[] {
     if (!homeValue && !awayValue) return [];
     return [{
       key: definition.key,
-      label: definition.label,
+      labelKey: getMatchStatLabelKey(definition.key),
       homeValue,
       awayValue,
       homeNumber: parseStatNumber(homeValue),
@@ -285,6 +286,7 @@ function getScoringEvents(summary: EspnSummaryPayload, homeTeam?: TeamRow, awayT
 }
 
 function StatComparisonRow({ stat }: { stat: MatchStatRow }) {
+  const { t } = useTranslation();
   const home = stat.homeNumber ?? 0;
   const away = stat.awayNumber ?? 0;
   const total = home + away;
@@ -295,7 +297,7 @@ function StatComparisonRow({ stat }: { stat: MatchStatRow }) {
     <div className="p-3 border-b-2 border-line last:border-b-0 bg-card">
       <div className="grid grid-cols-[52px_1fr_52px] items-center gap-3 font-black text-xs uppercase">
         <span>{stat.homeValue ?? '—'}</span>
-        <span className="text-center text-subtle text-[10px] tracking-wide">{stat.label}</span>
+        <span className="text-center text-subtle text-[10px] tracking-wide">{t(stat.labelKey)}</span>
         <span className="text-right">{stat.awayValue ?? '—'}</span>
       </div>
       <div className="grid grid-cols-2 gap-1 mt-2">
@@ -788,13 +790,25 @@ export default function MatchDetail({ themeControls }: MatchDetailProps) {
                   <div>
                     <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">{t('ui.matchNews')}</div>
                     <div className="bg-card">
-                      {(espnSummary.news ?? []).slice(0, 4).map((article, index) => (
-                        <a key={`${article.headline}-${index}`} href={article.link ?? '#'} target="_blank" rel="noreferrer" className="block p-4 border-b-2 border-line last:border-b-0 hover:bg-muted font-bold text-xs">
-                          <div className="font-black uppercase">{article.headline}</div>
-                          {article.description && <div className="text-subtle mt-1 leading-snug">{article.description}</div>}
-                          <div className="text-[10px] font-black uppercase mt-2 text-c2">{t('ui.openOnEspn')}</div>
-                        </a>
-                      ))}
+                      {(espnSummary.news ?? []).slice(0, 4).map((article, index) => {
+                        const content = (
+                          <>
+                            <div className="font-black uppercase">{article.headline}</div>
+                            {article.description && <div className="text-subtle mt-1 leading-snug">{article.description}</div>}
+                            {article.link && <div className="text-[10px] font-black uppercase mt-2 text-c2">{t('ui.openOnEspn')}</div>}
+                          </>
+                        );
+
+                        return article.link ? (
+                          <a key={`${article.headline}-${index}`} href={article.link} target="_blank" rel="noreferrer" className="block p-4 border-b-2 border-line last:border-b-0 hover:bg-muted font-bold text-xs">
+                            {content}
+                          </a>
+                        ) : (
+                          <div key={`${article.headline}-${index}`} className="p-4 border-b-2 border-line last:border-b-0 font-bold text-xs">
+                            {content}
+                          </div>
+                        );
+                      })}
                       {!espnSummary.news?.length && <div className="p-4 bg-muted font-bold text-xs text-subtle">{t('ui.noEspnNews')}</div>}
                     </div>
                   </div>

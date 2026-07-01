@@ -356,7 +356,6 @@ export default function AppShell({ children, themeControls, fullHeight = false }
                 <span className="text-[10px] uppercase font-bold opacity-80">{t('common.account')}</span>
                 <span className="text-sm">{user ? t('common.profile') : t('auth.signIn')}</span>
               </div>
-              <ChevronDown size={18} className="ml-1 hidden sm:block" />
             </Link>
           </div>
         </header>

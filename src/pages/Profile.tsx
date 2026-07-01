@@ -344,7 +344,7 @@ export default function Profile({ themeControls }: ProfileProps) {
                         setDisplayNameStatus('idle');
                         setDisplayNameError(null);
                       }}
-                      maxLength={60}
+                      maxLength={40}
                       placeholder={profile.username}
                       className="min-w-0 border-2 border-main bg-card px-3 py-2 font-bold text-sm text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none rounded-sm"
                     />
