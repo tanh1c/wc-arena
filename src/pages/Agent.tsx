@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Bot, Loader2, RotateCcw, Send, ShieldAlert, Trophy } from 'lucide-react';
+import { Bot, Loader2, RotateCcw, Send, ShieldAlert, Trophy, X } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../lib/auth';
 import { listMatches, type MatchRow } from '../services/matches';
@@ -140,9 +140,6 @@ export default function Agent({ themeControls }: AgentProps) {
 
   function selectMatchForPrompt(matchId: string) {
     setSelectedMatchId(matchId);
-    const match = matches.find((item) => item.id === matchId);
-    if (!match) return;
-    setInput((current) => appendAgentPromptText(current, getAgentMatchSelectionPrompt(match, teams)));
   }
 
   return (
@@ -162,11 +159,7 @@ export default function Agent({ themeControls }: AgentProps) {
             <div className="flex items-center gap-2">
               <select
                 value={selectedMatchId}
-                onChange={(event) => {
-                  const nextMatchId = event.target.value;
-                  setSelectedMatchId(nextMatchId);
-                  if (nextMatchId) selectMatchForPrompt(nextMatchId);
-                }}
+                onChange={(event) => selectMatchForPrompt(event.target.value)}
                 disabled={loadingContext}
                 className="max-w-full sm:w-[360px] border-2 border-main bg-card text-main px-3 py-2 font-black uppercase text-[10px] shadow-[2px_2px_0_var(--color-shadow)] outline-none"
               >
@@ -187,14 +180,37 @@ export default function Agent({ themeControls }: AgentProps) {
 
           <div className="flex-1 min-h-0 overflow-y-auto bg-page p-3 sm:p-4 flex flex-col gap-3">
             {!user && (
-              <div className="border-4 border-main bg-c5 text-main p-4 font-black uppercase text-xs flex items-center gap-3">
-                <ShieldAlert size={18} strokeWidth={3} />
-                <span>{t('appPages.agent.signInRequired')}</span>
+              <div className="border-4 border-main bg-c5 text-main p-4 font-black uppercase text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert size={18} strokeWidth={3} />
+                  <span>{t('appPages.agent.signInRequired')}</span>
+                </div>
+                <Link to="/login" className="border-2 border-main bg-card px-3 py-2 shadow-[2px_2px_0_var(--color-shadow)] text-center">
+                  {t('appPages.agent.signInCta')}
+                </Link>
+              </div>
+            )}
+
+            {selectedMatch && (
+              <div className="border-[3px] border-main bg-c1 text-main p-3 font-black uppercase text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                <div>
+                  <div className="text-[10px] text-subtle mb-1">{t('appPages.agent.selectedMatch')}</div>
+                  <div>{getAgentMatchSelectionPrompt(selectedMatch, teams)}</div>
+                </div>
+                <button type="button" onClick={() => setSelectedMatchId('')} className="border-2 border-main bg-card px-3 py-2 shadow-[2px_2px_0_var(--color-shadow)] flex items-center justify-center gap-2">
+                  <X size={14} strokeWidth={3} />
+                  {t('appPages.agent.clearMatch')}
+                </button>
               </div>
             )}
 
             {messages.length === 0 && (
               <>
+                <div className="border-4 border-main bg-card p-4 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <div className="font-black uppercase text-lg">{t('appPages.agent.emptyTitle')}</div>
+                  <p className="mt-2 text-sm font-bold text-subtle leading-relaxed">{t('appPages.agent.emptyIntro')}</p>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                   {[
                     { label: t('appPages.agent.quickStarts.matchPreview'), prompt: t('appPages.agent.quickPrompts.matchPreview') },
@@ -283,7 +299,7 @@ export default function Agent({ themeControls }: AgentProps) {
               onChange={(event) => setInput(event.target.value)}
               disabled={loading || !user}
               className="min-w-0 flex-1 border-[3px] border-main bg-page px-3 py-3 font-bold text-sm outline-none shadow-[3px_3px_0_var(--color-shadow)] disabled:bg-muted disabled:text-subtle"
-              placeholder={t('appPages.agent.inputPlaceholder')}
+              placeholder={t(user ? 'appPages.agent.inputPlaceholder' : 'appPages.agent.inputPlaceholderSignedOut')}
             />
             <button type="submit" disabled={loading || !input.trim() || !user} className="w-12 sm:w-auto sm:px-5 border-[3px] border-main bg-c3 text-main font-black uppercase flex items-center justify-center gap-2 shadow-[3px_3px_0_var(--color-shadow)] disabled:bg-muted disabled:text-subtle">
               <Send size={18} strokeWidth={3} />
