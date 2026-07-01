@@ -178,6 +178,10 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
           </div>
           <div className="flex flex-col items-center gap-1 shrink-0">
             <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
+            {prediction && <div className="mt-1 flex flex-col items-center gap-0.5 text-center font-black uppercase leading-none">
+              <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)]">{t('ui.predicted')}</span>
+              <span className="text-[8px] sm:text-[9px] text-subtle whitespace-nowrap">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
+            </div>}
             {isLive && <span className="text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
             {isFinished && <span className="text-[8px] uppercase text-subtle font-black">{t('ui.fullTime')}</span>}
           </div>
@@ -190,8 +194,6 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
         <div className="w-full md:w-auto mt-3 md:mt-0 md:ml-6 grid grid-cols-2 md:flex items-center gap-2 md:gap-3 shrink-0">
           <span className={`${getStatusClass(effectiveStatus)} px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px]`}>{getStatusLabel(effectiveStatus, t)}</span>
           {isProjected && <span className="bg-c1 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.projected')}</span>}
-          {prediction && <span className="bg-c3 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.predicted')}</span>}
-          {prediction && <span className="col-span-2 md:col-span-1 bg-page text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.yourPick')}: {formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>}
           <button onClick={() => onNavigate(`matches/${match.id}`)} className={`${effectiveStatus === 'open' ? 'bg-c2 text-inv hover:opacity-90' : 'bg-card hover:bg-page text-main'} font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 min-w-0 md:min-w-24 focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all`}>
             {effectiveStatus === 'open' ? prediction ? t('ui.editPick') : t('matches.predict') : isFinished ? t('matches.results') : t('matches.details')} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
           </button>
