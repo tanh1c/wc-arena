@@ -178,12 +178,11 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
           </div>
           <div className="relative flex flex-col items-center gap-1 shrink-0">
             <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
-            {prediction && <div className="absolute top-full mt-2 flex flex-col items-center gap-0.5 text-center font-black uppercase leading-none">
-              <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)] whitespace-nowrap">{t('ui.predicted')}</span>
-              <span className="text-[8px] sm:text-[9px] text-subtle whitespace-nowrap">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
+            {prediction && <div className="absolute top-full mt-2 flex items-center gap-1 text-center font-black uppercase leading-none whitespace-nowrap">
+              <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)]">{t('ui.predicted')}</span>
+              <span className="bg-main text-inv px-2 py-1 border-2 border-main text-[9px] sm:text-[10px] shadow-[2px_2px_0_var(--color-shadow)]">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
             </div>}
             {isLive && <span className="absolute top-full mt-1 text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
-            {isFinished && <span className="absolute top-full mt-1 text-[8px] uppercase text-subtle font-black whitespace-nowrap">{t('ui.fullTime')}</span>}
           </div>
           <div className="flex items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
             <TeamFlag team={awayTeam} />
