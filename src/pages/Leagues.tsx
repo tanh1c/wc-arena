@@ -10,6 +10,7 @@ import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../serv
 import { joinLeague, listCurrentUserLeagueMemberships, listLeagues, type LeagueRow } from '../services/leagues';
 import { getErrorMessage } from '../services/serviceTypes';
 import { getPublicDisplayName } from '../utils/displayName';
+import { getLeagueJoinPolicyLabelKey } from '../utils/leagueLabels';
 import type { ThemeControls } from '../App';
 
 type LeaguesProps = {
@@ -92,7 +93,6 @@ export default function Leagues({ themeControls }: LeaguesProps) {
 
   const totalMembers = leagues.reduce((sum, league) => sum + league.member_count, 0);
   const privateCount = leagues.filter((league) => league.visibility === 'private').length;
-  const publicCount = leagues.length - privateCount;
   const topEntry = leaderboard[0];
   const topUsername = topEntry ? getPublicDisplayName(topEntry.profiles, topEntry.user_id) : null;
   const leaguesTutorialSteps = useMemo(() => getLeaguesTutorialSteps(t), [t]);
@@ -171,9 +171,9 @@ export default function Leagues({ themeControls }: LeaguesProps) {
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 border-2 border-main text-xs sm:text-sm font-bold overflow-hidden">
                           <div className="p-2.5 sm:p-3 border-r-2 border-b-2 lg:border-b-0 border-main"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.members')}</div>{league.member_count.toLocaleString()}</div>
-                          <div className="p-2.5 sm:p-3 lg:border-r-2 border-b-2 lg:border-b-0 border-main"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.scoring')}</div>{t('ui.postJoinScoring')}</div>
-                          <div className="p-2.5 sm:p-3 border-r-2 border-main"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.joinPolicy')}</div>{league.join_policy}</div>
-                          <div className="p-2.5 sm:p-3"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.recognitionMode')}</div>{t('ui.noCashPrize')}</div>
+                          <div className="p-2.5 sm:p-3 lg:border-r-2 border-b-2 lg:border-b-0 border-main"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.postJoinScoring')}</div>{t('ui.postJoinScoringBody')}</div>
+                          <div className="p-2.5 sm:p-3 border-r-2 border-main"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.joinPolicy')}</div>{t(getLeagueJoinPolicyLabelKey(league.join_policy))}</div>
+                          <div className="p-2.5 sm:p-3"><div className="font-black uppercase text-[9px] sm:text-[10px] text-subtle">{t('ui.noCashPrize')}</div>{t('ui.leagueSafetyBody')}</div>
                         </div>
                       </div>
                       <div className="p-3 sm:p-4 lg:p-5 flex lg:flex-col justify-center gap-3 bg-muted">
@@ -201,9 +201,9 @@ export default function Leagues({ themeControls }: LeaguesProps) {
                 <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} className="bg-page border-2 border-main p-3 font-black uppercase outline-none" placeholder={t('ui.inviteCode')} />
                 <button className="bg-c2 text-inv border-2 border-main px-4 py-3 font-black uppercase">{t('ui.joinLeague')}</button>
               </form>
-              <div data-tour="leagues-safety" className="p-4 bg-c3 text-main font-black uppercase text-xs leading-relaxed flex items-start gap-3 flex-1">
-                <Shield size={22} className="shrink-0" />
-                <span>{t('ui.leagueSafetyBody', { publicCount, privateCount })}</span>
+              <div data-tour="leagues-safety" className="p-3 bg-c3 text-main font-black uppercase text-[11px] leading-tight flex items-center gap-2 flex-1">
+                <Shield size={18} className="shrink-0" />
+                <span>{t('ui.leagueSafetyBody')}</span>
               </div>
             </div>
           </div>
