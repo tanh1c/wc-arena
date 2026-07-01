@@ -170,25 +170,27 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
         </div>
       </div>
       <div className={`flex-1 flex flex-col md:flex-row items-center p-2 sm:p-3 lg:p-6 min-w-0 ${featured ? 'pt-8 lg:pt-8' : ''}`}>
-        <div className="flex-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 w-full min-w-0">
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2 text-right min-w-0">
-            <span className="font-black text-sm lg:text-lg uppercase tracking-wide hidden sm:block truncate">{homeTeam?.name ?? match.home_team_id}</span>
-            <span className="font-black text-xs uppercase sm:hidden truncate">{homeTeam?.short_name ?? match.home_team_id}</span>
-            <TeamFlag team={homeTeam} />
+        <div className="flex-1 flex flex-col items-center gap-3 w-full min-w-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 w-full min-w-0">
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 text-right min-w-0">
+              <span className="font-black text-sm lg:text-lg uppercase tracking-wide hidden sm:block truncate">{homeTeam?.name ?? match.home_team_id}</span>
+              <span className="font-black text-xs uppercase sm:hidden truncate">{homeTeam?.short_name ?? match.home_team_id}</span>
+              <TeamFlag team={homeTeam} />
+            </div>
+            <div className="relative flex flex-col items-center gap-1 shrink-0">
+              <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
+              {isLive && <span className="absolute top-full mt-1 text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
+            </div>
+            <div className="flex items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
+              <TeamFlag team={awayTeam} />
+              <span className="font-black text-sm lg:text-lg uppercase tracking-wide hidden sm:block truncate">{awayTeam?.name ?? match.away_team_id}</span>
+              <span className="font-black text-xs uppercase sm:hidden truncate">{awayTeam?.short_name ?? match.away_team_id}</span>
+            </div>
           </div>
-          <div className="relative flex flex-col items-center gap-1 shrink-0">
-            <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
-            {prediction && <div className="absolute top-full mt-2 flex items-center gap-1 text-center font-black uppercase leading-none whitespace-nowrap">
-              <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)]">{t('ui.predicted')}</span>
-              <span className="bg-main text-inv px-2 py-1 border-2 border-main text-[9px] sm:text-[10px] shadow-[2px_2px_0_var(--color-shadow)]">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
-            </div>}
-            {isLive && <span className="absolute top-full mt-1 text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
-          </div>
-          <div className="flex items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
-            <TeamFlag team={awayTeam} />
-            <span className="font-black text-sm lg:text-lg uppercase tracking-wide hidden sm:block truncate">{awayTeam?.name ?? match.away_team_id}</span>
-            <span className="font-black text-xs uppercase sm:hidden truncate">{awayTeam?.short_name ?? match.away_team_id}</span>
-          </div>
+          {prediction && <div className="flex items-center gap-1 text-center font-black uppercase leading-none whitespace-nowrap">
+            <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)]">{t('ui.predicted')}</span>
+            <span className="bg-main text-inv px-2 py-1 border-2 border-main text-[9px] sm:text-[10px] shadow-[2px_2px_0_var(--color-shadow)]">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
+          </div>}
         </div>
         <div className="w-full md:w-auto mt-3 md:mt-0 md:ml-6 grid grid-cols-2 md:flex items-center gap-2 md:gap-3 shrink-0">
           <span className={`${getStatusClass(effectiveStatus)} px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px]`}>{getStatusLabel(effectiveStatus, t)}</span>
