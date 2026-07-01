@@ -8,7 +8,14 @@ import RankBadge from './components/ui/RankBadge';
 import StreakBadge from './components/ui/StreakBadge';
 import UserAvatar from './components/ui/UserAvatar';
 import { useAuth } from './lib/auth';
-import { listGlobalLeaderboard, listPredictionEfficiencyLeaderboard, type LeaderboardEntryWithProfile, type PredictionEfficiencyLeaderboardEntry } from './services/leaderboard';
+import {
+  listGlobalLeaderboard,
+  listPredictionLeaderboard,
+  type LeaderboardEntryWithProfile,
+  type PredictionLeaderboardEntry,
+  type PredictionLeaderboardMetric,
+  type PredictionLeaderboardStage,
+} from './services/leaderboard';
 import { getCurrentProfile, type ProfileRow } from './services/profile';
 import { getErrorMessage } from './services/serviceTypes';
 import { getPublicDisplayName, getPublicInitials } from './utils/displayName';
@@ -27,8 +34,8 @@ type LeaderboardProps = {
   setHasFrame: (v: boolean) => void;
 };
 
-type LeaderboardMode = 'global' | 'efficiency';
-type LeaderboardEntry = LeaderboardEntryWithProfile | PredictionEfficiencyLeaderboardEntry;
+type LeaderboardMode = 'global' | 'prediction';
+type LeaderboardEntry = LeaderboardEntryWithProfile | PredictionLeaderboardEntry;
 type PodiumItem = LeaderboardEntry & {
   color: string;
   textColor: string;
@@ -57,18 +64,29 @@ function getRankChange(entry: LeaderboardEntry) {
   return entry.previous_rank ? entry.previous_rank - entry.rank : 0;
 }
 
-function isEfficiencyEntry(entry?: LeaderboardEntry): entry is PredictionEfficiencyLeaderboardEntry {
+const predictionStages: { value: PredictionLeaderboardStage; labelKey: string }[] = [
+  { value: 'all', labelKey: 'ui.overall' },
+  { value: 'group', labelKey: 'ui.groupStage' },
+  { value: 'round32', labelKey: 'ui.roundOf32' },
+  { value: 'round16', labelKey: 'ui.roundOf16' },
+  { value: 'quarter', labelKey: 'ui.quarterFinals' },
+  { value: 'semi', labelKey: 'ui.semiFinals' },
+  { value: 'final', labelKey: 'ui.final' },
+];
+
+function isPredictionEntry(entry?: LeaderboardEntry): entry is PredictionLeaderboardEntry {
   return !!entry && 'average_points' in entry;
 }
 
-function getMetricLabel(entry: LeaderboardEntry | undefined, mode: LeaderboardMode) {
-  if (mode === 'efficiency' && isEfficiencyEntry(entry)) return entry.average_points.toFixed(2);
+function getMetricLabel(entry: LeaderboardEntry | undefined, mode: LeaderboardMode, metric: PredictionLeaderboardMetric) {
+  if (mode === 'prediction' && metric === 'efficiency' && isPredictionEntry(entry)) return entry.average_points.toFixed(2);
   return formatPoints(entry?.points);
 }
 
-function getMetricDetail(entry: LeaderboardEntry | undefined, mode: LeaderboardMode, t: TranslationFn) {
-  if (mode === 'efficiency' && isEfficiencyEntry(entry)) {
-    return t('ui.pointsPerMatches', { points: formatPoints(entry.prediction_points), matches: entry.predicted_matches.toLocaleString() });
+function getMetricDetail(entry: LeaderboardEntry | undefined, mode: LeaderboardMode, metric: PredictionLeaderboardMetric, t: TranslationFn) {
+  if (mode === 'prediction' && isPredictionEntry(entry)) {
+    if (metric === 'efficiency') return t('ui.pointsPerMatches', { points: formatPoints(entry.prediction_points), matches: entry.predicted_matches.toLocaleString() });
+    return t('ui.matchesPredictedCount', { count: entry.predicted_matches.toLocaleString() });
   }
   return t('ui.pointsShort');
 }
@@ -85,7 +103,7 @@ function Avatar({ entry, size = 'w-8 h-8' }: { entry?: LeaderboardEntry; size?: 
   );
 }
 
-function PodiumCard({ item, heightClass, mode, primary, t }: { item?: PodiumItem; heightClass: string; mode: LeaderboardMode; primary?: boolean; t: TranslationFn }) {
+function PodiumCard({ item, heightClass, mode, metric, primary, t }: { item?: PodiumItem; heightClass: string; mode: LeaderboardMode; metric: PredictionLeaderboardMetric; primary?: boolean; t: TranslationFn }) {
   const rank = item?.rank ?? (primary ? 1 : 0);
   const className = `w-full ${primary ? 'sm:w-[40%] xl:w-[38%] pt-12 pb-6 px-4 z-20 shadow-[0px_-2px_0_0_var(--color-shadow)] transform sm:-translate-y-4' : 'sm:w-1/3 pt-10 pb-4 px-3 z-10'} border-4 border-main border-b-0 rounded-t-lg flex flex-col items-center relative ${item?.color ?? 'bg-card'} ${item?.textColor ?? 'text-main'} ${heightClass} ${item ? 'hover:brightness-105 transition' : ''}`;
   const content = (
@@ -101,10 +119,10 @@ function PodiumCard({ item, heightClass, mode, primary, t }: { item?: PodiumItem
         className={`${primary ? 'w-20 h-20 md:w-24 md:h-24' : 'w-16 h-16 md:w-20 md:h-20'} rounded-full border-4 border-main mb-3 flex-shrink-0 shadow-[2px_2px_0_0_var(--color-shadow)] font-black text-main text-xl`}
       />
       {mode === 'global' && <RankBadge points={item?.points ?? 0} size={primary ? 'lg' : 'md'} showPoints className="mb-3 bg-card text-main border-2 border-main px-2 py-1 shadow-[2px_2px_0_0_var(--color-shadow)]" />}
-      {mode === 'efficiency' && <div className="mb-3 bg-card text-main border-2 border-main px-2 py-1 shadow-[2px_2px_0_0_var(--color-shadow)] font-black text-[10px] uppercase">{t('ui.minPredictionsRequired')}</div>}
+      {mode === 'prediction' && metric === 'efficiency' && <div className="mb-3 bg-card text-main border-2 border-main px-2 py-1 shadow-[2px_2px_0_0_var(--color-shadow)] font-black text-[10px] uppercase">{t('ui.minPredictionsRequired')}</div>}
       <div className={`${primary ? 'font-bold text-base md:text-xl' : 'font-bold text-sm md:text-lg'} leading-tight truncate w-full text-center`}>{getDisplayName(item)}</div>
-      <div className={`${primary ? 'font-black text-3xl md:text-4xl text-main' : 'font-black text-2xl md:text-3xl'} mb-1 flex items-center justify-center gap-2`}>{getMetricLabel(item, mode)} <span className="text-sm md:text-lg">{mode === 'efficiency' ? t('ui.avgPerMatch') : t('ui.pointsShort')}</span></div>
-      <div className="mb-3 text-[9px] md:text-[10px] font-black uppercase text-center opacity-80">{getMetricDetail(item, mode, t)}</div>
+      <div className={`${primary ? 'font-black text-3xl md:text-4xl text-main' : 'font-black text-2xl md:text-3xl'} mb-1 flex items-center justify-center gap-2`}>{getMetricLabel(item, mode, metric)} <span className="text-sm md:text-lg">{mode === 'prediction' && metric === 'efficiency' ? t('ui.avgPerMatch') : t('ui.pointsShort')}</span></div>
+      <div className="mb-3 text-[9px] md:text-[10px] font-black uppercase text-center opacity-80">{getMetricDetail(item, mode, metric, t)}</div>
       <div className="bg-card text-main border-2 border-main rounded-sm px-2 py-1 flex items-center gap-1 text-[9px] md:text-[10px] font-black uppercase text-center justify-center shadow-[2px_2px_0_0_var(--color-shadow)]">
         <Star size={12} fill="currentColor" /> {t('ui.exactScores')}: {item?.exact_scores ?? 0}
       </div>
@@ -119,6 +137,8 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
   const { user } = useAuth();
   const themeControls = { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame };
   const [mode, setMode] = useState<LeaderboardMode>('global');
+  const [stage, setStage] = useState<PredictionLeaderboardStage>('all');
+  const [metric, setMetric] = useState<PredictionLeaderboardMetric>('total');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +151,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     setCurrentProfile(null);
 
     Promise.all([
-      mode === 'efficiency' ? listPredictionEfficiencyLeaderboard() : listGlobalLeaderboard(),
+      mode === 'prediction' ? listPredictionLeaderboard(stage, metric) : listGlobalLeaderboard(),
       user && mode === 'global' ? getCurrentProfile(user.id) : Promise.resolve(null),
     ])
       .then(([nextLeaderboard, nextProfile]) => {
@@ -150,7 +170,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
     return () => {
       active = false;
     };
-  }, [mode, user]);
+  }, [metric, mode, stage, user]);
 
   const topRank = leaderboard.find((entry) => entry.rank === 1);
   const secondRank = leaderboard.find((entry) => entry.rank === 2);
@@ -179,7 +199,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
   } satisfies CurrentLeaderboardEntry : undefined;
   const currentEntry: CurrentLeaderboardEntry | undefined = mode === 'global' ? leaderboardCurrentEntry ?? currentProfileEntry : leaderboardCurrentEntry;
   const currentRank = currentEntry?.rank ?? '—';
-  const currentRankLabel = currentEntry?.rank ? t('ui.outOfPlayers', { count: totalPlayers.toLocaleString() }) : mode === 'efficiency' ? t('ui.notEligibleYet') : t('ui.notRankedYet');
+  const currentRankLabel = currentEntry?.rank ? t('ui.outOfPlayers', { count: totalPlayers.toLocaleString() }) : mode === 'prediction' && metric === 'efficiency' ? t('ui.notEligibleYet') : t('ui.notRankedYet');
   const totalPoints = leaderboard.reduce((sum, entry) => sum + entry.points, 0);
 
   return (
@@ -196,17 +216,17 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
             <div className="flex items-center gap-2 sm:gap-4 border-b-4 border-r-4 xl:border-b-0 border-main p-2.5 sm:p-4 lg:p-5 bg-c1 text-main min-w-0">
               <div className="shrink-0"><Trophy size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5}/></div>
               <div className="flex flex-col justify-center min-w-0">
-                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{mode === 'efficiency' ? t('ui.avgPerMatch') : t('ui.topScore')}</div>
-                <div className="text-lg sm:text-3xl font-black leading-none flex items-center gap-1 sm:gap-2">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(topRank, mode)}</div>
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{mode === 'prediction' && metric === 'efficiency' ? t('ui.avgPerMatch') : t('ui.topScore')}</div>
+                <div className="text-lg sm:text-3xl font-black leading-none flex items-center gap-1 sm:gap-2">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(topRank, mode, metric)}</div>
                 <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{getDisplayName(topRank)}</div>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 border-b-4 xl:border-b-0 xl:border-r-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c2 text-inv min-w-0">
               <div className="shrink-0"><Users size={24} className="sm:w-9 sm:h-9" strokeWidth={2.5}/></div>
               <div className="flex flex-col justify-center min-w-0">
-                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{mode === 'efficiency' ? t('ui.eligiblePlayers') : t('ui.totalPlayers')}</div>
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{mode === 'prediction' && metric === 'efficiency' ? t('ui.eligiblePlayers') : t('ui.totalPlayers')}</div>
                 <div className="text-lg sm:text-3xl font-black leading-none">{totalPlayers.toLocaleString()}</div>
-                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1">{mode === 'efficiency' ? t('ui.minPredictionsRequired') : t('ui.joined')}</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1">{mode === 'prediction' && metric === 'efficiency' ? t('ui.minPredictionsRequired') : t('ui.joined')}</div>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 border-r-4 xl:border-r-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c3 text-main min-w-0">
@@ -220,9 +240,9 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
             <div className="flex items-center gap-2 sm:gap-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c4 text-main min-w-0">
               <div className="shrink-0"><PointsCoin size="md" /></div>
               <div className="flex flex-col justify-center min-w-0">
-                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{mode === 'efficiency' ? t('ui.avgPerMatch') : t('ui.yourPoints')}</div>
-                <div className="text-lg sm:text-3xl font-black leading-none flex items-center gap-1 sm:gap-2">{getMetricLabel(currentEntry ?? undefined, mode)} <span className="text-[9px] sm:text-xs">{mode === 'efficiency' ? t('ui.avgPerMatch') : t('ui.pointsShort')}</span></div>
-                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{getMetricDetail(currentEntry ?? undefined, mode, t)}</div>
+                <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90">{mode === 'prediction' && metric === 'efficiency' ? t('ui.avgPerMatch') : t('ui.yourPoints')}</div>
+                <div className="text-lg sm:text-3xl font-black leading-none flex items-center gap-1 sm:gap-2">{getMetricLabel(currentEntry ?? undefined, mode, metric)} <span className="text-[9px] sm:text-xs">{mode === 'prediction' && metric === 'efficiency' ? t('ui.avgPerMatch') : t('ui.pointsShort')}</span></div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 truncate">{getMetricDetail(currentEntry ?? undefined, mode, metric, t)}</div>
               </div>
             </div>
           </div>
@@ -231,8 +251,24 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
             <div className="order-2 xl:order-1 flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
               <div className="grid grid-cols-2 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-wide border-b-4 border-main">
                 <button onClick={() => setMode('global')} className={`${mode === 'global' ? 'bg-c2 text-accent-inv' : 'text-main hover:bg-elevated'} px-4 sm:px-2 py-2 md:py-3 border-r-4 border-main text-center`}>{t('ui.global')}</button>
-                <button onClick={() => setMode('efficiency')} className={`${mode === 'efficiency' ? 'bg-c2 text-accent-inv' : 'text-main hover:bg-elevated'} px-4 sm:px-2 py-2 md:py-3 text-center`}>{t('ui.predictionEfficiency')}</button>
+                <button onClick={() => setMode('prediction')} className={`${mode === 'prediction' ? 'bg-c2 text-accent-inv' : 'text-main hover:bg-elevated'} px-4 sm:px-2 py-2 md:py-3 text-center`}>{t('ui.predictionLeaderboard')}</button>
               </div>
+
+              {mode === 'prediction' && (
+                <div className="border-b-4 border-main bg-muted p-2 sm:p-3 flex flex-col gap-2">
+                  <div className="grid grid-cols-2 border-2 border-main font-black text-[10px] sm:text-xs uppercase">
+                    <button onClick={() => setMetric('total')} className={`${metric === 'total' ? 'bg-c1 text-main' : 'bg-card text-main hover:bg-elevated'} px-3 py-2 border-r-2 border-main`}>{t('ui.totalPredictionPoints')}</button>
+                    <button onClick={() => setMetric('efficiency')} className={`${metric === 'efficiency' ? 'bg-c1 text-main' : 'bg-card text-main hover:bg-elevated'} px-3 py-2`}>{t('ui.predictionEfficiency')}</button>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {predictionStages.map((option) => (
+                      <button key={option.value} onClick={() => setStage(option.value)} className={`${stage === option.value ? 'bg-c2 text-accent-inv' : 'bg-card text-main hover:bg-elevated'} shrink-0 border-2 border-main px-3 py-2 font-black text-[10px] sm:text-xs uppercase shadow-[2px_2px_0_0_var(--color-shadow)]`}>
+                        {t(option.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="bg-card flex flex-col">
                 {loading && <div className="p-6 font-black uppercase text-sm">{t('ui.loadingLeaderboard')}</div>}
@@ -250,18 +286,18 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                             <div className="min-w-0 flex-1">
                               <div className="font-black text-sm uppercase truncate">{getDisplayName(entry)}</div>
                               <div className="text-[9px] font-black uppercase text-subtle">{t('ui.exact')} {entry.exact_scores} · {entry.accuracy}%</div>
-                              {mode === 'efficiency' && <div className="text-[9px] font-black uppercase text-subtle">{getMetricDetail(entry, mode, t)}</div>}
+                              {mode === 'prediction' && metric === 'efficiency' && <div className="text-[9px] font-black uppercase text-subtle">{getMetricDetail(entry, mode, metric, t)}</div>}
                             </div>
-                            <div className="font-black text-base flex items-center gap-1 shrink-0">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(entry, mode)}</div>
+                            <div className="font-black text-base flex items-center gap-1 shrink-0">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(entry, mode, metric)}</div>
                           </Link>
                         );
                       })}
                     </div>
 
                     <div className="hidden sm:flex flex-col sm:flex-row items-end p-4 md:p-6 lg:p-8 pb-0 gap-4 md:gap-0 justify-center">
-                      <PodiumCard item={podium[0]} heightClass="sm:-mr-2 sm:shadow-[2px_0px_0_0_var(--color-shadow)]" mode={mode} t={t} />
-                      <PodiumCard item={podium[1]} heightClass="" mode={mode} primary t={t} />
-                      <PodiumCard item={podium[2]} heightClass="sm:-ml-2 sm:shadow-[-2px_0px_0_0_var(--color-shadow)]" mode={mode} t={t} />
+                      <PodiumCard item={podium[0]} heightClass="sm:-mr-2 sm:shadow-[2px_0px_0_0_var(--color-shadow)]" mode={mode} metric={metric} t={t} />
+                      <PodiumCard item={podium[1]} heightClass="" mode={mode} metric={metric} primary t={t} />
+                      <PodiumCard item={podium[2]} heightClass="sm:-ml-2 sm:shadow-[-2px_0px_0_0_var(--color-shadow)]" mode={mode} metric={metric} t={t} />
                     </div>
 
                     <div className="sm:border-t-4 border-main">
@@ -270,7 +306,7 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                         <div className="w-12"></div>
                         <div className="flex-1">{t('ui.player')}</div>
                         <div className="w-28 text-center">{t('ui.rankTier')}</div>
-                        <div className="w-24 text-center">{mode === 'efficiency' ? t('ui.avgPerMatch') : t('ui.pointsShort')}</div>
+                        <div className="w-24 text-center">{mode === 'prediction' && metric === 'efficiency' ? t('ui.avgPerMatch') : t('ui.pointsShort')}</div>
                         <div className="w-32 text-center text-[10px] lg:text-xs">{t('ui.exactScores')}</div>
                         <div className="w-32 text-center">{t('ui.accuracy')}</div>
                         <div className="w-20 text-center">{t('ui.streak')}</div>
@@ -287,12 +323,12 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                                 <Avatar entry={item} />
                                 <div className="flex-1 font-bold text-sm lg:text-base leading-tight truncate">{getDisplayName(item)}</div>
                                 {mode === 'global' && <div className="sm:hidden"><RankBadge points={item.points} size="sm" showLabel={false} /></div>}
-                              <div className="font-black text-base sm:hidden flex items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(item, mode)}</div>
+                              <div className="font-black text-base sm:hidden flex items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(item, mode, metric)}</div>
                               </Link>
 
                               <div className="grid grid-cols-4 sm:flex items-start sm:items-center justify-between sm:justify-start w-full sm:w-auto text-xs sm:text-sm pl-8 sm:pl-0 font-bold gap-2 sm:gap-0">
-                                <div className="hidden sm:flex w-28 justify-center">{mode === 'global' ? <RankBadge points={item.points} size="sm" showLabel={false} /> : <span className="font-black text-[10px] uppercase text-subtle">{getMetricDetail(item, mode, t)}</span>}</div>
-                                <div className="hidden sm:flex w-24 justify-center items-center gap-1 text-sm">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(item, mode)}</div>
+                                <div className="hidden sm:flex w-28 justify-center">{mode === 'global' ? <RankBadge points={item.points} size="sm" showLabel={false} /> : <span className="font-black text-[10px] uppercase text-subtle">{getMetricDetail(item, mode, metric, t)}</span>}</div>
+                                <div className="hidden sm:flex w-24 justify-center items-center gap-1 text-sm">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(item, mode, metric)}</div>
                                 <div className="w-auto sm:w-32 text-center text-subtle sm:text-main flex flex-col sm:flex-row items-center sm:justify-center">
                                   <span className="sm:hidden text-[9px] uppercase font-black tracking-widest text-faint mb-0.5">{t('ui.exact')}</span>
                                   {item.exact_scores}
@@ -326,12 +362,12 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                               <Avatar entry={currentEntry} />
                               <div className="flex-1 font-black text-sm lg:text-base leading-tight truncate">{getDisplayName(currentEntry)}</div>
                               {mode === 'global' && <div className="sm:hidden"><RankBadge points={currentEntry.points} size="sm" showLabel={false} /></div>}
-                              <div className="font-black text-base sm:hidden flex items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(currentEntry, mode)}</div>
+                              <div className="font-black text-base sm:hidden flex items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(currentEntry, mode, metric)}</div>
                             </Link>
 
                             <div className="grid grid-cols-4 sm:flex items-start sm:items-center justify-between sm:justify-start w-full sm:w-auto text-xs sm:text-sm pl-8 sm:pl-0 font-black text-main gap-2 sm:gap-0">
-                              <div className="hidden sm:flex w-28 justify-center">{mode === 'global' ? <RankBadge points={currentEntry.points} size="sm" showLabel={false} /> : <span className="font-black text-[10px] uppercase text-main">{getMetricDetail(currentEntry, mode, t)}</span>}</div>
-                              <div className="hidden sm:flex w-24 justify-center items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(currentEntry, mode)}</div>
+                              <div className="hidden sm:flex w-28 justify-center">{mode === 'global' ? <RankBadge points={currentEntry.points} size="sm" showLabel={false} /> : <span className="font-black text-[10px] uppercase text-main">{getMetricDetail(currentEntry, mode, metric, t)}</span>}</div>
+                              <div className="hidden sm:flex w-24 justify-center items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{getMetricLabel(currentEntry, mode, metric)}</div>
                               <div className="w-auto sm:w-32 text-center flex flex-col sm:flex-row items-center sm:justify-center"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">{t('ui.exact')}</span>{currentEntry.exact_scores}</div>
                               <div className="w-auto sm:w-32 text-center flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1 sm:gap-2"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">{t('ui.accuracy')}</span><span>{currentEntry.accuracy}%</span></div>
                               <div className="w-auto sm:w-20 text-center flex flex-col sm:flex-row items-center sm:justify-center gap-0.5"><span className="sm:hidden text-[9px] uppercase tracking-widest opacity-70 mb-0.5">{t('ui.streak')}</span><StreakBadge streak={currentEntry.streak} size="sm" /></div>
@@ -358,11 +394,11 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                     <span className="text-main font-black">{currentRank}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
-                    <span className="flex items-center gap-2 text-main"><Star size={16} /> {mode === 'efficiency' ? t('ui.matchesPredicted') : t('ui.tier')}</span>
-                    {mode === 'global' ? <RankBadge points={currentEntry?.points ?? 0} size="sm" /> : <span className="text-main font-black">{isEfficiencyEntry(currentEntry) ? currentEntry.predicted_matches.toLocaleString() : '—'}</span>}
+                    <span className="flex items-center gap-2 text-main"><Star size={16} /> {mode === 'prediction' && metric === 'efficiency' ? t('ui.matchesPredicted') : t('ui.tier')}</span>
+                    {mode === 'global' ? <RankBadge points={currentEntry?.points ?? 0} size="sm" /> : <span className="text-main font-black">{isPredictionEntry(currentEntry) ? currentEntry.predicted_matches.toLocaleString() : '—'}</span>}
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
-                    <span className="flex items-center gap-2 text-main"><PointsCoin size="sm" /> {mode === 'efficiency' ? t('ui.predictionPoints') : t('ui.pointsShort')}</span>
+                    <span className="flex items-center gap-2 text-main"><PointsCoin size="sm" /> {mode === 'prediction' && metric === 'efficiency' ? t('ui.predictionPoints') : t('ui.pointsShort')}</span>
                     <span className="text-main font-black flex items-center gap-1"><PointsCoin size="sm" />{formatPoints(currentEntry?.points)}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b-2 border-line border-dashed text-subtle">
@@ -370,8 +406,8 @@ export default function Leaderboard({ isVintage, setIsVintage, isDark, setIsDark
                     <span className="text-main font-black">{currentEntry?.exact_scores ?? 0}</span>
                   </div>
                   <div className="flex justify-between items-center pb-3 border-b-2 border-line text-subtle">
-                    <span className="flex items-center gap-2 text-main"><PointsCoin size="sm" /> {mode === 'efficiency' ? t('ui.avgPerMatch') : t('ui.totalPoints')}</span>
-                    <span className="text-main font-black flex items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{mode === 'efficiency' ? getMetricLabel(currentEntry ?? undefined, mode) : formatPoints(totalPoints)}</span>
+                    <span className="flex items-center gap-2 text-main"><PointsCoin size="sm" /> {mode === 'prediction' && metric === 'efficiency' ? t('ui.avgPerMatch') : t('ui.totalPoints')}</span>
+                    <span className="text-main font-black flex items-center gap-1">{mode === 'global' && <PointsCoin size="sm" />}{mode === 'prediction' && metric === 'efficiency' ? getMetricLabel(currentEntry ?? undefined, mode, metric) : formatPoints(totalPoints)}</span>
                   </div>
                   <div className="pt-2 flex flex-col gap-2">
                     <div className="flex justify-between items-center text-xs uppercase font-black tracking-widest text-main">

@@ -1884,6 +1884,27 @@ export type Database = {
           username: string
         }[]
       }
+      get_prediction_leaderboard: {
+        Args: { target_metric?: string; target_stage?: string | null }
+        Returns: {
+          accuracy: number
+          avatar_bg_color: string | null
+          avatar_url: string | null
+          average_points: number
+          country_code: string | null
+          display_name: string | null
+          exact_scores: number
+          last_scored_at: string
+          metric: string
+          predicted_matches: number
+          prediction_points: number
+          rank: number
+          stage: string
+          streak: number
+          user_id: string
+          username: string
+        }[]
+      }
       get_public_user_prediction_history: {
         Args: { row_limit?: number; target_user_id: string }
         Returns: {
