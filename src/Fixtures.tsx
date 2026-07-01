@@ -32,7 +32,7 @@ import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type Match
 import { listCurrentUserPredictions, type PredictionWithMatch } from './services/predictions';
 import { getTeamMap, type TeamRow } from './services/teams';
 import { getPublicDisplayName } from './utils/displayName';
-import { getPenaltyScoreLabel, getPenaltyWinnerLabel } from './utils/predictionDisplay';
+import { formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './utils/predictionDisplay';
 import { getTeamFlag } from './utils/teamFlags';
 
 type FixturesProps = {
@@ -138,11 +138,13 @@ function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?:
   );
 }
 
-function MatchListRow({ match, homeTeam, awayTeam, projection, featured, onNavigate, t }: { key?: string; match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow; projection?: ProjectedMatchTeams; featured: boolean; onNavigate: (page: string) => void; t: TranslationFn }) {
+function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featured, onNavigate, t }: { key?: string; match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow; projection?: ProjectedMatchTeams; prediction?: PredictionWithMatch; featured: boolean; onNavigate: (page: string) => void; t: TranslationFn }) {
   const effectiveStatus = getEffectiveMatchStatus(match);
   const isLive = effectiveStatus === 'live';
   const isFinished = effectiveStatus === 'finished';
   const isProjected = Boolean(projection && (projection.home.projected || projection.away.projected));
+  const homeLabel = homeTeam?.short_name ?? match.home_team_id;
+  const awayLabel = awayTeam?.short_name ?? match.away_team_id;
 
   return (
     <div className={`flex flex-col sm:flex-row border-b-4 border-main relative hover:bg-page transition-colors overflow-hidden ${isLive ? 'bg-[#f0f9ff]' : 'bg-card'} ${isFinished ? 'opacity-80' : ''}`}>
@@ -188,8 +190,10 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, featured, onNavig
         <div className="w-full md:w-auto mt-3 md:mt-0 md:ml-6 grid grid-cols-2 md:flex items-center gap-2 md:gap-3 shrink-0">
           <span className={`${getStatusClass(effectiveStatus)} px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px]`}>{getStatusLabel(effectiveStatus, t)}</span>
           {isProjected && <span className="bg-c1 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.projected')}</span>}
+          {prediction && <span className="bg-c3 text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.predicted')}</span>}
+          {prediction && <span className="col-span-2 md:col-span-1 bg-page text-main px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px] font-black">{t('ui.yourPick')}: {formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>}
           <button onClick={() => onNavigate(`matches/${match.id}`)} className={`${effectiveStatus === 'open' ? 'bg-c2 text-inv hover:opacity-90' : 'bg-card hover:bg-page text-main'} font-black text-[10px] px-3 py-1.5 border-2 border-main uppercase flex items-center justify-center gap-1 min-w-0 md:min-w-24 focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all`}>
-            {effectiveStatus === 'open' ? t('matches.predict') : isFinished ? t('matches.results') : t('matches.details')} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
+            {effectiveStatus === 'open' ? prediction ? t('ui.editPick') : t('matches.predict') : isFinished ? t('matches.results') : t('matches.details')} <ChevronRight size={14} className="-mr-1" strokeWidth={3} />
           </button>
         </div>
       </div>
@@ -243,6 +247,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
   }, []);
 
   const knockoutProjection = useMemo(() => buildKnockoutTeamProjection(matches, teams), [matches, teams]);
+  const predictionsByMatchId = useMemo(() => new Map(predictions.map((prediction) => [prediction.match_id, prediction])), [predictions]);
   const matchesTutorialSteps = useMemo(() => getMatchesTutorialSteps(t), [t]);
 
   const filteredMatches = useMemo(() => matches.filter((match) => {
@@ -380,6 +385,7 @@ export default function Fixtures({ onNavigate, isVintage, setIsVintage, isDark, 
                       homeTeam={teams.get(projection?.home.teamId ?? match.home_team_id)}
                       awayTeam={teams.get(projection?.away.teamId ?? match.away_team_id)}
                       projection={projection}
+                      prediction={predictionsByMatchId.get(match.id)}
                       featured={match.id === firstOpenMatchId}
                       onNavigate={onNavigate}
                       t={t}

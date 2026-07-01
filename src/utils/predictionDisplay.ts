@@ -9,6 +9,13 @@ type MatchResultLike = {
   espn_away_shootout_score?: number | null;
 };
 
+type PredictionRowLike = {
+  prediction_type: string;
+  home_score?: number | null;
+  away_score?: number | null;
+  predicted_outcome: string;
+};
+
 export function formatOutcomeLabel(outcome: MatchOutcome, homeLabel: string, awayLabel: string) {
   if (outcome === 'home') return `${homeLabel} WIN`;
   if (outcome === 'away') return `${awayLabel} WIN`;
@@ -21,6 +28,14 @@ export function formatPredictionPick(prediction: Prediction, homeLabel: string, 
   }
 
   return formatOutcomeLabel(prediction.predictedOutcome, homeLabel, awayLabel);
+}
+
+export function formatPredictionRowPick(prediction: PredictionRowLike, homeLabel: string, awayLabel: string) {
+  if (prediction.prediction_type === 'exact_score' && typeof prediction.home_score === 'number' && typeof prediction.away_score === 'number') {
+    return `${prediction.home_score}-${prediction.away_score}`;
+  }
+
+  return formatOutcomeLabel(prediction.predicted_outcome as MatchOutcome, homeLabel, awayLabel);
 }
 
 export function getShootoutScoreLabel(match: MatchResultLike, separator = '-') {

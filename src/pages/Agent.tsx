@@ -234,12 +234,12 @@ export default function Agent({ themeControls }: AgentProps) {
                 </div>
 
                 {upcomingMatches.length > 0 && (
-                  <section className="border-[3px] border-main bg-card/70 opacity-80 shadow-[4px_4px_0_var(--color-shadow)]">
-                    <div className="border-b-[3px] border-main bg-muted/80 px-3 py-2 font-black uppercase text-[10px] text-subtle flex items-center justify-between gap-3">
+                  <section className="border-[3px] border-main bg-card/70 opacity-80 shadow-[4px_4px_0_var(--color-shadow)] rounded-sm overflow-hidden">
+                    <div className="border-b-[3px] border-main bg-muted/80 px-3 py-2 font-black uppercase text-[10px] text-subtle flex items-center justify-between gap-3 rounded-t-sm">
                       <span>{t('appPages.agent.upcomingFixtures')}</span>
                       <span>{t('appPages.agent.tapFixture')}</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 p-2">
                       {upcomingMatches.map((match) => {
                         const fixture = formatUpcomingMatch(match, teams, locale);
                         return (
@@ -249,7 +249,7 @@ export default function Agent({ themeControls }: AgentProps) {
                             onClick={() => {
                               selectMatchForPrompt(match.id);
                             }}
-                            className="min-h-[78px] text-left p-3 border-b-2 md:border-r-2 xl:border-b-0 last:border-r-0 border-main bg-page/60 hover:bg-card transition-colors"
+                            className="min-h-[78px] text-left p-3 border-2 border-main rounded-sm bg-page/60 hover:bg-card transition-colors"
                           >
                             <div className="font-black uppercase text-xs text-main truncate">{fixture.home} vs {fixture.away}</div>
                             <div className="mt-1 font-bold uppercase text-[10px] text-subtle">{fixture.date}</div>

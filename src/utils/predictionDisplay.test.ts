@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formatActualResult, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './predictionDisplay';
+import { formatActualResult, formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './predictionDisplay';
+
+test('formats prediction rows for match cards', () => {
+  assert.equal(formatPredictionRowPick({ prediction_type: 'exact_score', home_score: 2, away_score: 1, predicted_outcome: 'home' }, 'BRA', 'ARG'), '2-1');
+  assert.equal(formatPredictionRowPick({ prediction_type: 'outcome_only', home_score: null, away_score: null, predicted_outcome: 'draw' }, 'BRA', 'ARG'), 'DRAW');
+});
 
 test('formats penalty winner for tied knockout results', () => {
   const match = { home_score: 1, away_score: 1, espn_home_winner: false, espn_away_winner: true };
