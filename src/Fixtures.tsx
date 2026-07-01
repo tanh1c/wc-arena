@@ -176,14 +176,14 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
             <span className="font-black text-xs uppercase sm:hidden truncate">{homeTeam?.short_name ?? match.home_team_id}</span>
             <TeamFlag team={homeTeam} />
           </div>
-          <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="relative flex flex-col items-center gap-1 shrink-0">
             <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
-            {prediction && <div className="mt-1 flex flex-col items-center gap-0.5 text-center font-black uppercase leading-none">
-              <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)]">{t('ui.predicted')}</span>
+            {prediction && <div className="absolute top-full mt-2 flex flex-col items-center gap-0.5 text-center font-black uppercase leading-none">
+              <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)] whitespace-nowrap">{t('ui.predicted')}</span>
               <span className="text-[8px] sm:text-[9px] text-subtle whitespace-nowrap">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
             </div>}
-            {isLive && <span className="text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
-            {isFinished && <span className="text-[8px] uppercase text-subtle font-black">{t('ui.fullTime')}</span>}
+            {isLive && <span className="absolute top-full mt-1 text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
+            {isFinished && <span className="absolute top-full mt-1 text-[8px] uppercase text-subtle font-black whitespace-nowrap">{t('ui.fullTime')}</span>}
           </div>
           <div className="flex items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
             <TeamFlag team={awayTeam} />
