@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { BarChart3, Goal, Handshake, ListOrdered, ShieldAlert, Trophy, Users } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { buildGroupStandings } from '../lib/groupStandings';
+import { buildKnockoutTeamProjection, type ProjectedMatchTeams } from '../lib/knockoutAdvancement';
 import { listMatchesWithSummaries, type MatchRow } from '../services/matches';
 import { getStatisticsCoverage, listTopAssists, listTopGoalContributions, listTopScorers, listTopYellowCards, type PlayerTournamentStatRow, type StatisticsCoverage } from '../services/statistics';
 import { getTeamMap, listTeams, type TeamRow } from '../services/teams';
@@ -55,6 +56,22 @@ type PlayerLeaderRow = {
   total: number;
   latestMinute: string;
 };
+
+type KnockoutRound = {
+  stage: string;
+  matches: MatchRow[];
+};
+
+type BracketSide = {
+  team?: TeamRow;
+  label: string;
+  score: number | null;
+  projected: boolean;
+};
+
+type TranslationFn = ReturnType<typeof useTranslation>['t'];
+
+const KNOCKOUT_STAGE_ORDER = ['round32', 'round16', 'quarter', 'semi', 'third_place', 'final'];
 
 function getSummary(match: MatchRow): EspnSummaryPayload {
   return (match.espn_summary ?? {}) as EspnSummaryPayload;
@@ -200,10 +217,115 @@ function mapNormalizedPlayerLeaders(rows: PlayerTournamentStatRow[], teams: Map<
   });
 }
 
+function getMatchNumber(id: string) {
+  return Number(id.match(/(?:^|-)0*(\d+)$/)?.[1] ?? 0);
+}
+
+function getStageTitle(stage: string, t: TranslationFn) {
+  const keys: Record<string, string> = {
+    round32: 'ui.roundOf32',
+    round16: 'ui.roundOf16',
+    quarter: 'ui.quarterFinals',
+    semi: 'ui.semiFinals',
+    third_place: 'appPages.statistics.thirdPlace',
+    final: 'ui.final',
+  };
+  return t(keys[stage] ?? stage);
+}
+
+function getWinnerSide(match: MatchRow) {
+  if (match.espn_home_winner === true) return 'home';
+  if (match.espn_away_winner === true) return 'away';
+  if (typeof match.home_score !== 'number' || typeof match.away_score !== 'number' || match.home_score === match.away_score) return null;
+  return match.home_score > match.away_score ? 'home' : 'away';
+}
+
+function getBracketSide(match: MatchRow, side: 'home' | 'away', projection: Map<string, ProjectedMatchTeams>, teams: Map<string, TeamRow>): BracketSide {
+  const projected = projection.get(match.id)?.[side];
+  const teamId = projected?.teamId ?? (side === 'home' ? match.home_team_id : match.away_team_id);
+  const team = teams.get(teamId);
+  return {
+    team,
+    label: team?.short_name ?? projected?.slot ?? teamId,
+    score: side === 'home' ? match.home_score : match.away_score,
+    projected: projected?.projected ?? false,
+  };
+}
+
+function formatKickoff(value: string) {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
 function TeamFlag({ team }: { team?: TeamRow }) {
   const Flag = getTeamFlag(team?.country_code, team?.short_name);
   if (!Flag) return <span className="font-black text-[10px]">{team?.short_name?.slice(0, 2) ?? '—'}</span>;
   return <Flag className="w-full h-full object-cover" title={team?.name} />;
+}
+
+function BracketTeamRow({ side, winner }: { side: BracketSide; winner: boolean }) {
+  return (
+    <div className={`${winner ? 'bg-c1 text-main' : 'bg-card text-main'} grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 border-2 border-main rounded-sm px-2 py-1.5 min-w-0`}>
+      <span className="w-6 h-4 border border-main rounded-sm overflow-hidden bg-muted shrink-0 flex items-center justify-center"><TeamFlag team={side.team} /></span>
+      <span className="min-w-0">
+        <span className="block font-black uppercase text-[10px] sm:text-xs truncate">{side.label}</span>
+        <span className="block font-bold uppercase text-[8px] sm:text-[9px] text-subtle truncate">{side.team?.name ?? side.label}</span>
+      </span>
+      <span className="font-black text-sm tabular-nums">{side.score ?? '—'}</span>
+    </div>
+  );
+}
+
+function KnockoutMatchCard({ match, projection, teamMap, t }: { match: MatchRow; projection: Map<string, ProjectedMatchTeams>; teamMap: Map<string, TeamRow>; t: TranslationFn }) {
+  const home = getBracketSide(match, 'home', projection, teamMap);
+  const away = getBracketSide(match, 'away', projection, teamMap);
+  const winner = getWinnerSide(match);
+  const isProjected = home.projected || away.projected;
+
+  return (
+    <div className="bg-card border-2 border-main rounded-sm p-2 shadow-[2px_2px_0_0_var(--color-shadow)] flex flex-col gap-2 min-w-0">
+      <div className="flex items-center justify-between gap-2 font-black uppercase text-[8px] sm:text-[9px] text-subtle">
+        <span>#{getMatchNumber(match.id) || match.id}</span>
+        <span className="truncate">{formatKickoff(match.kickoff_at)}</span>
+      </div>
+      <BracketTeamRow side={home} winner={winner === 'home'} />
+      <BracketTeamRow side={away} winner={winner === 'away'} />
+      {isProjected && <div className="self-start bg-c2 text-accent-inv border-2 border-main rounded-sm px-2 py-0.5 font-black uppercase text-[8px] shadow-[1px_1px_0_0_var(--color-shadow)]">{t('appPages.statistics.projected')}</div>}
+    </div>
+  );
+}
+
+function KnockoutRoundColumn({ round, projection, teamMap, t }: { round: KnockoutRound; projection: Map<string, ProjectedMatchTeams>; teamMap: Map<string, TeamRow>; t: TranslationFn }) {
+  return (
+    <div className="min-w-[220px] lg:min-w-0 flex flex-col gap-2">
+      <div className="bg-c1 text-main border-2 border-main rounded-sm px-3 py-2 font-black uppercase text-xs shadow-[2px_2px_0_0_var(--color-shadow)]">
+        <div>{getStageTitle(round.stage, t)}</div>
+        <div className="text-[9px] text-subtle">{t('appPages.statistics.knockoutMatches', { count: round.matches.length })}</div>
+      </div>
+      <div className="flex flex-col gap-3">
+        {round.matches.map((match) => <div key={match.id}><KnockoutMatchCard match={match} projection={projection} teamMap={teamMap} t={t} /></div>)}
+      </div>
+    </div>
+  );
+}
+
+function KnockoutBracket({ rounds, projection, teamMap, t }: { rounds: KnockoutRound[]; projection: Map<string, ProjectedMatchTeams>; teamMap: Map<string, TeamRow>; t: TranslationFn }) {
+  const matchCount = rounds.reduce((sum, round) => sum + round.matches.length, 0);
+  if (rounds.length === 0) return null;
+
+  return (
+    <div className="border-b-4 border-main bg-card min-w-0">
+      <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
+        <span>{t('appPages.statistics.knockoutBracket')}</span>
+        <span className="text-[10px] font-bold text-faint">{t('appPages.statistics.knockoutMatches', { count: matchCount })}</span>
+      </div>
+      <div className="bg-c1 text-main px-3 py-2 border-b-4 border-main font-bold uppercase text-[10px] sm:text-xs">{t('appPages.statistics.knockoutBracketDescription')}</div>
+      <div className="overflow-x-auto bg-muted [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-main/30 hover:[&::-webkit-scrollbar-thumb]:bg-main/50">
+        <div className="grid grid-flow-col auto-cols-[minmax(220px,1fr)] lg:auto-cols-fr gap-3 p-3 min-w-max lg:min-w-0">
+          {rounds.map((round) => <div key={round.stage}><KnockoutRoundColumn round={round} projection={projection} teamMap={teamMap} t={t} /></div>)}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function PlayerLeaderTable({ title, icon, rows, teamMap, metricLabel, getMetric, emptyLabel }: { title: string; icon: ReactNode; rows: PlayerLeaderRow[]; teamMap: Map<string, TeamRow>; metricLabel: string; getMetric: (row: PlayerLeaderRow) => number; emptyLabel: string }) {
@@ -296,6 +418,13 @@ export default function Statistics({ themeControls }: StatisticsProps) {
   const topAssists = normalizedAssists.length ? normalizedAssists : sortTopAssists(fallbackPlayerLeaders);
   const topGoalContributions = normalizedGoalContributions.length ? normalizedGoalContributions : sortTopGoalContributions(fallbackPlayerLeaders);
   const topYellowCards = normalizedYellowCards.length ? normalizedYellowCards : sortTopYellowCards(fallbackPlayerLeaders);
+  const knockoutProjection = useMemo(() => buildKnockoutTeamProjection(matches, teamMap), [matches, teamMap]);
+  const knockoutRounds = useMemo(() => KNOCKOUT_STAGE_ORDER.map((stage) => ({
+    stage,
+    matches: matches
+      .filter((match) => match.stage === stage)
+      .sort((first, second) => getMatchNumber(first.id) - getMatchNumber(second.id)),
+  })).filter((round) => round.matches.length > 0), [matches]);
   const topScorerGoals = topScorers[0]?.goals ?? 0;
   const topAssistCount = topAssists[0]?.assists ?? 0;
   const summaryMatches = coverage.normalizedMatches || matches.filter((match) => match.espn_summary_updated_at).length;
@@ -347,8 +476,10 @@ export default function Statistics({ themeControls }: StatisticsProps) {
           {error && <div className="p-6 bg-c5 text-main font-black uppercase text-sm border-b-4 border-main">{error}</div>}
 
           {!loading && !error && (
-            <div className="flex flex-col xl:flex-row flex-1">
-              <div className="order-2 xl:order-1 flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-muted min-w-0">
+            <>
+              <KnockoutBracket rounds={knockoutRounds} projection={knockoutProjection} teamMap={teamMap} t={t} />
+              <div className="flex flex-col xl:flex-row flex-1">
+                <div className="order-2 xl:order-1 flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-muted min-w-0">
                 <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
                   <span>{t('appPages.statistics.groupTables')}</span>
                   <span className="text-[10px] font-bold text-faint">{t('ui.itemsCount', { count: groupCards.length })}</span>
@@ -424,7 +555,8 @@ export default function Statistics({ themeControls }: StatisticsProps) {
                   emptyLabel={t('appPages.statistics.noYellowCards')}
                 />
               </div>
-            </div>
+              </div>
+            </>
           )}
 
           <div className="border-t-4 border-main bg-c1 text-main p-2.5 sm:p-4 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center sm:justify-between">
