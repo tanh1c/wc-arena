@@ -39,15 +39,28 @@ test('groups source matches before the next match they feed', () => {
   ]);
 });
 
+test('groups first knockout matches by the next match they feed', () => {
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'left', matches).map((match) => match.id), [
+    'match-073',
+    'match-075',
+    'match-074',
+    'match-077',
+    'match-076',
+    'match-078',
+    'match-079',
+    'match-080',
+  ]);
+});
+
 test('keeps right-side knockout lane ordered by source matches', () => {
-  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'right').map((match) => match.id), [
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'right', matches).map((match) => match.id), [
     'match-081',
     'match-082',
     'match-083',
     'match-084',
     'match-085',
-    'match-086',
     'match-087',
+    'match-086',
     'match-088',
   ]);
   assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'right', matches).map((match) => match.id), ['match-094', 'match-093', 'match-096', 'match-095']);

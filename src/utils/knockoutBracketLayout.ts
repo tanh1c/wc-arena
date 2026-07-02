@@ -36,7 +36,8 @@ export function buildDependencyBracketColumns<T extends BracketLayoutMatch>(matc
 }
 
 export function splitDependencyBracketSide<T extends BracketLayoutMatch>(matches: T[], side: 'left' | 'right', allMatches: T[] = matches) {
-  const sortedMatches = [...matches].sort((first, second) => getSourceSortKey(first, buildMatchesByNumber(allMatches)) - getSourceSortKey(second, buildMatchesByNumber(allMatches)) || (getMatchNumber(first.id) ?? 0) - (getMatchNumber(second.id) ?? 0));
+  const matchesByNumber = buildMatchesByNumber(allMatches);
+  const sortedMatches = [...matches].sort((first, second) => getLaneSortKey(first, matchesByNumber) - getLaneSortKey(second, matchesByNumber) || (getMatchNumber(first.id) ?? 0) - (getMatchNumber(second.id) ?? 0));
   const split = Math.ceil(sortedMatches.length / 2);
   return side === 'left' ? sortedMatches.slice(0, split) : sortedMatches.slice(split);
 }
@@ -48,6 +49,12 @@ function buildMatchesByNumber<T extends BracketLayoutMatch>(matches: T[]) {
 function getStageIndex(stage: string) {
   const index = STAGE_ORDER.indexOf(stage);
   return index === -1 ? STAGE_ORDER.length : index;
+}
+
+function getLaneSortKey<T extends BracketLayoutMatch>(match: T, matchesByNumber: Map<number, T>) {
+  const matchNumber = getMatchNumber(match.id);
+  const nextMatchNumber = matchNumber ? Number(Object.entries(MATCH_SOURCES).find(([, sourceNumbers]) => sourceNumbers.includes(matchNumber))?.[0]) : NaN;
+  return Number.isNaN(nextMatchNumber) ? getSourceSortKey(match, matchesByNumber) : getSourceSortKey(matchesByNumber.get(nextMatchNumber) ?? match, matchesByNumber);
 }
 
 function getSourceSortKey<T extends BracketLayoutMatch>(match: T, matchesByNumber: Map<number, T>): number {
