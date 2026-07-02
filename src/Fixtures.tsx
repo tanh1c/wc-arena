@@ -32,7 +32,7 @@ import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type Match
 import { listCurrentUserPredictions, type PredictionWithMatch } from './services/predictions';
 import { getTeamMap, type TeamRow } from './services/teams';
 import { getPublicDisplayName } from './utils/displayName';
-import { formatFixtureMetadata } from './utils/predictionDisplay';
+import { formatFixtureMetadata, getShootoutScoreLabel } from './utils/predictionDisplay';
 import { getTeamFlag } from './utils/teamFlags';
 
 type FixturesProps = {
@@ -115,13 +115,21 @@ function TeamFlag({ team }: { team?: TeamRow }) {
 
 function MatchScore({ match }: { match: MatchRow }) {
   const hasScore = typeof match.home_score === 'number' && typeof match.away_score === 'number';
-  const scoreClass = `w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`;
+  const hasShootoutScore = Boolean(getShootoutScoreLabel(match));
+  const scoreClass = `relative w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`;
+  const shootoutClass = 'absolute -right-1 -bottom-1 min-w-4 h-4 px-1 rounded-full border-2 border-main bg-main text-inv text-[9px] leading-none flex items-center justify-center shadow-[1px_1px_0_var(--color-shadow)]';
 
   return (
     <div className={`flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
-      <div className={scoreClass}>{hasScore ? match.home_score : '-'}</div>
+      <div className={scoreClass}>
+        {hasScore ? match.home_score : '-'}
+        {hasShootoutScore && <span className={shootoutClass}>{match.espn_home_shootout_score}</span>}
+      </div>
       <div className="font-black text-base sm:text-xl">-</div>
-      <div className={scoreClass}>{hasScore ? match.away_score : '-'}</div>
+      <div className={scoreClass}>
+        {hasScore ? match.away_score : '-'}
+        {hasShootoutScore && <span className={shootoutClass}>{match.espn_away_shootout_score}</span>}
+      </div>
     </div>
   );
 }
@@ -180,14 +188,14 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
               const chipText = 'labelKey' in chip ? t(chip.labelKey) : chip.label;
               const chipClass = chip.kind === 'predictionState'
                 ? chip.labelKey === 'ui.predicted'
-                  ? 'border-c3 bg-c3/15 text-c3'
+                  ? 'border-emerald-700 bg-emerald-900/10 text-emerald-800'
                   : 'border-muted bg-page text-subtle'
                 : chip.kind === 'predictionPick'
                   ? 'border-main bg-card text-main'
-                  : chip.kind === 'penalty'
-                    ? 'border-main bg-main text-inv'
-                    : chip.kind === 'status' && chip.labelKey === 'ui.live'
-                      ? 'border-c4 bg-c4 text-inv'
+                  : chip.kind === 'status' && chip.labelKey === 'ui.live'
+                    ? 'border-c4 bg-c4 text-inv'
+                    : chip.kind === 'status'
+                      ? 'border-blue-800 bg-blue-950/10 text-blue-800'
                       : 'border-c2 bg-card text-c2';
 
               return <span key={`${chip.kind}-${chipText}`} className={`${chipClass} min-h-8 px-3 py-1.5 border-2 rounded-sm shadow-[2px_2px_0_var(--color-shadow)] flex items-center gap-1 text-[9px] sm:text-[10px] whitespace-nowrap`}>{chipText}</span>;

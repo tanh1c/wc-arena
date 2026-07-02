@@ -20,7 +20,6 @@ type FixtureMetadataChip =
   | { kind: 'predictionState'; labelKey: 'ui.predicted' }
   | { kind: 'predictionState'; labelKey: 'ui.notPredicted' }
   | { kind: 'predictionPick'; label: string }
-  | { kind: 'penalty'; label: string }
   | { kind: 'penaltyWinner'; label: string }
   | { kind: 'status'; labelKey: 'ui.live' | 'ui.completed' };
 
@@ -81,10 +80,8 @@ export function formatFixtureMetadata(match: MatchResultLike, prediction: Predic
 
   if (prediction) chips.push({ kind: 'predictionPick', label: formatPredictionRowPick(prediction, homeLabel, awayLabel) });
 
-  const penaltyScore = getPenaltyScoreLabel(match);
   const penaltyWinner = getPenaltyWinnerLabel(match, homeLabel, awayLabel);
-  if (penaltyScore) chips.push({ kind: 'penalty', label: penaltyScore });
-  else if (penaltyWinner) chips.push({ kind: 'penaltyWinner', label: penaltyWinner });
+  if (!getShootoutScoreLabel(match) && penaltyWinner) chips.push({ kind: 'penaltyWinner', label: penaltyWinner });
 
   if (status === 'live') chips.push({ kind: 'status', labelKey: 'ui.live' });
   if (status === 'finished') chips.push({ kind: 'status', labelKey: 'ui.completed' });

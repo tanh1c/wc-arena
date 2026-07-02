@@ -22,7 +22,6 @@ test('formats fixture metadata chips', () => {
   assert.deepEqual(formatFixtureMetadata(match, prediction, 'GER', 'PAR', 'finished'), [
     { kind: 'predictionState', labelKey: 'ui.predicted' },
     { kind: 'predictionPick', label: '2-1' },
-    { kind: 'penalty', label: 'PEN 3-4' },
     { kind: 'status', labelKey: 'ui.completed' },
   ]);
 });
