@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import LoadingScreen from './components/ui/LoadingScreen';
 
 const Landing = lazy(() => import('./Landing'));
 const Leaderboard = lazy(() => import('./Leaderboard'));
@@ -107,11 +108,7 @@ function LegacyRoute({ Component, themeControls }: LegacyRouteProps) {
 function RouteFallback() {
   const { t } = useTranslation();
 
-  return (
-    <div className="min-h-screen bg-page text-main p-6 font-black uppercase">
-      {t('ui.loadingPage')}
-    </div>
-  );
+  return <LoadingScreen label={t('ui.loadingPage')} />;
 }
 
 export default function App() {

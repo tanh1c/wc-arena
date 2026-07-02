@@ -188,14 +188,14 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
               const chipText = 'labelKey' in chip ? t(chip.labelKey) : chip.label;
               const chipClass = chip.kind === 'predictionState'
                 ? chip.labelKey === 'ui.predicted'
-                  ? 'border-emerald-700 bg-emerald-900/10 text-emerald-800'
+                  ? 'border-main bg-emerald-400 text-main'
                   : 'border-muted bg-page text-subtle'
                 : chip.kind === 'predictionPick'
                   ? 'border-main bg-card text-main'
                   : chip.kind === 'status' && chip.labelKey === 'ui.live'
                     ? 'border-c4 bg-c4 text-inv'
                     : chip.kind === 'status'
-                      ? 'border-blue-800 bg-blue-950/10 text-blue-800'
+                      ? 'border-main bg-blue-400 text-main'
                       : 'border-c2 bg-card text-c2';
 
               return <span key={`${chip.kind}-${chipText}`} className={`${chipClass} min-h-8 px-3 py-1.5 border-2 rounded-sm shadow-[2px_2px_0_var(--color-shadow)] flex items-center gap-1 text-[9px] sm:text-[10px] whitespace-nowrap`}>{chipText}</span>;
