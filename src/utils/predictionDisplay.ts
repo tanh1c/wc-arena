@@ -46,6 +46,8 @@ export function formatPredictionRowPick(prediction: PredictionRowLike, homeLabel
 }
 
 export function getShootoutScoreLabel(match: MatchResultLike, separator = '-') {
+  if (typeof match.home_score !== 'number' || typeof match.away_score !== 'number') return null;
+  if (match.home_score !== match.away_score) return null;
   if (typeof match.espn_home_shootout_score !== 'number' || typeof match.espn_away_shootout_score !== 'number') return null;
   if (match.espn_home_shootout_score === 0 && match.espn_away_shootout_score === 0) return null;
   return `${match.espn_home_shootout_score}${separator}${match.espn_away_shootout_score}`;

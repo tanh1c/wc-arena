@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formatActualResult, formatFixtureMetadata, formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './predictionDisplay';
+import { formatActualResult, formatFixtureMetadata, formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel, getShootoutScoreLabel } from './predictionDisplay';
 
 test('formats prediction rows for match cards', () => {
   assert.equal(formatPredictionRowPick({ prediction_type: 'exact_score', home_score: 2, away_score: 1, predicted_outcome: 'home' }, 'BRA', 'ARG'), '2-1');
@@ -46,6 +46,18 @@ test('formats penalty shootout scores compactly', () => {
   assert.equal(getPenaltyScoreLabel(match), 'PEN 2-3');
   assert.equal(formatActualResult(match, 'NED', 'MAR'), '1-1 (PEN 2-3)');
   assert.equal(formatActualResult(match, 'NED', 'MAR', ' - '), '1 - 1 (PEN 2 - 3)');
+});
+
+test('does not show penalty shootout scores before the match score exists', () => {
+  const match = {
+    home_score: null,
+    away_score: null,
+    espn_home_shootout_score: 4,
+    espn_away_shootout_score: 2,
+  };
+
+  assert.equal(getShootoutScoreLabel(match), null);
+  assert.equal(getPenaltyScoreLabel(match), null);
 });
 
 test('does not show placeholder penalty shootout scores', () => {
