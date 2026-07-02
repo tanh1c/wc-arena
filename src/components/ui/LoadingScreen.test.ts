@@ -8,15 +8,15 @@ import LoadingScreen from './LoadingScreen';
 test('renders branded loading screen copy', () => {
   const html = renderToStaticMarkup(createElement(LoadingScreen, { label: 'Loading page...' }));
 
-  assert.match(html, /We Know Ball/);
   assert.match(html, /Loading page/);
   assert.match(html, /role="status"/);
 });
 
-test('fills the viewport with a branded loading stage', () => {
+test('fills the viewport with a centered spinner', () => {
   const html = renderToStaticMarkup(createElement(LoadingScreen, { label: 'Loading page...' }));
 
   assert.match(html, /fixed inset-0/);
+  assert.match(html, /items-center justify-center/);
   assert.match(html, /aria-label="Loading page\.\.\."/);
-  assert.match(html, /MATCH IS LOADING/);
+  assert.doesNotMatch(html, /MATCH IS LOADING|Hold your line|Live board/);
 });
