@@ -9,7 +9,7 @@ import { listMatchesWithSummaries, type MatchRow } from '../services/matches';
 import { getStatisticsCoverage, listTopAssists, listTopGoalContributions, listTopScorers, listTopYellowCards, type PlayerTournamentStatRow, type StatisticsCoverage } from '../services/statistics';
 import { getTeamMap, listTeams, type TeamRow } from '../services/teams';
 import { getErrorMessage } from '../services/serviceTypes';
-import { buildDependencyBracketColumns } from '../utils/knockoutBracketLayout';
+import { buildDependencyBracketColumns, splitDependencyBracketSide } from '../utils/knockoutBracketLayout';
 import { getTeamFlag } from '../utils/teamFlags';
 import type { ThemeControls } from '../App';
 
@@ -309,20 +309,20 @@ function KnockoutRoundColumn({ round, projection, teamMap, t }: { round: Knockou
   );
 }
 
-function splitBracketRound(round: KnockoutRound, side: 'left' | 'right'): KnockoutRound {
-  const split = Math.ceil(round.matches.length / 2);
+function splitBracketRound(round: KnockoutRound, side: 'left' | 'right', allMatches: MatchRow[]): KnockoutRound {
   return {
     stage: round.stage,
-    matches: side === 'left' ? round.matches.slice(0, split) : round.matches.slice(split),
+    matches: splitDependencyBracketSide(round.matches, side, allMatches),
   };
 }
 
 function KnockoutBracket({ rounds, projection, teamMap, t }: { rounds: KnockoutRound[]; projection: Map<string, ProjectedMatchTeams>; teamMap: Map<string, TeamRow>; t: TranslationFn }) {
   const matchCount = rounds.reduce((sum, round) => sum + round.matches.length, 0);
-  const roundsByStage = new Map(buildDependencyBracketColumns(rounds.flatMap((round) => round.matches)).map((matches) => [matches[0]?.stage ?? '', { stage: matches[0]?.stage ?? '', matches }]));
+  const allMatches = rounds.flatMap((round) => round.matches);
+  const roundsByStage = new Map(buildDependencyBracketColumns(allMatches).map((matches) => [matches[0]?.stage ?? '', { stage: matches[0]?.stage ?? '', matches }]));
   const pathStages = KNOCKOUT_STAGE_ORDER.filter((stage) => !['third_place', 'final'].includes(stage) && roundsByStage.has(stage));
-  const leftRounds = pathStages.map((stage) => splitBracketRound(roundsByStage.get(stage)!, 'left')).filter((round) => round.matches.length > 0);
-  const rightRounds = [...pathStages].reverse().map((stage) => splitBracketRound(roundsByStage.get(stage)!, 'right')).filter((round) => round.matches.length > 0);
+  const leftRounds = pathStages.map((stage) => splitBracketRound(roundsByStage.get(stage)!, 'left', allMatches)).filter((round) => round.matches.length > 0);
+  const rightRounds = [...pathStages].reverse().map((stage) => splitBracketRound(roundsByStage.get(stage)!, 'right', allMatches)).filter((round) => round.matches.length > 0);
   const centerRounds = [roundsByStage.get('final'), roundsByStage.get('third_place')].filter((round): round is KnockoutRound => Boolean(round));
   if (rounds.length === 0) return null;
 
