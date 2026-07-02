@@ -116,7 +116,7 @@ function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
-  const { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame } = themeControls;
+  const { isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow } = themeControls;
 
   useEffect(() => {
     if (!showSettings) return;
@@ -141,7 +141,6 @@ function ThemeSettings({ themeControls }: { themeControls: ThemeControls }) {
           <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.dark')}</span><input type="checkbox" checked={isDark} onChange={(event) => setIsDark(event.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
           <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.rounded')}</span><input type="checkbox" checked={isRounded} onChange={(event) => setIsRounded(event.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
           <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.shadows')}</span><input type="checkbox" checked={hasShadow} onChange={(event) => setHasShadow(event.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
-          <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.macFrame')}</span><input type="checkbox" checked={hasFrame} onChange={(event) => setHasFrame(event.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
           <label className="flex flex-col gap-2 border-t-2 border-main pt-2">
             <span className="text-sm font-bold text-main">{t('language.label')}</span>
             <select value={i18n.resolvedLanguage ?? 'en'} onChange={(event) => void i18n.changeLanguage(event.target.value)} className="border-2 border-main bg-card px-2 py-1 text-sm font-black uppercase text-main shadow-[2px_2px_0_0_var(--color-shadow)] outline-none">

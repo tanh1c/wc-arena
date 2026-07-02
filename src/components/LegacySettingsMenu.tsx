@@ -5,7 +5,7 @@ import type { ThemeControls } from '../App';
 
 type LegacySettingsMenuProps = ThemeControls;
 
-export default function LegacySettingsMenu({ isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow, hasFrame, setHasFrame }: LegacySettingsMenuProps) {
+export default function LegacySettingsMenu({ isVintage, setIsVintage, isDark, setIsDark, isRounded, setIsRounded, hasShadow, setHasShadow }: LegacySettingsMenuProps) {
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const { t, i18n } = useTranslation();
@@ -33,7 +33,6 @@ export default function LegacySettingsMenu({ isVintage, setIsVintage, isDark, se
           <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.dark')}</span><input type="checkbox" checked={isDark} onChange={(e) => setIsDark(e.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
           <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.rounded')}</span><input type="checkbox" checked={isRounded} onChange={(e) => setIsRounded(e.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
           <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.shadows')}</span><input type="checkbox" checked={hasShadow} onChange={(e) => setHasShadow(e.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
-          <label className="flex items-center justify-between cursor-pointer border-t-2 border-main pt-2"><span className="text-sm font-bold text-main">{t('settings.macFrame')}</span><input type="checkbox" checked={hasFrame} onChange={(e) => setHasFrame(e.target.checked)} className="w-4 h-4 border-2 border-main accent-main cursor-pointer" /></label>
           <label className="flex flex-col gap-2 border-t-2 border-main pt-2">
             <span className="text-sm font-bold text-main">{t('language.label')}</span>
             <select value={i18n.resolvedLanguage ?? 'en'} onChange={(event) => void i18n.changeLanguage(event.target.value)} className="border-2 border-main bg-card px-2 py-1 text-sm font-black uppercase text-main shadow-[2px_2px_0_0_var(--color-shadow)] outline-none">
