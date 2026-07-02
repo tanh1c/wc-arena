@@ -32,7 +32,7 @@ import { getEffectiveMatchStatus, isMatchPredictionOpen, listMatches, type Match
 import { listCurrentUserPredictions, type PredictionWithMatch } from './services/predictions';
 import { getTeamMap, type TeamRow } from './services/teams';
 import { getPublicDisplayName } from './utils/displayName';
-import { formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './utils/predictionDisplay';
+import { formatFixtureMetadata } from './utils/predictionDisplay';
 import { getTeamFlag } from './utils/teamFlags';
 
 type FixturesProps = {
@@ -113,27 +113,15 @@ function TeamFlag({ team }: { team?: TeamRow }) {
   );
 }
 
-function MatchScore({ match, homeTeam, awayTeam }: { match: MatchRow; homeTeam?: TeamRow; awayTeam?: TeamRow }) {
-  if (typeof match.home_score === 'number' && typeof match.away_score === 'number') {
-    const penaltyScore = getPenaltyScoreLabel(match);
-    const penaltyWinner = getPenaltyWinnerLabel(match, homeTeam?.short_name ?? match.home_team_id, awayTeam?.short_name ?? match.away_team_id);
-
-    return (
-      <div className={`relative flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.home_score}</div>
-        <div className="font-black text-base sm:text-xl">-</div>
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`}>{match.away_score}</div>
-        {penaltyScore && <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 bg-main text-inv border-2 border-main px-2 py-0.5 font-black text-[9px] sm:text-[10px] uppercase whitespace-nowrap z-10">{penaltyScore}</div>}
-        {!penaltyScore && penaltyWinner && <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 font-black text-[9px] sm:text-[10px] uppercase text-center text-c2 whitespace-nowrap z-10">{penaltyWinner}</div>}
-      </div>
-    );
-  }
+function MatchScore({ match }: { match: MatchRow }) {
+  const hasScore = typeof match.home_score === 'number' && typeof match.away_score === 'number';
+  const scoreClass = `w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] ${match.status === 'live' ? 'border-c4' : 'border-main'} flex items-center justify-center font-black text-base sm:text-xl bg-card`;
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-base sm:text-xl bg-card">-</div>
+    <div className={`flex items-center gap-2 ${match.status === 'live' ? 'text-c4' : ''}`}>
+      <div className={scoreClass}>{hasScore ? match.home_score : '-'}</div>
       <div className="font-black text-base sm:text-xl">-</div>
-      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-[3px] border-main flex items-center justify-center font-black text-base sm:text-xl bg-card">-</div>
+      <div className={scoreClass}>{hasScore ? match.away_score : '-'}</div>
     </div>
   );
 }
@@ -145,6 +133,7 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
   const isProjected = Boolean(projection && (projection.home.projected || projection.away.projected));
   const homeLabel = homeTeam?.short_name ?? match.home_team_id;
   const awayLabel = awayTeam?.short_name ?? match.away_team_id;
+  const metadataChips = formatFixtureMetadata(match, prediction, homeLabel, awayLabel, effectiveStatus);
 
   return (
     <div className={`flex flex-col sm:flex-row border-b-4 border-main relative hover:bg-page transition-colors overflow-hidden ${isLive ? 'bg-[#f0f9ff]' : 'bg-card'} ${isFinished ? 'opacity-80' : ''}`}>
@@ -177,9 +166,8 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
               <span className="font-black text-xs uppercase sm:hidden truncate">{homeTeam?.short_name ?? match.home_team_id}</span>
               <TeamFlag team={homeTeam} />
             </div>
-            <div className="relative flex flex-col items-center gap-1 shrink-0">
-              <MatchScore match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
-              {isLive && <span className="absolute top-full mt-1 text-[8px] bg-c4 text-inv px-1 h-3 flex items-center leading-none">{t('ui.live')}</span>}
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <MatchScore match={match} />
             </div>
             <div className="flex items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
               <TeamFlag team={awayTeam} />
@@ -187,10 +175,24 @@ function MatchListRow({ match, homeTeam, awayTeam, projection, prediction, featu
               <span className="font-black text-xs uppercase sm:hidden truncate">{awayTeam?.short_name ?? match.away_team_id}</span>
             </div>
           </div>
-          {prediction && <div className="flex items-center gap-1 text-center font-black uppercase leading-none whitespace-nowrap">
-            <span className="bg-c3 text-main px-2 py-1 border-2 border-main text-[8px] sm:text-[9px] shadow-[2px_2px_0_var(--color-shadow)]">{t('ui.predicted')}</span>
-            <span className="bg-main text-inv px-2 py-1 border-2 border-main text-[9px] sm:text-[10px] shadow-[2px_2px_0_var(--color-shadow)]">{formatPredictionRowPick(prediction, homeLabel, awayLabel)}</span>
-          </div>}
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-1.5 text-center font-black uppercase leading-none">
+            {metadataChips.map((chip) => {
+              const chipText = 'labelKey' in chip ? t(chip.labelKey) : chip.label;
+              const chipClass = chip.kind === 'predictionState'
+                ? chip.labelKey === 'ui.predicted'
+                  ? 'border-c3 bg-c3/15 text-c3'
+                  : 'border-muted bg-page text-subtle'
+                : chip.kind === 'predictionPick'
+                  ? 'border-main bg-card text-main'
+                  : chip.kind === 'penalty'
+                    ? 'border-main bg-main text-inv'
+                    : chip.kind === 'status' && chip.labelKey === 'ui.live'
+                      ? 'border-c4 bg-c4 text-inv'
+                      : 'border-c2 bg-card text-c2';
+
+              return <span key={`${chip.kind}-${chipText}`} className={`${chipClass} min-h-8 px-3 py-1.5 border-2 rounded-sm shadow-[2px_2px_0_var(--color-shadow)] flex items-center gap-1 text-[9px] sm:text-[10px] whitespace-nowrap`}>{chipText}</span>;
+            })}
+          </div>
         </div>
         <div className="w-full md:w-auto mt-3 md:mt-0 md:ml-6 grid grid-cols-2 md:flex items-center gap-2 md:gap-3 shrink-0">
           <span className={`${getStatusClass(effectiveStatus)} px-2 sm:px-3 py-1 border-2 border-main uppercase text-center text-[9px] sm:text-[10px]`}>{getStatusLabel(effectiveStatus, t)}</span>

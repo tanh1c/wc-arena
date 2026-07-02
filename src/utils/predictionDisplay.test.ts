@@ -1,11 +1,30 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formatActualResult, formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './predictionDisplay';
+import { formatActualResult, formatFixtureMetadata, formatPredictionRowPick, getPenaltyScoreLabel, getPenaltyWinnerLabel } from './predictionDisplay';
 
 test('formats prediction rows for match cards', () => {
   assert.equal(formatPredictionRowPick({ prediction_type: 'exact_score', home_score: 2, away_score: 1, predicted_outcome: 'home' }, 'BRA', 'ARG'), '2-1');
   assert.equal(formatPredictionRowPick({ prediction_type: 'outcome_only', home_score: null, away_score: null, predicted_outcome: 'draw' }, 'BRA', 'ARG'), 'DRAW');
+});
+
+test('formats fixture metadata chips', () => {
+  const match = {
+    home_score: 1,
+    away_score: 1,
+    espn_home_winner: false,
+    espn_away_winner: true,
+    espn_home_shootout_score: 3,
+    espn_away_shootout_score: 4,
+  };
+  const prediction = { prediction_type: 'exact_score', home_score: 2, away_score: 1, predicted_outcome: 'home' };
+
+  assert.deepEqual(formatFixtureMetadata(match, prediction, 'GER', 'PAR', 'finished'), [
+    { kind: 'predictionState', labelKey: 'ui.predicted' },
+    { kind: 'predictionPick', label: '2-1' },
+    { kind: 'penalty', label: 'PEN 3-4' },
+    { kind: 'status', labelKey: 'ui.completed' },
+  ]);
 });
 
 test('formats penalty winner for tied knockout results', () => {

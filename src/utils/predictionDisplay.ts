@@ -16,6 +16,14 @@ type PredictionRowLike = {
   predicted_outcome: string;
 };
 
+type FixtureMetadataChip =
+  | { kind: 'predictionState'; labelKey: 'ui.predicted' }
+  | { kind: 'predictionState'; labelKey: 'ui.notPredicted' }
+  | { kind: 'predictionPick'; label: string }
+  | { kind: 'penalty'; label: string }
+  | { kind: 'penaltyWinner'; label: string }
+  | { kind: 'status'; labelKey: 'ui.live' | 'ui.completed' };
+
 export function formatOutcomeLabel(outcome: MatchOutcome, homeLabel: string, awayLabel: string) {
   if (outcome === 'home') return `${homeLabel} WIN`;
   if (outcome === 'away') return `${awayLabel} WIN`;
@@ -66,4 +74,20 @@ export function formatActualResult(match: MatchResultLike, homeLabel: string, aw
   const winnerLabel = getPenaltyWinnerLabel(match, homeLabel, awayLabel);
   if (penaltyScore) return `${score} (${penaltyScore})`;
   return winnerLabel ? `${score} (${winnerLabel})` : score;
+}
+
+export function formatFixtureMetadata(match: MatchResultLike, prediction: PredictionRowLike | undefined, homeLabel: string, awayLabel: string, status: string): FixtureMetadataChip[] {
+  const chips: FixtureMetadataChip[] = [prediction ? { kind: 'predictionState', labelKey: 'ui.predicted' } : { kind: 'predictionState', labelKey: 'ui.notPredicted' }];
+
+  if (prediction) chips.push({ kind: 'predictionPick', label: formatPredictionRowPick(prediction, homeLabel, awayLabel) });
+
+  const penaltyScore = getPenaltyScoreLabel(match);
+  const penaltyWinner = getPenaltyWinnerLabel(match, homeLabel, awayLabel);
+  if (penaltyScore) chips.push({ kind: 'penalty', label: penaltyScore });
+  else if (penaltyWinner) chips.push({ kind: 'penaltyWinner', label: penaltyWinner });
+
+  if (status === 'live') chips.push({ kind: 'status', labelKey: 'ui.live' });
+  if (status === 'finished') chips.push({ kind: 'status', labelKey: 'ui.completed' });
+
+  return chips;
 }
