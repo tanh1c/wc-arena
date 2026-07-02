@@ -52,6 +52,8 @@ function getStageIndex(stage: string) {
 }
 
 function getLaneSortKey<T extends BracketLayoutMatch>(match: T, matchesByNumber: Map<number, T>) {
+  if (getSourceMatches(match, matchesByNumber).length > 0) return getSourceSortKey(match, matchesByNumber);
+
   const matchNumber = getMatchNumber(match.id);
   const nextMatchNumber = matchNumber ? Number(Object.entries(MATCH_SOURCES).find(([, sourceNumbers]) => sourceNumbers.includes(matchNumber))?.[0]) : NaN;
   return Number.isNaN(nextMatchNumber) ? getSourceSortKey(match, matchesByNumber) : getSourceSortKey(matchesByNumber.get(nextMatchNumber) ?? match, matchesByNumber);
@@ -59,15 +61,20 @@ function getLaneSortKey<T extends BracketLayoutMatch>(match: T, matchesByNumber:
 
 function getSourceSortKey<T extends BracketLayoutMatch>(match: T, matchesByNumber: Map<number, T>): number {
   const matchNumber = getMatchNumber(match.id);
+  const sourceMatches = getSourceMatches(match, matchesByNumber);
+
+  if (sourceMatches.length === 0) return matchNumber ?? Number.MAX_SAFE_INTEGER;
+  return Math.min(...sourceMatches.map((sourceMatch) => getSourceSortKey(sourceMatch, matchesByNumber)));
+}
+
+function getSourceMatches<T extends BracketLayoutMatch>(match: T, matchesByNumber: Map<number, T>) {
+  const matchNumber = getMatchNumber(match.id);
   const sourceNumbers = [match.home_team_id, match.away_team_id]
     .map((slot) => slot.match(KNOCKOUT_SLOT_RE)?.[1])
     .filter((sourceNumber): sourceNumber is string => Boolean(sourceNumber))
     .map(Number);
   const sources = sourceNumbers.length ? sourceNumbers : matchNumber ? MATCH_SOURCES[matchNumber] ?? [] : [];
-  const sourceMatches = sources.map((sourceNumber) => matchesByNumber.get(sourceNumber)).filter((sourceMatch): sourceMatch is T => Boolean(sourceMatch));
-
-  if (sourceMatches.length === 0) return matchNumber ?? Number.MAX_SAFE_INTEGER;
-  return Math.min(...sourceMatches.map((sourceMatch) => getSourceSortKey(sourceMatch, matchesByNumber)));
+  return sources.map((sourceNumber) => matchesByNumber.get(sourceNumber)).filter((sourceMatch): sourceMatch is T => Boolean(sourceMatch));
 }
 
 function getMatchNumber(id: string) {

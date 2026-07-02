@@ -28,6 +28,10 @@ const matches = [
   { id: 'match-094', stage: 'round16', home_team_id: 'W81', away_team_id: 'W82' },
   { id: 'match-095', stage: 'round16', home_team_id: 'W86', away_team_id: 'W88' },
   { id: 'match-096', stage: 'round16', home_team_id: 'W85', away_team_id: 'W87' },
+  { id: 'match-097', stage: 'quarter', home_team_id: 'W89', away_team_id: 'W90' },
+  { id: 'match-098', stage: 'quarter', home_team_id: 'W93', away_team_id: 'W94' },
+  { id: 'match-099', stage: 'quarter', home_team_id: 'W91', away_team_id: 'W92' },
+  { id: 'match-100', stage: 'quarter', home_team_id: 'W95', away_team_id: 'W96' },
 ];
 
 test('groups source matches before the next match they feed', () => {
@@ -39,7 +43,7 @@ test('groups source matches before the next match they feed', () => {
   ]);
 });
 
-test('groups first knockout matches by the next match they feed', () => {
+test('aligns left knockout lane by adjacent sources', () => {
   assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'left', matches).map((match) => match.id), [
     'match-073',
     'match-075',
@@ -50,6 +54,7 @@ test('groups first knockout matches by the next match they feed', () => {
     'match-079',
     'match-080',
   ]);
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'left', matches).map((match) => match.id), ['match-090', 'match-089', 'match-091', 'match-092']);
 });
 
 test('keeps right-side knockout lane ordered by source matches', () => {
