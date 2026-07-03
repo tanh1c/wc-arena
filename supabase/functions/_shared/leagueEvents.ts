@@ -195,6 +195,17 @@ async function updateDisplayedPoints(supabase: SupabaseClient, userId: string, p
   if (leaderboardError) throw leaderboardError;
 }
 
+async function getUserCoins(supabase: SupabaseClient, userId: string) {
+  const { data: wallet, error } = await supabase.from('point_wallets').select('balance').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return Math.max(0, wallet?.balance ?? 0);
+}
+
+async function setUserCoins(supabase: SupabaseClient, userId: string, coins: number) {
+  const { error } = await supabase.from('point_wallets').upsert({ user_id: userId, balance: coins, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
 export async function ensureWeeklyLeagueEvents(supabase: SupabaseClient, leagueIds?: string[]) {
   const targetLeagueIds = await getLeagueIds(supabase, leagueIds);
   const { startsAt, endsAt } = getCurrentUtcWeekWindow();
@@ -463,15 +474,29 @@ export async function settleLeagueEvent(supabase: SupabaseClient, eventId: strin
     const pointsAfterPointSplit = Math.max(0, profile.points ?? 0) + pointSplit.pointSplit;
     await updateDisplayedPoints(supabase, pointSplit.user_id, pointsAfterPointSplit);
 
-    const { error: transactionError } = await supabase.from('point_transactions').insert({
-      user_id: pointSplit.user_id,
-      league_id: leagueEvent.league_id,
-      event_id: eventId,
-      type: 'point_split',
-      amount: pointSplit.pointSplit,
-      balance_after: pointsAfterPointSplit,
-      description: 'League event point split',
-    });
+    const coinsAfterPayout = await getUserCoins(supabase, pointSplit.user_id) + pointSplit.pointSplit;
+    await setUserCoins(supabase, pointSplit.user_id, coinsAfterPayout);
+
+    const { error: transactionError } = await supabase.from('point_transactions').insert([
+      {
+        user_id: pointSplit.user_id,
+        league_id: leagueEvent.league_id,
+        event_id: eventId,
+        type: 'point_split',
+        amount: pointSplit.pointSplit,
+        balance_after: pointsAfterPointSplit,
+        description: 'League event point split',
+      },
+      {
+        user_id: pointSplit.user_id,
+        league_id: leagueEvent.league_id,
+        event_id: eventId,
+        type: 'payout',
+        amount: pointSplit.pointSplit,
+        balance_after: coinsAfterPayout,
+        description: 'League event coin payout',
+      },
+    ]);
     if (transactionError) throw transactionError;
 
     const { error: pointSplitError } = await supabase
@@ -526,15 +551,8 @@ export async function cancelLeagueEvent(supabase: SupabaseClient, eventId: strin
     if (existingTransactionError) throw existingTransactionError;
     if (existingTransaction) continue;
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('points')
-      .eq('id', entry.user_id)
-      .single();
-
-    if (profileError) throw profileError;
-    const pointsAfterRefund = Math.max(0, profile.points ?? 0) + entry.stake;
-    await updateDisplayedPoints(supabase, entry.user_id, pointsAfterRefund);
+    const coinsAfterRefund = await getUserCoins(supabase, entry.user_id) + entry.stake;
+    await setUserCoins(supabase, entry.user_id, coinsAfterRefund);
 
     const { error: transactionError } = await supabase.from('point_transactions').insert({
       user_id: entry.user_id,
@@ -542,7 +560,7 @@ export async function cancelLeagueEvent(supabase: SupabaseClient, eventId: strin
       event_id: eventId,
       type: 'refund',
       amount: entry.stake,
-      balance_after: pointsAfterRefund,
+      balance_after: coinsAfterRefund,
       description: 'League event refund',
     });
     if (transactionError) throw transactionError;

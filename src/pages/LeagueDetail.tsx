@@ -9,7 +9,7 @@ import { useAuth } from '../lib/auth';
 import { listLeagueActivity, type ActivityEventRow } from '../services/activity';
 import { listLeagueLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { approveJoinRequest, archiveLeague, deleteArchivedLeague, getLeague, joinLeague, kickLeagueMember, leaveLeague, listLeagueJoinRequests, listLeagueMembers, rejectJoinRequest, updateLeague, type LeagueJoinRequestRow, type LeagueMemberRow, type LeagueRow } from '../services/leagues';
-import { cancelLeagueEvent, createLeagueEvent, enterLeagueEvent, listLeagueEventLeaderboard, listLeagueEventMatches, listLeagueEvents, settleLeagueEvent, type LeagueEventLeaderboardEntryWithProfile, type LeagueEventMatchRow, type LeagueEventRow, type PointSplitCurve } from '../services/leagueEvents';
+import { cancelLeagueEvent, createLeagueEvent, enterLeagueEvent, getCurrentUserCoinBalance, listLeagueEventLeaderboard, listLeagueEventMatches, listLeagueEvents, settleLeagueEvent, type LeagueEventLeaderboardEntryWithProfile, type LeagueEventMatchRow, type LeagueEventRow, type PointSplitCurve } from '../services/leagueEvents';
 import { getErrorMessage } from '../services/serviceTypes';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentProfile, type ProfileRow } from '../services/profile';
@@ -170,7 +170,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [predictedMatchIds, setPredictedMatchIds] = useState<Set<string>>(new Set());
-  const [availablePoints, setAvailablePoints] = useState<number | null>(null);
+  const [availableCoins, setAvailableCoins] = useState<number | null>(null);
   const [stakeByEventId, setStakeByEventId] = useState<Record<string, string>>({});
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -235,7 +235,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
 
     getLeague(leagueId)
       .then(async (nextLeague) => {
-        const [nextStandings, nextCreator, nextMembers, nextActivity, nextEvents, nextMatches, nextTeams, currentProfile] = await Promise.all([
+        const [nextStandings, nextCreator, nextMembers, nextActivity, nextEvents, nextMatches, nextTeams, currentCoins] = await Promise.all([
           listLeagueLeaderboard(nextLeague.id).catch(() => []),
           nextLeague.creator_id ? getCurrentProfile(nextLeague.creator_id).catch(() => null) : Promise.resolve(null),
           listLeagueMembers(nextLeague.id).catch(() => []),
@@ -243,7 +243,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
           listLeagueEvents(nextLeague.id).catch(() => []),
           listMatches().catch(() => []),
           getTeamMap().catch(() => new Map()),
-          user ? getCurrentProfile(user.id).catch(() => null) : Promise.resolve(null),
+          user ? getCurrentUserCoinBalance().catch(() => null) : Promise.resolve(null),
         ]);
         const [nextEventStandings, nextEventMatches] = await Promise.all([
           Promise.all(nextEvents.map(async (event) => [event.id, await listLeagueEventLeaderboard(event.id).catch(() => [])] as const)).then(Object.fromEntries),
@@ -271,7 +271,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
         setMatches(nextMatches);
         setTeams(nextTeams);
         setPredictedMatchIds(new Set(nextPredictions.map((prediction) => prediction.match_id)));
-        setAvailablePoints(currentProfile?.points ?? null);
+        setAvailableCoins(currentCoins);
       })
       .catch((nextError) => {
         setError(getErrorMessage(nextError));
@@ -285,7 +285,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
         setMatches([]);
         setTeams(new Map());
         setPredictedMatchIds(new Set());
-        setAvailablePoints(null);
+        setAvailableCoins(null);
       })
       .finally(() => setLoading(false));
   }
@@ -424,10 +424,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     setError(null);
     try {
       const result = await leaveLeague({ leagueId: league.id });
-      if (typeof result.points === 'number') {
-        window.dispatchEvent(new CustomEvent('wc26:profile-points-changed', { detail: { points: result.points } }));
-        setAvailablePoints(result.points);
-      }
+      if (typeof result.coins === 'number') setAvailableCoins(result.coins);
       navigate('/leagues');
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -442,8 +439,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     setError(null);
     try {
       const result = await enterLeagueEvent({ eventId: event.id, stake });
-      window.dispatchEvent(new CustomEvent('wc26:profile-points-changed', { detail: { points: result.points } }));
-      setAvailablePoints(result.points);
+      setAvailableCoins(result.coins);
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -458,7 +454,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     try {
       const result = await settleLeagueEvent({ eventId });
       window.dispatchEvent(new CustomEvent('wc26:profile-points-changed', { detail: { points: result.points } }));
-      setAvailablePoints(result.points);
+      setAvailableCoins(result.coins);
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -471,7 +467,8 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     setCancellingEventId(eventId);
     setError(null);
     try {
-      await cancelLeagueEvent({ eventId });
+      const result = await cancelLeagueEvent({ eventId });
+      setAvailableCoins(result.coins);
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -539,8 +536,8 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
             <div className={`${phaseClass} border-2 border-main px-2 py-1 font-black uppercase text-[10px] whitespace-nowrap`}>{getEventPhaseLabel(phase, t)}</div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs font-bold">
-            <div className="border-2 border-main bg-page p-2 rounded-sm"><div className="font-black uppercase text-[9px] text-subtle">{t('ui.recognitionPoolPoints')}</div>{getEventRecognitionPool(event)} {t('ui.pointsShort')}</div>
-            <div className="border-2 border-main bg-page p-2 rounded-sm"><div className="font-black uppercase text-[9px] text-subtle">{t('ui.stakePoints')}</div>{event.min_stake}-{event.max_stake}</div>
+            <div className="border-2 border-main bg-page p-2 rounded-sm"><div className="font-black uppercase text-[9px] text-subtle">{t('ui.recognitionPoolPoints')}</div>{getEventRecognitionPool(event)} {t('ui.coinsShort')}</div>
+            <div className="border-2 border-main bg-page p-2 rounded-sm"><div className="font-black uppercase text-[9px] text-subtle">{t('ui.stakeCoins')}</div>{event.min_stake}-{event.max_stake}</div>
             <div className="border-2 border-main bg-page p-2 rounded-sm"><div className="font-black uppercase text-[9px] text-subtle">{t('ui.pointSplitCurve')}</div>{getPointSplitCurveLabel(getEventPointSplitCurve(event), t)}</div>
           </div>
         </div>
@@ -595,7 +592,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
               <div className="min-w-0 flex flex-col gap-1">
                 <div className="font-black uppercase truncate">{getPublicDisplayName(row.profiles, row.user_id)}</div>
                 <div className="flex flex-wrap gap-1.5 text-[9px] uppercase">
-                  <span className="border border-line bg-page px-1.5 py-0.5 font-black text-subtle rounded-sm">{t('ui.stakePoints')}: {row.stake} {t('ui.pointsShort')}</span>
+                  <span className="border border-line bg-page px-1.5 py-0.5 font-black text-subtle rounded-sm">{t('ui.stakeCoins')}: {row.stake} {t('ui.coinsShort')}</span>
                   <span className="border border-line bg-page px-1.5 py-0.5 font-black text-subtle rounded-sm">{t('ui.poolScorePoints')}: {row.points} {t('ui.pointsShort')}</span>
                 </div>
               </div>
@@ -774,7 +771,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
           <div className="border-4 border-main bg-card rounded-sm overflow-hidden">
             <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main flex items-center justify-between gap-3">
               <span>{t('ui.miniLeaderboards')}</span>
-              {user && <span className="bg-c1 text-main border-2 border-main px-2 py-0.5 text-[10px] inline-flex items-center gap-1">{t('ui.availablePoints')}: {availablePoints ?? t('ui.notSet')} {t('ui.pointsShort')}</span>}
+              {user && <span className="bg-c1 text-main border-2 border-main px-2 py-0.5 text-[10px] inline-flex items-center gap-1">{t('ui.availableCoins')}: {availableCoins ?? t('ui.notSet')} {t('ui.coinsShort')}</span>}
             </div>
             {isOwner && !isArchived && (
               <div className="p-3 sm:p-4 border-b-4 border-main bg-page">

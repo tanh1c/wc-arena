@@ -227,7 +227,7 @@ async function createDefaultLeagueEvents(supabase: ReturnType<typeof createClien
 function assertStake(value: unknown, minStake: number, maxStake: number) {
   if (!Number.isInteger(value)) throw new Error('Stake must be a whole number.');
   const stake = value as number;
-  if (stake < minStake || stake > maxStake) throw new Error(`Stake must be between ${minStake} and ${maxStake} points.`);
+  if (stake < minStake || stake > maxStake) throw new Error(`Stake must be between ${minStake} and ${maxStake} coins.`);
   return stake;
 }
 
@@ -235,6 +235,17 @@ async function getUserPoints(supabase: ReturnType<typeof createClient>, userId: 
   const { data: profile, error } = await supabase.from('profiles').select('points').eq('id', userId).single();
   if (error) throw error;
   return Math.max(0, profile.points ?? 0);
+}
+
+async function getUserCoins(supabase: ReturnType<typeof createClient>, userId: string) {
+  const { data: wallet, error } = await supabase.from('point_wallets').select('balance').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return Math.max(0, wallet?.balance ?? 0);
+}
+
+async function setUserCoins(supabase: ReturnType<typeof createClient>, userId: string, coins: number) {
+  const { error } = await supabase.from('point_wallets').upsert({ user_id: userId, balance: coins, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  if (error) throw error;
 }
 
 async function updateDisplayedPoints(supabase: ReturnType<typeof createClient>, userId: string, points: number) {
@@ -480,8 +491,8 @@ async function refundOpenPoolEntriesForUser(supabase: ReturnType<typeof createCl
   const openEntries = entries.filter(({ event }) => event.status === 'open' && event.starts_at > now);
   const affectedEventIds = new Set<string>();
   let refunds = 0;
-  let refundedPoints = 0;
-  let latestPoints: number | null = null;
+  let refundedCoins = 0;
+  let latestCoins: number | null = null;
 
   for (const { event, stake } of openEntries) {
     affectedEventIds.add(event.id);
@@ -497,9 +508,8 @@ async function refundOpenPoolEntriesForUser(supabase: ReturnType<typeof createCl
     if (existingTransactionError) throw existingTransactionError;
 
     if (!existingTransaction) {
-      const currentPoints = await getUserPoints(supabase, targetUserId);
-      const pointsAfterRefund = currentPoints + stake;
-      await updateDisplayedPoints(supabase, targetUserId, pointsAfterRefund);
+      const coinsAfterRefund = await getUserCoins(supabase, targetUserId) + stake;
+      await setUserCoins(supabase, targetUserId, coinsAfterRefund);
 
       const { error: transactionError } = await supabase.from('point_transactions').insert({
         user_id: targetUserId,
@@ -507,13 +517,13 @@ async function refundOpenPoolEntriesForUser(supabase: ReturnType<typeof createCl
         event_id: event.id,
         type: 'refund',
         amount: stake,
-        balance_after: pointsAfterRefund,
+        balance_after: coinsAfterRefund,
         description: `Refunded ${event.name} before league removal`,
       });
       if (transactionError) throw transactionError;
       refunds += 1;
-      refundedPoints += stake;
-      latestPoints = pointsAfterRefund;
+      refundedCoins += stake;
+      latestCoins = coinsAfterRefund;
     }
 
     const { error: entryError } = await supabase
@@ -535,7 +545,7 @@ async function refundOpenPoolEntriesForUser(supabase: ReturnType<typeof createCl
   }
 
   if (affectedEventIds.size > 0) await refreshLeagueEventLeaderboards(supabase, [...affectedEventIds]);
-  return { refunds, refundedPoints, points: latestPoints };
+  return { refunds, refundedCoins, coins: latestCoins };
 }
 
 async function removeLeagueMemberSafely(supabase: ReturnType<typeof createClient>, leagueId: string, targetUserId: string, reason: 'leave' | 'kick') {
@@ -682,10 +692,10 @@ async function enterLeagueEvent(supabase: ReturnType<typeof createClient>, userI
   if (existingError) throw existingError;
   if (existingEntry) throw new Error('You already entered this event.');
 
-  const currentPoints = await getUserPoints(supabase, userId);
-  if (currentPoints < stake) throw new Error('Not enough points.');
+  const currentCoins = await getUserCoins(supabase, userId);
+  if (currentCoins < stake) throw new Error('Not enough coins.');
 
-  const pointsAfterStake = currentPoints - stake;
+  const coinsAfterStake = currentCoins - stake;
   const { data: entry, error: entryError } = await supabase
     .from('league_event_entries')
     .insert({ event_id: event.id, user_id: userId, stake })
@@ -700,11 +710,11 @@ async function enterLeagueEvent(supabase: ReturnType<typeof createClient>, userI
     event_id: event.id,
     type: 'stake',
     amount: -stake,
-    balance_after: pointsAfterStake,
+    balance_after: coinsAfterStake,
     description: `Entered ${event.name}`,
   });
   if (transactionError) throw transactionError;
-  await updateDisplayedPoints(supabase, userId, pointsAfterStake);
+  await setUserCoins(supabase, userId, coinsAfterStake);
 
   const currentPool = event.recognition_pool ?? event.prize_pool ?? 0;
   const nextPool = currentPool + stake;
@@ -715,7 +725,7 @@ async function enterLeagueEvent(supabase: ReturnType<typeof createClient>, userI
 
   if (poolError) throw poolError;
   await refreshLeagueEventLeaderboards(supabase, [event.id]);
-  return { entry, points: pointsAfterStake, status: 'entered' };
+  return { entry, coins: coinsAfterStake, status: 'entered' };
 }
 
 async function settleEvent(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
@@ -729,7 +739,8 @@ async function settleEvent(supabase: ReturnType<typeof createClient>, userId: st
 
   const result = await settleLeagueEvent(supabase, event.id);
   const points = await getUserPoints(supabase, userId);
-  return { status: 'settled', ...result, points };
+  const coins = await getUserCoins(supabase, userId);
+  return { status: 'settled', ...result, points, coins };
 }
 
 async function cancelEvent(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {
@@ -739,7 +750,8 @@ async function cancelEvent(supabase: ReturnType<typeof createClient>, userId: st
   await requireOwner(supabase, event.league_id, userId);
   await requireActiveLeague(supabase, event.league_id);
   const result = await cancelLeagueEvent(supabase, event.id, userId);
-  return { status: 'cancelled', ...result };
+  const coins = await getUserCoins(supabase, userId);
+  return { status: 'cancelled', ...result, coins };
 }
 
 async function archiveLeague(supabase: ReturnType<typeof createClient>, userId: string, body: Body) {

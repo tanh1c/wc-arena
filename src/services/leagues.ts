@@ -156,13 +156,13 @@ export async function updateLeague(input: { leagueId: string; name: string; desc
 }
 
 export async function kickLeagueMember(input: { leagueId: string; userId: string }) {
-  const result = await invokeLeagueAction<{ status: 'removed'; refunds: number; refundedPoints: number; points: number | null }>({ action: 'kickLeagueMember', ...input });
+  const result = await invokeLeagueAction<{ status: 'removed'; refunds: number; refundedCoins: number; coins: number | null }>({ action: 'kickLeagueMember', ...input });
   invalidateCache('leagues:');
   return result;
 }
 
 export async function leaveLeague(input: { leagueId: string }) {
-  const result = await invokeLeagueAction<{ status: 'removed'; refunds: number; refundedPoints: number; points: number | null }>({ action: 'leaveLeague', ...input });
+  const result = await invokeLeagueAction<{ status: 'removed'; refunds: number; refundedCoins: number; coins: number | null }>({ action: 'leaveLeague', ...input });
   invalidateCache('leagues:');
   return result;
 }

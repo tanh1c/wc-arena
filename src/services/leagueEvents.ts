@@ -79,14 +79,24 @@ export function createLeagueEvent(input: CreateLeagueEventInput) {
   return invokeLeagueAction<{ status: 'created'; event: LeagueEventRow }>({ action: 'createLeagueEvent', eventType: 'custom', ...input, payoutCurve: input.pointSplitCurve });
 }
 
+export async function getCurrentUserCoinBalance() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) return null;
+
+  const { data, error } = await supabase.from('point_wallets').select('balance').eq('user_id', user.id).maybeSingle();
+  if (error) throw error;
+  return data?.balance ?? 0;
+}
+
 export function enterLeagueEvent(input: { eventId: string; stake: number }) {
-  return invokeLeagueAction<{ status: 'entered'; points: number }>({ action: 'enterLeagueEvent', ...input });
+  return invokeLeagueAction<{ status: 'entered'; coins: number }>({ action: 'enterLeagueEvent', ...input });
 }
 
 export function settleLeagueEvent(input: { eventId: string }) {
-  return invokeLeagueAction<{ status: 'settled'; leagueEventLeaderboardEntries: number; pointSplits: number; payouts: number; points: number }>({ action: 'settleLeagueEvent', ...input });
+  return invokeLeagueAction<{ status: 'settled'; leagueEventLeaderboardEntries: number; pointSplits: number; payouts: number; points: number; coins: number }>({ action: 'settleLeagueEvent', ...input });
 }
 
 export function cancelLeagueEvent(input: { eventId: string }) {
-  return invokeLeagueAction<{ status: 'cancelled'; leagueEventLeaderboardEntries: number; refunds: number }>({ action: 'cancelLeagueEvent', ...input });
+  return invokeLeagueAction<{ status: 'cancelled'; leagueEventLeaderboardEntries: number; refunds: number; coins: number }>({ action: 'cancelLeagueEvent', ...input });
 }
