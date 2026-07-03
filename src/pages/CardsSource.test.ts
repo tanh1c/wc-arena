@@ -71,9 +71,30 @@ test('card art renders at a capped width instead of stretching low-resolution im
 test('cards page follows the squad gallery attached layout contract', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /xl:w-\[340px\]/);
   assert.match(cardsSource, /min-h-\[560px\]/);
   assert.match(cardsSource, /grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main/);
   assert.match(cardsSource, /bg-main text-inv border-b-4 border-main/);
   assert.match(cardsSource, /grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5/);
+});
+
+test('cards page separates pack opening from gallery browsing with tabs', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /activeTab/);
+  assert.match(cardsSource, /openPacks/);
+  assert.match(cardsSource, /gallery/);
+  assert.match(cardsSource, /Open Packs/);
+  assert.match(cardsSource, /Gallery/);
+  assert.match(cardsSource, /setActiveTab/);
+});
+
+test('card art panels use rarity-specific colorful backgrounds', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /getRarityCardArtClass/);
+  assert.match(cardsSource, /Common: 'bg-\[radial-gradient/);
+  assert.match(cardsSource, /Rare: 'bg-\[radial-gradient/);
+  assert.match(cardsSource, /Epic: 'bg-\[radial-gradient/);
+  assert.match(cardsSource, /Icon: 'bg-\[radial-gradient/);
+  assert.match(cardsSource, /getRarityCardArtClass\(card\.rarity\)/);
 });
