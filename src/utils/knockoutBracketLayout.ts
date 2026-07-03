@@ -38,8 +38,17 @@ export function buildDependencyBracketColumns<T extends BracketLayoutMatch>(matc
 export function splitDependencyBracketSide<T extends BracketLayoutMatch>(matches: T[], side: 'left' | 'right', allMatches: T[] = matches) {
   const matchesByNumber = buildMatchesByNumber(allMatches);
   const sortedMatches = [...matches].sort((first, second) => getLaneSortKey(first, matchesByNumber) - getLaneSortKey(second, matchesByNumber) || (getMatchNumber(first.id) ?? 0) - (getMatchNumber(second.id) ?? 0));
-  const split = Math.ceil(sortedMatches.length / 2);
-  return side === 'left' ? sortedMatches.slice(split) : sortedMatches.slice(0, split);
+  const sideRoot = MATCH_SOURCES[104]?.[side === 'right' ? 0 : 1];
+
+  if (!sideRoot) {
+    const split = Math.ceil(sortedMatches.length / 2);
+    return side === 'left' ? sortedMatches.slice(split) : sortedMatches.slice(0, split);
+  }
+
+  return sortedMatches.filter((match) => {
+    const matchNumber = getMatchNumber(match.id);
+    return matchNumber !== null && isMatchInBranch(sideRoot, matchNumber);
+  });
 }
 
 export function getBracketSourceNumbers(matchNumber: number) {
@@ -53,6 +62,13 @@ function buildMatchesByNumber<T extends BracketLayoutMatch>(matches: T[]) {
 function getStageIndex(stage: string) {
   const index = STAGE_ORDER.indexOf(stage);
   return index === -1 ? STAGE_ORDER.length : index;
+}
+
+function isMatchInBranch(rootNumber: number, matchNumber: number, seen = new Set<number>()): boolean {
+  if (rootNumber === matchNumber) return true;
+  if (seen.has(rootNumber)) return false;
+  seen.add(rootNumber);
+  return (MATCH_SOURCES[rootNumber] ?? []).some((sourceNumber) => isMatchInBranch(sourceNumber, matchNumber, seen));
 }
 
 function getLaneSortKey<T extends BracketLayoutMatch>(match: T, matchesByNumber: Map<number, T>) {
