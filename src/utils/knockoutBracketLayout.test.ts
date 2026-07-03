@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildDependencyBracketColumns, splitDependencyBracketSide } from './knockoutBracketLayout';
+import { buildDependencyBracketColumns, getBracketSourceNumbers, splitDependencyBracketSide } from './knockoutBracketLayout';
 
 const matches = [
   { id: 'match-073', stage: 'round32', home_team_id: '2A', away_team_id: '2B' },
@@ -50,8 +50,8 @@ test('matches the reference left-side knockout lane from top to bottom', () => {
     'match-083',
     'match-084',
     'match-085',
-    'match-086',
     'match-087',
+    'match-086',
     'match-088',
   ]);
   assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'left', matches).map((match) => match.id), ['match-094', 'match-093', 'match-096', 'match-095']);
@@ -71,4 +71,31 @@ test('matches the reference right-side knockout lane from top to bottom', () => 
   ]);
   assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'right', matches).map((match) => match.id), ['match-090', 'match-089', 'match-091', 'match-092']);
   assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'quarter'), 'right', matches).map((match) => match.id), ['match-097', 'match-099']);
+});
+
+test('matches knockout dependencies from the 2026 worldcup schedule json', () => {
+  assert.deepEqual(
+    Object.fromEntries(Array.from({ length: 16 }, (_, index) => {
+      const matchNumber = index + 89;
+      return [matchNumber, getBracketSourceNumbers(matchNumber)];
+    })),
+    {
+      89: [74, 77],
+      90: [73, 75],
+      91: [76, 78],
+      92: [79, 80],
+      93: [83, 84],
+      94: [81, 82],
+      95: [86, 88],
+      96: [85, 87],
+      97: [89, 90],
+      98: [93, 94],
+      99: [91, 92],
+      100: [95, 96],
+      101: [97, 98],
+      102: [99, 100],
+      103: [],
+      104: [101, 102],
+    },
+  );
 });

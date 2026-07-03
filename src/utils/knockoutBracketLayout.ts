@@ -14,15 +14,15 @@ const MATCH_SOURCES: Record<number, number[]> = {
   92: [79, 80],
   93: [83, 84],
   94: [81, 82],
-  95: [87, 88],
-  96: [85, 86],
-  97: [90, 89],
-  98: [94, 93],
+  95: [86, 88],
+  96: [85, 87],
+  97: [89, 90],
+  98: [93, 94],
   99: [91, 92],
-  100: [96, 95],
-  101: [97, 99],
-  102: [98, 100],
-  104: [102, 101],
+  100: [95, 96],
+  101: [97, 98],
+  102: [99, 100],
+  104: [101, 102],
 };
 
 export function buildDependencyBracketColumns<T extends BracketLayoutMatch>(matches: T[]) {
@@ -40,6 +40,10 @@ export function splitDependencyBracketSide<T extends BracketLayoutMatch>(matches
   const sortedMatches = [...matches].sort((first, second) => getLaneSortKey(first, matchesByNumber) - getLaneSortKey(second, matchesByNumber) || (getMatchNumber(first.id) ?? 0) - (getMatchNumber(second.id) ?? 0));
   const split = Math.ceil(sortedMatches.length / 2);
   return side === 'left' ? sortedMatches.slice(split) : sortedMatches.slice(0, split);
+}
+
+export function getBracketSourceNumbers(matchNumber: number) {
+  return MATCH_SOURCES[matchNumber] ?? [];
 }
 
 function buildMatchesByNumber<T extends BracketLayoutMatch>(matches: T[]) {
