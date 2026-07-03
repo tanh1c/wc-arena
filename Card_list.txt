@@ -1,0 +1,172 @@
+Name,Position,Alternate Positions,TEAM,LEAGUE,NATION/REGION,Skill Moves,STRONG FOOT / WEAK FOOT,Height,Weight,Work Rate (ATT) / Work Rate (DEF),Added on,Image URL
+Beckham,CM,RM,Icons,Icons,England,(4) ★★★★,RIGHT / (4) ★★★★,6'0" (182 cm),74 kg,High/High,7/3/2026,https://s6.imgcdn.dev/YqjcNo.png
+C. Ronaldo,ST,,Portugal,International,Portugal,(5) ★★★★★,RIGHT / (4) ★★★★,6'2" (187 cm),85 kg,High/Low,6/10/2026,https://s6.imgcdn.dev/YqjLmO.png
+Bruno Fernandes,CAM,CM,Portugal,International,Portugal,(4) ★★★★,RIGHT / (4) ★★★★,5'10" (179 cm),69 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yqwk1e.png
+Neymar Jr,LW,"CAM,ST",Brazil,International,Brazil,(5) ★★★★★,RIGHT / (5) ★★★★★,"5'9"" (175 cm)",68 kg,High/Medium,6/24/2026,https://s6.imgcdn.dev/YqwFCS.png
+Vini Jr.,LW,ST,Brazil,International,Brazil,(5) ★★★★★,RIGHT / (4) ★★★★,"5'9"" (176 cm)",73 kg,High/Medium,6/29/2026,https://s6.imgcdn.dev/Yq6QsB.png
+Messi,RW,"CAM,ST",Argentina,International,Argentina,(4) ★★★★,LEFT / (5) ★★★★★,"5'7"" (169 cm)",67 kg,High/Medium,7/1/2026,https://s6.imgcdn.dev/YqMn5d.png
+Haaland,ST,,Norway,International,Norway,(4) ★★★★,LEFT / (4) ★★★★,"6'5"" (195 cm)",94 kg,High/Medium,6/29/2026,https://s6.imgcdn.dev/YqM3ri.png
+Bellingham,CAM,"CM,LM",England,International,England,(4) ★★★★,RIGHT / (4) ★★★★,"6'1"" (186 cm)",75 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/Yqc5TD.png
+Kane,ST,,England,International,England,(4) ★★★★,RIGHT / (4) ★★★★,"6'2"" (188 cm)",86 kg,High/High,6/17/2026,https://s6.imgcdn.dev/Yqc00S.png
+Quiñones,ST,,Mexico,International,Mexico,(4) ★★★★,RIGHT / (3) ★★★,"5'11"" (180 cm)",78 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yqc73C.png
+Pulisic,RW,"RM,ST",United States,International,United States,(4) ★★★★,RIGHT / (5) ★★★★★,"5'10"" (178 cm)",73 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqcGje.png
+Al Dawsari,LM,LW,Saudi Arabia,International,Saudi Arabia,(4) ★★★★,RIGHT / (5) ★★★★★,"5'8"" (173 cm)",71 kg,High/High,6/10/2026,https://s6.imgcdn.dev/YqcST0.png
+Pickford,GK,,England,International,England,(1) ★,LEFT / (4) ★★★★,"6'1"" (185 cm)",77 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqcrRM.png
+Martínez,GK,,Argentina,International,Argentina,(1) ★,RIGHT / (4) ★★★★,"6'5"" (195 cm)",88 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqcvJd.png
+Messi,CAM,"ST,RW",Argentina,International,Argentina,(4) ★★★★,LEFT / (4) ★★★★,"5'7"" (169 cm)",67 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/Yqc2nl.png
+Modrić,CM,"CAM,CDM",Croatia,International,Croatia,(4) ★★★★,RIGHT / (4) ★★★★,"5'8"" (172 cm)",67 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqcOFV.png
+Kimmich,CDM,RB,Germany,International,Germany,(3) ★★★,RIGHT / (4) ★★★★,"5'10"" (177 cm)",75 kg,Medium/High,6/17/2026,https://s6.imgcdn.dev/YqcR0o.png
+Musiala,CAM,"LM,CM",Germany,International,Germany,(5) ★★★★★,RIGHT / (4) ★★★★,"6'0"" (184 cm)",72 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqcV3O.png
+Van Dijk,CB,,Netherlands,International,Netherlands,(2) ★★,RIGHT / (3) ★★★,"6'4"" (193 cm)",92 kg,Medium/High,6/10/2026,https://s6.imgcdn.dev/Yqctwn.png
+Marc Cucurella,LB,,Spain,International,Spain,(3) ★★★,LEFT / (3) ★★★,"5'9"" (174 cm)",66 kg,High/High,6/17/2026,https://s6.imgcdn.dev/YqcdRv.png
+Lamine Yamal,RW,RM,Spain,International,Spain,(5) ★★★★★,LEFT / (4) ★★★★,"5'11"" (180 cm)",72 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqcexB.png
+De Bruyne,CM,CAM,Belgium,International,Belgium,(4) ★★★★,RIGHT / (5) ★★★★★,"5'11"" (181 cm)",75 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqcmHu.png
+Díaz,LW,"LM,ST",Colombia,International,Colombia,(4) ★★★★,RIGHT / (4) ★★★★,"5'11"" (180 cm)",73 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqcFCL.png
+Rodríguez,CAM,"RM,CM",Colombia,International,Colombia,(4) ★★★★,LEFT / (3) ★★★,"5'11"" (180 cm)",75 kg,High/Low,6/10/2026,https://s6.imgcdn.dev/YqcH7a.png
+Amad,RM,RB,"Côte d'Ivoire",International,Ivory Coast,(4) ★★★★,LEFT / (4) ★★★★,"5'8"" (173 cm)",67 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqcXLw.png
+McTominay,CM,"CAM,LM",Scotland,International,Scotland,(3) ★★★,RIGHT / (3) ★★★,"6'4"" (193 cm)",88 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqcEwt.png
+Gyökeres,ST,,Sweden,International,Sweden,(3) ★★★,RIGHT / (4) ★★★★,"6'2"" (189 cm)",94 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/Yqc8UT.png
+Isak,ST,,Sweden,International,Sweden,(4) ★★★★,RIGHT / (4) ★★★★,"6'4"" (192 cm)",77 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqcJVD.png
+Kim Min Jae,CB,,Korea Republic,International,Korea Republic,(2) ★★,RIGHT / (3) ★★★,"6'3"" (190 cm)",81 kg,Low/High,6/10/2026,https://s6.imgcdn.dev/Yqcoo9.png
+Son,ST,LW,Korea Republic,International,Korea Republic,(4) ★★★★,RIGHT / (5) ★★★★★,"6'0"" (183 cm)",78 kg,Medium/Medium,6/3/2026,https://s6.imgcdn.dev/YquDsy.png
+Schick,ST,,Czech Republic,International,Czech Republic,(3) ★★★,LEFT / (3) ★★★,"6'3"" (191 cm)",87 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YquYx8.png
+Foster,ST,LM,South Africa,International,South Africa,(3) ★★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",70 kg,High/High,6/17/2026,https://s6.imgcdn.dev/YquhH2.png
+Xhaka,CM,CDM,Switzerland,International,Switzerland,(3) ★★★,LEFT / (3) ★★★,"6'1"" (186 cm)",80 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YquwIi.png
+Džeko,ST,,Bosnia & Herzegovina,International,Bosnia Herzegovina,(3) ★★★,RIGHT / (5) ★★★★★,"6'4"" (193 cm)",80 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YquMLS.png
+Demirović,ST,,Bosnia & Herzegovina,International,Bosnia Herzegovina,(3) ★★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",84 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/Yquu6C.png
+Davies,LB,"LM,LW",Canada,International,Canada,(4) ★★★★,LEFT / (3) ★★★,"6'1"" (185 cm)",77 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/Yqu4Ue.png
+Douglas Santos,LB,,Brazil,International,Brazil,(3) ★★★,LEFT / (3) ★★★,"5'9"" (175 cm)",69 kg,High/High,6/24/2026,https://s6.imgcdn.dev/YquCV0.png
+Casemiro,CDM,CM,Brazil,International,Brazil,(2) ★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",84 kg,Medium/High,6/4/2026,https://s6.imgcdn.dev/YquIpM.png
+Raphinha,RW,"LW,LM,CAM",Brazil,International,Brazil,(4) ★★★★,LEFT / (4) ★★★★,"5'9"" (176 cm)",68 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YquQsd.png
+Brahim,RW,"RM,LM,CAM",Morocco,International,Morocco,(4) ★★★★,RIGHT / (5) ★★★★★,"5'7"" (170 cm)",68 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yqui2l.png
+Bellegarde,CAM,"CM,LW",Haiti,International,Haiti,(3) ★★★,RIGHT / (3) ★★★,"5'7"" (170 cm)",70 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqukXh.png
+Çalhanoğlu,CDM,CM,Türkiye,International,Türkiye,(4) ★★★★,RIGHT / (5) ★★★★★,"5'10"" (178 cm)",69 kg,High/High,6/17/2026,https://s6.imgcdn.dev/YqusIV.png
+Güler,CAM,"RM,CM",Türkiye,International,Türkiye,(4) ★★★★,LEFT / (3) ★★★,"5'9"" (175 cm)",70 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YquyBK.png
+Gómez,CB,,Paraguay,International,Paraguay,(2) ★★,RIGHT / (2) ★★,"6'1"" (185 cm)",83 kg,Medium/High,6/17/2026,https://s6.imgcdn.dev/Yqu5Lo.png
+Caicedo,CDM,,Ecuador,International,Ecuador,(3) ★★★,RIGHT / (3) ★★★,"5'10"" (178 cm)",73 kg,Medium/High,6/10/2026,https://s6.imgcdn.dev/YquTln.png
+Doan,RM,"CAM,CM",Japan,International,Japan,(4) ★★★★,LEFT / (3) ★★★,"5'8"" (172 cm)",74 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/YquUVg
+Salah,RW,RM,Egypt,International,Egypt,(4) ★★★★,LEFT / (4) ★★★★,"5'9"" (175 cm)",72 kg,High/Medium,6/10/2026,https://imgcdn.dev/i/Yqulpv
+Marmoush,LW,ST,Egypt,International,Egypt,(4) ★★★★,RIGHT / (4) ★★★★,"6'0"" (183 cm)",81 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/YquayN
+Wood,ST,,New Zealand,International,New Zealand,(3) ★★★,RIGHT / (3) ★★★,"6'3"" (191 cm)",92 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/Yqu12q
+Valverde,CM,"RB,CDM",Uruguay,International,Uruguay,(3) ★★★,RIGHT / (4) ★★★★,"6'0"" (182 cm)",74 kg,High/High,6/17/2026,https://i.ibb.co/d4KjBDV0/Valverde.png
+Saliba,CB,,France,International,France,(2) ★★,RIGHT / (3) ★★★,"6'4"" (193 cm)",85 kg,Medium/High,6/10/2026,https://imgcdn.dev/i/YquGBL
+Theo Hernández,LB,LM,France,International,France,(4) ★★★★,LEFT / (3) ★★★,"6'0"" (184 cm)",81 kg,High/High,6/24/2026,https://s6.imgcdn.dev/YquEGV.png
+Olise,RM,"RW,CAM",France,International,France,(4) ★★★★,LEFT / (5) ★★★★★,"6'0"" (184 cm)",73 kg,Medium/Medium,6/24/2026,https://s6.imgcdn.dev/Yqu8eK.png
+Mbappé,ST,LW,France,International,France,(5) ★★★★★,RIGHT / (4) ★★★★,"6'0"" (182 cm)",75 kg,High/Low,6/10/2026,https://s6.imgcdn.dev/Yq4Dtn.png
+Cherki,RW,"RM,CAM",France,International,France,(5) ★★★★★,LEFT / (5) ★★★★★,"5'10"" (177 cm)",71 kg,Medium/Medium,6/3/2026,https://s6.imgcdn.dev/Yq4j5v.png
+Kanté,CDM,CM,France,International,France,(2) ★★,RIGHT / (3) ★★★,"5'6"" (168 cm)",70 kg,High/High,6/17/2026,https://s6.imgcdn.dev/Yq46gq.png
+Ndiaye,RM,"LM,RW",Senegal,International,Senegal,(4) ★★★★,RIGHT / (4) ★★★★,"5'11"" (180 cm)",70 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yq4uSu.png
+Schmid,CAM,"CM,LW",Austria,International,Austria,(3) ★★★,RIGHT / (3) ★★★,"5'6"" (168 cm)",73 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yq44eL.png
+Baumgartner,CM,"CAM,ST",Austria,International,Austria,(4) ★★★★,RIGHT / (3) ★★★,"5'11"" (180 cm)",77 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/Yq4Naw.png
+Semenyo,RW,"LW,RM",Ghana,International,Ghana,(4) ★★★★,RIGHT / (5) ★★★★★,"6'1"" (185 cm)",79 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yq4Qtt.png
+Matheus Cunha,CAM,ST,Brazil,International,Brazil,(4) ★★★★,RIGHT / (4) ★★★★,"6'0"" (183 cm)",76 kg,High/Medium,6/24/2026,https://s6.imgcdn.dev/Yq4nKD.png
+Bouaddi,CM,"CAM,CDM",Morocco,International,Morocco,(3) ★★★,RIGHT / (3) ★★★,"6'1"" (186 cm)",72 kg,Medium/Medium,6/24/2026,https://s6.imgcdn.dev/Yq4sO9.png
+Neuer,GK,,Germany,International,Germany,(1) ★,RIGHT / (4) ★★★★,"6'4"" (193 cm)",93 kg,Medium/Medium,6/24/2026,https://s6.imgcdn.dev/Yq4yEy.png
+Diomande,LW,LM,Côte d'Ivoire,International,Ivory Coast,(3) ★★★,RIGHT / (3) ★★★,"5'11"" (181 cm)",77 kg,High/Medium,6/24/2026,https://s6.imgcdn.dev/Yq4KQ8.png
+Martínez,CB,,Argentina,International,Argentina,(3) ★★★,LEFT / (3) ★★★,"5'10"" (178 cm)",77 kg,Medium/High,6/24/2026,https://s6.imgcdn.dev/Yq4Tmi.png
+Pavlović,CDM,CM,Germany,International,Germany,(3) ★★★,RIGHT / (4) ★★★★,"6'2"" (188 cm)",75 kg,Medium/High,7/1/2026,https://s6.imgcdn.dev/Yq4lcH.png
+Van de Ven,CB,LB,Netherlands,International,Netherlands,(3) ★★★,LEFT / (3) ★★★,"6'4"" (193 cm)",86 kg,Medium/High,6/29/2026,https://s6.imgcdn.dev/Yq4zaS.png
+Doku,LW,RW,Belgium,International,Belgium,(4) ★★★★,RIGHT / (4) ★★★★,"5'8"" (173 cm)",66 kg,High/Medium,7/1/2026,https://s6.imgcdn.dev/Yq4aWC.png
+Rabiot,CM,CAM,France,International,France,(3) ★★★,LEFT / (3) ★★★,"6'3"" (191 cm)",80 kg,High/Medium,7/3/2026,https://s6.imgcdn.dev/Yq47K0.png
+James,RB,CDM,England,International,England,(3) ★★★,RIGHT / (4) ★★★★,"5'11"" (180 cm)",91 kg,High/High,7/1/2026,https://s6.imgcdn.dev/Yq4BZM.png
+Arias,RW,"RM,LW",Colombia,International,Colombia,(3) ★★★,RIGHT / (4) ★★★★,"5'6"" (168 cm)",70 kg,High/Medium,7/1/2026,https://s6.imgcdn.dev/Yq4ril.png
+Gordon,LW,"ST,RW",England,International,England,(4) ★★★★,RIGHT / (4) ★★★★,"6'0"" (183 cm)",72 kg,High/High,7/3/2026,https://s6.imgcdn.dev/Yq4vrh.png
+Bruno Guimarães,CDM,CM,Brazil,International,Brazil,(3) ★★★,RIGHT / (3) ★★★,"6'0"" (182 cm)",74 kg,High/High,7/3/2026,https://s6.imgcdn.dev/Yq4xmV.png
+Schlotterbeck,CB,,Germany,International,Germany,(2) ★★,LEFT / (3) ★★★,"6'3"" (191 cm)",86 kg,High/High,6/29/2026,https://s6.imgcdn.dev/Yq4AuK.png
+Laporte,CB,,Spain,International,Spain,(2) ★★,LEFT / (3) ★★★,"6'2"" (189 cm)",85 kg,Medium/High,7/1/2026,https://s6.imgcdn.dev/Yq4Oao.png
+Romero,CB,,Argentina,International,Argentina,(3) ★★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",79 kg,Medium/High,7/1/2026,https://s6.imgcdn.dev/Yq4ZWO.png
+Barcola,LW,RW,France,International,France,(4) ★★★★,RIGHT / (4) ★★★★,"6'2"" (188 cm)",70 kg,High/Medium,6/29/2026,https://s6.imgcdn.dev/Yq4Rhn.png
+Havertz,ST,CM,Germany,International,Germany,(4) ★★★★,LEFT / (4) ★★★★,"6'4"" (193 cm)",82 kg,High/Medium,6/29/2026,https://s6.imgcdn.dev/Yq4VKg.png
+Brobbey,ST,,Netherlands,International,Netherlands,(3) ★★★,RIGHT / (4) ★★★★,"5'11"" (180 cm)",78 kg,High/Low,6/29/2026,https://s6.imgcdn.dev/Yq4fZv.png
+Ødegaard,CM,CAM,Norway,International,Norway,(5) ★★★★★,LEFT / (4) ★★★★,"5'10"" (178 cm)",68 kg,High/Medium,6/29/2026,https://s6.imgcdn.dev/Yq4t8N.png
+Maseko,RW,"RM,LM",South Africa,International,South Africa,(4) ★★★★,LEFT / (3) ★★★,"5'10"" (178 cm)",74 kg,High/Medium,6/29/2026,https://s6.imgcdn.dev/Yq4diq.png
+David,ST,,Canada,International,Canada,(4) ★★★★,RIGHT / (5) ★★★★★,"5'10"" (178 cm)",81 kg,High/High,6/29/2026,https://s6.imgcdn.dev/Yq43rB.png
+Rafael Leão,LW,"LM,ST",Portugal,International,Portugal,(5) ★★★★★,RIGHT / (4) ★★★★,"6'2"" (188 cm)",81 kg,High/Low,7/1/2026,https://s6.imgcdn.dev/Yq4Lqu.png
+Diop,CB,,Morocco,International,Morocco,(2) ★★,RIGHT / (3) ★★★,"6'4"" (194 cm)",92 kg,Medium/High,7/3/2026,https://s6.imgcdn.dev/Yq4euL.png
+Jiménez,ST,,Mexico,International,Mexico,(3) ★★★,RIGHT / (3) ★★★,"6'3"" (190 cm)",81 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/Yq4m1a.png
+Ream,CB,LB,United States,International,United States,(2) ★★,LEFT / (3) ★★★,"6'1"" (185 cm)",80 kg,Medium/Medium,6/24/2026,https://s6.imgcdn.dev/Yq4qdw.png
+Robinson,LB,,United States,International,United States,(3) ★★★,LEFT / (3) ★★★,"6'0"" (183 cm)",70 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yq4Hht.png
+João Neves,CM,CDM,Portugal,International,Portugal,(3) ★★★,RIGHT / (3) ★★★,"5'9"" (174 cm)",66 kg,High/High,6/3/2026,https://s6.imgcdn.dev/Yq4XPT.png
+Al Juwair,CM,"CAM,CDM",Saudi Arabia,International,Saudi Arabia,(3) ★★★,RIGHT / (4) ★★★★,"5'10"" (178 cm)",70 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/Yq4g9D.png
+Martínez,ST,,Argentina,International,Argentina,(4) ★★★★,RIGHT / (4) ★★★★,"5'9"" (174 cm)",72 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/Yq4E89.png
+Nico Paz,CAM,,Argentina,International,Argentina,(4) ★★★★,LEFT / (4) ★★★★,"6'1"" (186 cm)",81 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/Yq4Jky.png
+Gvardiol,CB,LB,Croatia,International,Croatia,(3) ★★★,LEFT / (5) ★★★★★,"6'1"" (185 cm)",80 kg,High/High,6/17/2026,https://s6.imgcdn.dev/Yq4or8.png
+Sučić,CM,,Croatia,International,Croatia,(3) ★★★,RIGHT / (4) ★★★★,"6'0"" (183 cm)",76 kg,Medium/High,6/24/2026,https://s6.imgcdn.dev/Yq4pq2.png
+Perišić,LW,RW,Croatia,International,Croatia,(4) ★★★★,RIGHT / (5) ★★★★★,"6'1"" (186 cm)",80 kg,Medium/Medium,6/3/2026,https://s6.imgcdn.dev/YqCY4i.png
+Karl,CAM,RM,Germany,International,Germany,(4) ★★★★,LEFT / (3) ★★★,"5'6"" (168 cm)",67 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqCjdS.png
+Dumfries,RB,RM,Netherlands,International,Netherlands,(2) ★★,RIGHT / (3) ★★★,"6'2"" (188 cm)",80 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqC6jC.png
+Pedri,CM,CDM,Spain,International,Spain,(4) ★★★★,RIGHT / (4) ★★★★,"5'9"" (174 cm)",60 kg,High/High,6/10/2026,https://s6.imgcdn.dev/YqCMPe.png
+Mikel Merino,CM,ST,Spain,International,Spain,(3) ★★★,LEFT / (3) ★★★,"6'2"" (189 cm)",83 kg,High/High,6/24/2026,https://s6.imgcdn.dev/YqCuJM.png
+Courtois,GK,,Belgium,International,Belgium,(1) ★,LEFT / (3) ★★★,"6'7"" (200 cm)",96 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqCCkd.png
+Debast,CB,"CDM,CM",Belgium,International,Belgium,(3) ★★★,RIGHT / (4) ★★★★,"6'3"" (191 cm)",76 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqCNFh.png
+De Ketelaere,CAM,ST,Belgium,International,Belgium,(4) ★★★★,LEFT / (3) ★★★,"6'4"" (192 cm)",79 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqCi4V.png
+Heggem,CB,LB,Norway,International,Norway,(2) ★★,LEFT / (5) ★★★★★,"6'4"" (192 cm)",79 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqCk0K.png
+Pépé,RW,"ST,RM",Côte d'Ivoire,International,Ivory Coast,(4) ★★★★,LEFT / (3) ★★★,"6'0"" (183 cm)",73 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqCndo.png
+Ferguson,CDM,"CM,CAM",Scotland,International,Scotland,(3) ★★★,RIGHT / (4) ★★★★,"5'11"" (181 cm)",75 kg,High/High,6/17/2026,https://s6.imgcdn.dev/YqCyjO.png
+Hwang Hee Chan,ST,"LW,RW",Korea Republic,International,Korea Republic,(3) ★★★,RIGHT / (4) ★★★★,"5'10"" (177 cm)",77 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqC5Tn.png
+Chaloupek,CB,,Czech Republic,International,Czech Republic,(2) ★★,RIGHT / (3) ★★★,"6'2"" (188 cm)",68 kg,Medium/High,6/24/2026,https://s6.imgcdn.dev/YqCzFB.png
+Šulc,CAM,"ST,RM",Czech Republic,International,Czech Republic,(4) ★★★★,RIGHT / (3) ★★★,"5'9"" (175 cm)",67 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqC1Cu.png
+Mofokeng,CAM,,South Africa,International,South Africa,(3) ★★★,RIGHT / (3) ★★★,"5'5"" (166 cm)",55 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqC00L.png
+Kobel,GK,,Switzerland,International,Switzerland,(1) ★,RIGHT / (3) ★★★,"6'5"" (195 cm)",88 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqC73a.png
+Bombito,CB,,Canada,International,Canada,(2) ★★,RIGHT / (3) ★★★,"6'3"" (191 cm)",81 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqCSTt.png
+Laryea,RB,"RM,LM",Canada,International,Canada,(4) ★★★★,RIGHT / (4) ★★★★,"5'9"" (175 cm)",70 kg,Medium/High,7/3/2026,https://s6.imgcdn.dev/YqCrRT.png
+Edmilson Junior,LW,"RW,LM",Qatar,International,Qatar,(4) ★★★★,RIGHT / (5) ★★★★★,"5'11"" (181 cm)",71 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqCvoD.png
+Ali,ST,"RW,RM",Qatar,International,Qatar,(3) ★★★,RIGHT / (4) ★★★★,"5'11"" (180 cm)",69 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqC2n9.png
+Endrick,ST,RW,Brazil,International,Brazil,(4) ★★★★,LEFT / (4) ★★★★,"5'8"" (173 cm)",66 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqCAxy.png
+Bounou,GK,,Morocco,International,Morocco,(1) ★,LEFT / (2) ★★,"6'5"" (195 cm)",78 kg,Medium/Medium,6/3/2026,https://s6.imgcdn.dev/YqCOF8.png
+Saibari,CAM,CM,Morocco,International,Morocco,(4) ★★★★,RIGHT / (4) ★★★★,"6'1"" (185 cm)",81 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqC9C2.png
+Pierrot,ST,,Haiti,International,Haiti,(2) ★★,RIGHT / (3) ★★★,"6'4"" (194 cm)",85 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqCR7i.png
+Sanabria,ST,,Paraguay,International,Paraguay,(3) ★★★,RIGHT / (4) ★★★★,"5'11"" (180 cm)",70 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqCV3H.png
+Galarza,CM,LM,Paraguay,International,Paraguay,(3) ★★★,LEFT / (4) ★★★★,"5'10"" (177 cm)",76 kg,High/Medium,7/3/2026,https://s6.imgcdn.dev/YqCtwS.png
+Ryan,GK,,Australia,International,Australia,(1) ★,RIGHT / (4) ★★★★,"6'0"" (184 cm)",82 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqCWUC.png
+Irankunda,RM,"ST,LM",Australia,International,Australia,(3) ★★★,RIGHT / (3) ★★★,"5'9"" (175 cm)",74 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqCdRe.png
+Ordoñez,CB,,Ecuador,International,Ecuador,(2) ★★,RIGHT / (3) ★★★,"6'2"" (188 cm)",80 kg,Medium/High,6/17/2026,https://s6.imgcdn.dev/YqC3o0.png
+Pacho,CB,,Ecuador,International,Ecuador,(2) ★★,LEFT / (3) ★★★,"6'2"" (188 cm)",81 kg,Low/Medium,6/10/2026,https://s6.imgcdn.dev/YqCbsM.png
+Skhiri,CDM,"CM,CB",Tunisia,International,Tunisia,(3) ★★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",74 kg,High/High,6/10/2026,https://s6.imgcdn.dev/YqCexd.png
+Hannibal,CM,CAM,Tunisia,International,Tunisia,(3) ★★★,RIGHT / (3) ★★★,"6'0"" (182 cm)",70 kg,Medium/Medium,6/17/2026,https://s6.imgcdn.dev/YqCH7V.png
+Maeda,LW,"ST,RW",Japan,International,Japan,(3) ★★★,RIGHT / (4) ★★★★,"5'8"" (173 cm)",68 kg,High/High,6/10/2026,https://s6.imgcdn.dev/YqCXLK.png
+Bell,CDM,CM,New Zealand,International,New Zealand,(3) ★★★,RIGHT / (3) ★★★,"6'0"" (182 cm)",77 kg,Medium/Medium,6/10/2026,https://s6.imgcdn.dev/YqCEwo.png
+De Arrascaeta,CAM,"CM,LM",Uruguay,International,Uruguay,(3) ★★★,RIGHT / (4) ★★★★,"5'8"" (172 cm)",67 kg,Medium/Low,6/10/2026,https://s6.imgcdn.dev/YqC8UO.png
+Bentancur,CDM,CM,Uruguay,International,Uruguay,(3) ★★★,RIGHT / (4) ★★★★,"6'2"" (187 cm)",73 kg,Medium/Medium,6/24/2026,https://s6.imgcdn.dev/YqCJVn.png
+Jovane Cabral,LW,"ST,LM",Cabo Verde,International,Cape Verde Islands,(3) ★★★,RIGHT / (4) ★★★★,"5'9"" (174 cm)",81 kg,High/Medium,6/17/2026,https://s6.imgcdn.dev/YqCoog.png
+Dembélé,ST,RW,France,International,France,(5) ★★★★★,LEFT / (5) ★★★★★,"5'10"" (178 cm)",67 kg,High/Medium,6/10/2026,https://s6.imgcdn.dev/YqIDsv.png
+Koulibaly,CB,,Senegal,International,Senegal,(3) ★★★,RIGHT / (4) ★★★★,"6'1"" (186 cm)",89 kg,Medium/High,6/10/2026,https://imgcdn.dev/i/YqIY2N
+Laimer,RB,"CDM,LB",Austria,International,Austria,(3) ★★★,RIGHT / (3) ★★★,"5'11"" (180 cm)",72 kg,Medium/Medium,6/10/2026,https://imgcdn.dev/i/YqIhHq
+Arnautović,ST,,Austria,International,Austria,(4) ★★★★,RIGHT / (4) ★★★★,"6'4"" (192 cm)",83 kg,High/Low,7/1/2026,https://imgcdn.dev/i/YqIwIB
+Wimmer,LM,"CAM,CM",Austria,International,Austria,(5) ★★★★★,RIGHT / (4) ★★★★,"6'0"" (182 cm)",77 kg,Medium/Medium,6/17/2026,https://imgcdn.dev/i/YqI6Bu
+Yusupov,GK,,Uzbekistan,International,Uzbekistan,(1) ★,RIGHT / (3) ★★★,"6'1"" (185 cm)",83 kg,Medium/Medium,6/17/2026,https://imgcdn.dev/i/YqIMLL
+Khusanov,CB,,Uzbekistan,International,Uzbekistan,(2) ★★,RIGHT / (3) ★★★,"6'1"" (186 cm)",84 kg,Medium/Medium,6/4/2026,https://imgcdn.dev/i/YqIu6a
+Shomurodov,ST,CAM,Uzbekistan,International,Uzbekistan,(3) ★★★,RIGHT / (4) ★★★★,"6'3"" (190 cm)",76 kg,Medium/Medium,6/10/2026,https://imgcdn.dev/i/YqI4lw
+Mbemba,CB,,Congo DR,International,DR Congo,(2) ★★,RIGHT / (3) ★★★,"6'0"" (182 cm)",81 kg,High/Medium,6/10/2026,https://imgcdn.dev/i/YqICVt
+Wissa,ST,,Congo DR,International,DR Congo,(3) ★★★,RIGHT / (3) ★★★,"5'9"" (176 cm)",74 kg,Medium/Medium,6/17/2026,https://imgcdn.dev/i/YqIIpT
+Iñaki Williams,RW,"ST,RM",Ghana,International,Ghana,(4) ★★★★,RIGHT / (3) ★★★,"6'1"" (186 cm)",80 kg,High/Medium,6/10/2026,https://imgcdn.dev/i/YqIQyD
+Murillo,RB,CB,Panama,International,Panama,(3) ★★★,RIGHT / (3) ★★★,"6'0"" (184 cm)",78 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/YqIi29
+Carrasquilla,CM,"CAM,RM",Panama,International,Panama,(3) ★★★,RIGHT / (3) ★★★,"5'7"" (170 cm)",64 kg,Medium/Medium,6/10/2026,https://imgcdn.dev/i/YqIkXy
+Summerville,RW,RM,Netherlands,International,Netherlands,(3) ★★★,RIGHT / (3) ★★★,"5'7"" (169 cm)",64 kg,High/Medium,6/24/2026,https://imgcdn.dev/i/YqIsI8
+Samú Costa,CDM,CM,Portugal,International,Portugal,(2) ★★,LEFT / (3) ★★★,"6'0"" (183 cm)",75 kg,Medium/High,6/24/2026,https://imgcdn.dev/i/YqIyB2
+Amdouni,ST,,Switzerland,International,Switzerland,(3) ★★★,RIGHT / (4) ★★★★,"6'1"" (185 cm)",79 kg,High/Low,6/24/2026,https://imgcdn.dev/i/YqI5bi
+Mora,CAM,"LW,CM",Mexico,International,Mexico,(4) ★★★★,RIGHT / (3) ★★★,"5'6"" (168 cm)",65 kg,High/Medium,7/3/2026,https://imgcdn.dev/i/YqIP6H
+Alvarado,RW,"RM,LM",Mexico,International,Mexico,(4) ★★★★,LEFT / (4) ★★★★,"5'9"" (176 cm)",70 kg,High/Medium,6/29/2026,https://imgcdn.dev/i/YqITlS
+Manzambi,CAM,"CM,CDM",Switzerland,International,Switzerland,(4) ★★★★,RIGHT / (3) ★★★,"6'0"" (183 cm)",75 kg,High/Medium,6/29/2026,https://imgcdn.dev/i/YqIUfC
+Ayari,CDM,CM,Sweden,International,Sweden,(3) ★★★,RIGHT / (3) ★★★,"5'8"" (172 cm)",69 kg,High/High,6/17/2026,https://imgcdn.dev/i/YqIay0
+Balogun,ST,,United States,International,United States,(4) ★★★★,RIGHT / (4) ★★★★,"5'10"" (178 cm)",66 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/YqI1AM
+Koné,CM,,Canada,International,Canada,(3) ★★★,RIGHT / (4) ★★★★,"6'2"" (188 cm)",76 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/YqI0Xd
+Mané,ST,LW,Senegal,International,Senegal,(4) ★★★★,RIGHT / (4) ★★★★,"5'9"" (174 cm)",69 kg,High/Medium,7/1/2026,https://imgcdn.dev/i/YqIBNl
+Vózinha,GK,,Cabo Verde,International,Cape Verde Islands,(1) ★,RIGHT / (3) ★★★,"6'2"" (189 cm)",75 kg,Medium/Medium,6/19/2026,https://imgcdn.dev/i/YqIGGh
+Just,LW,"RW,CAM",New Zealand,International,New Zealand,(3) ★★★,LEFT / (4) ★★★★,"5'9"" (174 cm)",69 kg,High/Medium,6/19/2026,https://imgcdn.dev/i/YqISbV
+Mostafa Zico,LW,RW,Egypt,International,Egypt,(4) ★★★★,RIGHT / (4) ★★★★,"6'0"" (182 cm)",74 kg,High/Medium,7/1/2026,https://imgcdn.dev/i/YqIvMK
+Diney,CB,,Cabo Verde,International,Cape Verde Islands,(2) ★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",78 kg,Low/Medium,7/1/2026,https://imgcdn.dev/i/YqIxlo
+Livaković,GK,,Croatia,International,Croatia,(1) ★,RIGHT / (2) ★★,"6'2"" (188 cm)",79 kg,Medium/Medium,7/1/2026,https://imgcdn.dev/i/YqI2fO
+Alisson,GK,,Brazil,International,Brazil,(1) ★,RIGHT / (3) ★★★,"6'4"" (193 cm)",91 kg,Medium/Medium,6/29/2026,https://imgcdn.dev/i/YqIODn
+El Aynaoui,CM,CDM,Morocco,International,Morocco,(3) ★★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",77 kg,High/High,6/29/2026,https://imgcdn.dev/i/YqIZyg
+Singo,CB,RB,Côte d'Ivoire,International,Ivory Coast,(3) ★★★,RIGHT / (2) ★★,"6'3"" (190 cm)",79 kg,High/Medium,6/29/2026,https://imgcdn.dev/i/YqI9Av
+Sarr,RW,CAM,Senegal,International,Senegal,(4) ★★★★,RIGHT / (3) ★★★,"6'1"" (185 cm)",70 kg,High/Medium,6/29/2026,https://imgcdn.dev/i/YqIRgN
+Okon,CB,,South Africa,International,South Africa,(2) ★★,RIGHT / (3) ★★★,"6'2"" (187 cm)",86 kg,Medium/High,6/29/2026,https://imgcdn.dev/i/YqIfNq
+Saliba,CM,CDM,Canada,International,Canada,(3) ★★★,RIGHT / (5) ★★★★★,"5'8"" (173 cm)",71 kg,High/Medium,6/29/2026,https://imgcdn.dev/i/YqItGB
+Berhalter,CM,"RM,CDM",United States,International,United States,(2) ★★,RIGHT / (3) ★★★,"5'9"" (175 cm)",70 kg,Medium/High,7/1/2026,https://imgcdn.dev/i/YqIWeu
+Ajer,CB,"RB,LB",Norway,International,Norway,(3) ★★★,RIGHT / (3) ★★★,"6'5"" (196 cm)",84 kg,Medium/High,7/3/2026,https://imgcdn.dev/i/YqILza
+Saka,RW,RM,England,International,England,(3) ★★★,LEFT / (4) ★★★★,"5'10"" (178 cm)",65 kg,High/Medium,6/10/2026,https://imgcdn.dev/i/YqIbtw
+Álvarez,CDM,"CM,CB",Mexico,International,Mexico,(2) ★★,RIGHT / (2) ★★,"6'2"" (187 cm)",73 kg,Medium/High,6/3/2026,https://imgcdn.dev/i/YqImDt
+Nuno Mendes,LB,,Portugal,International,Portugal,(3) ★★★,LEFT / (4) ★★★★,"5'11"" (180 cm)",70 kg,High/Medium,6/17/2026,https://imgcdn.dev/i/YqIq5T
+Vitinha,CM,CDM,Portugal,International,Portugal,(4) ★★★★,RIGHT / (4) ★★★★,"5'8"" (172 cm)",64 kg,High/High,6/10/2026,https://imgcdn.dev/i/YqIFOD
+

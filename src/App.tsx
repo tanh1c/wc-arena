@@ -19,6 +19,7 @@ const AdminAudit = lazy(() => import('./pages/AdminAudit'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const Agent = lazy(() => import('./pages/Agent'));
 const Badges = lazy(() => import('./pages/Badges'));
+const Cards = lazy(() => import('./pages/Cards'));
 const JoinLeague = lazy(() => import('./pages/JoinLeague'));
 const LeagueCreate = lazy(() => import('./pages/LeagueCreate'));
 const LeagueDetail = lazy(() => import('./pages/LeagueDetail'));
@@ -137,6 +138,7 @@ export default function App() {
           <Route path="/points-guide" element={<LegacyRoute Component={PointsGuide} themeControls={themeControls} />} />
           <Route path="/prize-pool" element={<Navigate to="/points-guide" replace />} />
           <Route path="/profile" element={<Profile themeControls={themeControls} />} />
+          <Route path="/cards" element={<Cards themeControls={themeControls} />} />
           <Route path="/users/:userId" element={<PublicProfile themeControls={themeControls} />} />
           <Route path="/badges" element={<Badges themeControls={themeControls} />} />
           <Route path="/achievements" element={<Achievements themeControls={themeControls} />} />

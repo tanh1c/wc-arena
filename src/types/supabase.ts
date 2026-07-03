@@ -1327,6 +1327,182 @@ export type Database = {
           },
         ]
       }
+      card_pack_openings: {
+        Row: {
+          cards_awarded: number
+          coins_spent: number
+          id: string
+          opened_at: string
+          opened_on_utc: string
+          pack_type: string
+          user_id: string
+        }
+        Insert: {
+          cards_awarded: number
+          coins_spent?: number
+          id?: string
+          opened_at?: string
+          opened_on_utc: string
+          pack_type: string
+          user_id: string
+        }
+        Update: {
+          cards_awarded?: number
+          coins_spent?: number
+          id?: string
+          opened_at?: string
+          opened_on_utc?: string
+          pack_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_pack_openings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_cards: {
+        Row: {
+          added_on: string | null
+          alternate_positions: string | null
+          created_at: string
+          footedness: string | null
+          height: string | null
+          id: string
+          image_url: string
+          league: string
+          name: string
+          nation_region: string
+          position: string
+          rarity: string
+          skill_moves: string | null
+          team: string
+          updated_at: string
+          weight: string | null
+          work_rate_att: string | null
+          work_rate_def: string | null
+        }
+        Insert: {
+          added_on?: string | null
+          alternate_positions?: string | null
+          created_at?: string
+          footedness?: string | null
+          height?: string | null
+          id?: string
+          image_url: string
+          league: string
+          name: string
+          nation_region: string
+          position: string
+          rarity: string
+          skill_moves?: string | null
+          team: string
+          updated_at?: string
+          weight?: string | null
+          work_rate_att?: string | null
+          work_rate_def?: string | null
+        }
+        Update: {
+          added_on?: string | null
+          alternate_positions?: string | null
+          created_at?: string
+          footedness?: string | null
+          height?: string | null
+          id?: string
+          image_url?: string
+          league?: string
+          name?: string
+          nation_region?: string
+          position?: string
+          rarity?: string
+          skill_moves?: string | null
+          team?: string
+          updated_at?: string
+          weight?: string | null
+          work_rate_att?: string | null
+          work_rate_def?: string | null
+        }
+        Relationships: []
+      }
+      profile_card_showcases: {
+        Row: {
+          slot_number: number
+          updated_at: string
+          user_id: string
+          user_player_card_id: string
+        }
+        Insert: {
+          slot_number: number
+          updated_at?: string
+          user_id: string
+          user_player_card_id: string
+        }
+        Update: {
+          slot_number?: number
+          updated_at?: string
+          user_id?: string
+          user_player_card_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_card_showcases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_card_showcases_user_player_card_id_fkey"
+            columns: ["user_player_card_id"]
+            isOneToOne: false
+            referencedRelation: "user_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_player_cards: {
+        Row: {
+          card_id: string
+          id: string
+          opened_at: string
+          source_pack_type: string
+          user_id: string
+        }
+        Insert: {
+          card_id: string
+          id?: string
+          opened_at?: string
+          source_pack_type: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string
+          id?: string
+          opened_at?: string
+          source_pack_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_player_cards_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_player_cards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       point_wallets: {
         Row: {
           balance: number

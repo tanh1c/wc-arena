@@ -11,6 +11,7 @@ import StreakBadge from '../components/ui/StreakBadge';
 import UserAvatar from '../components/ui/UserAvatar';
 import { useAuth } from '../lib/auth';
 import { listCurrentUserBadges, type UserBadgeWithBadge } from '../services/badges';
+import { listCurrentUserShowcase, type ShowcaseCard } from '../services/cards';
 import { getCurrentUserCoinBalance } from '../services/leagueEvents';
 import { listCurrentUserLeagueMemberships, type LeagueMemberRow } from '../services/leagues';
 import { calculateAccuracy, calculateStreak, getPredictionOutcome } from '../lib/scoring';
@@ -74,6 +75,7 @@ export default function Profile({ themeControls }: ProfileProps) {
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [badges, setBadges] = useState<UserBadgeWithBadge[]>([]);
   const [leagueMemberships, setLeagueMemberships] = useState<LeagueMemberRow[]>([]);
+  const [showcaseCards, setShowcaseCards] = useState<ShowcaseCard[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
@@ -91,6 +93,7 @@ export default function Profile({ themeControls }: ProfileProps) {
     if (!authUser) {
       setProfile(null);
       setCoins(0);
+      setShowcaseCards([]);
       return;
     }
 
@@ -98,8 +101,16 @@ export default function Profile({ themeControls }: ProfileProps) {
     setProfileLoading(true);
     setProfileError(null);
 
-    Promise.all([ensureCurrentProfile(authUser.id, authUser.email, authUser.user_metadata.username), getCurrentUserCoinBalance(), listCurrentUserPredictions(), getTeamMap(), listCurrentUserBadges(), listCurrentUserLeagueMemberships()])
-      .then(([nextProfile, nextCoins, nextPredictions, nextTeams, nextBadges, nextLeagueMemberships]) => {
+    Promise.all([
+      ensureCurrentProfile(authUser.id, authUser.email, authUser.user_metadata.username),
+      getCurrentUserCoinBalance(),
+      listCurrentUserPredictions(),
+      getTeamMap(),
+      listCurrentUserBadges(),
+      listCurrentUserLeagueMemberships(),
+      listCurrentUserShowcase(),
+    ])
+      .then(([nextProfile, nextCoins, nextPredictions, nextTeams, nextBadges, nextLeagueMemberships, nextShowcaseCards]) => {
         if (!active) return;
         setProfile(nextProfile);
         setCoins(nextCoins ?? 0);
@@ -110,6 +121,7 @@ export default function Profile({ themeControls }: ProfileProps) {
         setTeams(nextTeams);
         setBadges(nextBadges);
         setLeagueMemberships(nextLeagueMemberships);
+        setShowcaseCards(nextShowcaseCards);
       })
       .catch((error) => {
         if (!active) return;
@@ -374,6 +386,32 @@ export default function Profile({ themeControls }: ProfileProps) {
                   <div className="p-2.5 sm:p-3"><div className="text-[10px] uppercase text-subtle font-black">{t('ui.joined')}</div>{formatDate(profile.created_at)}</div>
                 </div>
               </div>
+
+              <section className="bg-card border-b-4 border-main p-4">
+                <div className="flex items-center justify-between gap-3 border-b-4 border-main pb-3">
+                  <h2 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.profileShowcase')}</h2>
+                  <Link to="/cards" className="border-2 border-main bg-c1 px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">
+                    {t('appPages.cards.pickShowcaseCards')}
+                  </Link>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                  {[1, 2, 3].map((slot) => {
+                    const showcaseCard = showcaseCards.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                    return (
+                      <div key={slot} className="min-h-32 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
+                        {showcaseCard ? (
+                          <>
+                            <img src={showcaseCard.image_url} alt={showcaseCard.name} className="aspect-[3/4] w-full object-cover border-2 border-main bg-card" />
+                            <p className="mt-2 truncate">{showcaseCard.name}</p>
+                          </>
+                        ) : (
+                          <span>{t('appPages.cards.emptySlot', { slot })}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
 
               <div className="bg-main text-inv font-black px-3 sm:px-4 py-2.5 sm:py-3 uppercase tracking-wide text-xs sm:text-sm border-b-4 border-main">
                 {t('ui.leagues')}

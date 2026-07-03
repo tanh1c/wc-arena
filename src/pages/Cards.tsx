@@ -1,0 +1,252 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Gift, Search, Star } from 'lucide-react';
+import AppShell from '../components/layout/AppShell';
+import PointsCoin from '../components/ui/PointsCoin';
+import { CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks';
+import type { ThemeControls } from '../App';
+import {
+  groupCatalogWithOwnership,
+  listCurrentUserOwnedCards,
+  listCurrentUserShowcase,
+  listPlayerCards,
+  openCardPack,
+  setShowcaseCard,
+  type CatalogCardWithOwnedCount,
+  type OwnedPlayerCard,
+  type ShowcaseCard,
+} from '../services/cards';
+import { getErrorMessage } from '../services/serviceTypes';
+
+type CardsProps = {
+  themeControls: ThemeControls;
+};
+
+const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
+
+export default function Cards({ themeControls }: CardsProps) {
+  const { t } = useTranslation();
+  const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
+  const [showcase, setShowcase] = useState<ShowcaseCard[]>([]);
+  const [revealedCards, setRevealedCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
+  const [query, setQuery] = useState('');
+  const [rarity, setRarity] = useState<'all' | CardRarity>('all');
+  const [loading, setLoading] = useState(true);
+  const [openingPack, setOpeningPack] = useState<PackType | null>(null);
+  const [error, setError] = useState('');
+
+  const loadCards = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [cards, owned, currentShowcase] = await Promise.all([
+        listPlayerCards(),
+        listCurrentUserOwnedCards(),
+        listCurrentUserShowcase(),
+      ]);
+      setCatalog(groupCatalogWithOwnership(cards, owned));
+      setShowcase(currentShowcase);
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadCards();
+  }, []);
+
+  const filteredCatalog = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return catalog.filter((card) => {
+      const matchesRarity = rarity === 'all' || card.rarity === rarity;
+      const haystack = `${card.name} ${card.position} ${card.team} ${card.nation_region}`.toLowerCase();
+      return matchesRarity && (!normalizedQuery || haystack.includes(normalizedQuery));
+    });
+  }, [catalog, query, rarity]);
+
+  const uniqueOwned = catalog.filter((card) => card.ownedCount > 0).length;
+
+  const handleOpenPack = async (packType: PackType) => {
+    setOpeningPack(packType);
+    setError('');
+    try {
+      const result = await openCardPack(packType);
+      setRevealedCards(result.cards);
+      window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
+      await loadCards();
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setOpeningPack(null);
+    }
+  };
+
+  const handleSetShowcase = async (slotNumber: number, ownedCardId: string) => {
+    setError('');
+    try {
+      setShowcase(await setShowcaseCard(slotNumber, ownedCardId));
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    }
+  };
+
+  return (
+    <AppShell themeControls={themeControls}>
+      <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
+        <section className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_var(--color-shadow)]">
+          <p className="text-xs font-black uppercase text-muted-foreground">{t('appPages.cards.kicker')}</p>
+          <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">{t('appPages.cards.title')}</h1>
+          <p className="mt-2 max-w-3xl text-sm font-bold text-muted-foreground">{t('appPages.cards.subtitle')}</p>
+        </section>
+
+        {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
+
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 lg:gap-6 min-h-0">
+          <aside className="space-y-4">
+            <PackPanel
+              title={t('appPages.cards.dailyPack')}
+              description={t('appPages.cards.dailyPackDescription')}
+              packType="daily"
+              openingPack={openingPack}
+              onOpen={handleOpenPack}
+            />
+            <PackPanel
+              title={t('appPages.cards.premiumPack')}
+              description={t('appPages.cards.premiumPackDescription', {
+                count: CARD_PACKS.premium.cardCount,
+                coins: CARD_PACKS.premium.priceCoins,
+              })}
+              packType="premium"
+              openingPack={openingPack}
+              onOpen={handleOpenPack}
+            />
+
+            <section className="bg-card border-4 border-main p-4 shadow-[6px_6px_0_var(--color-shadow)]">
+              <h2 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h2>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((slot) => {
+                  const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                  return (
+                    <div key={slot} className="min-h-28 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
+                      {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </aside>
+
+          <main className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_var(--color-shadow)] min-h-0">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b-4 border-main pb-4">
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-main">{t('appPages.cards.collection')}</h2>
+                <p className="text-sm font-bold text-muted-foreground">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <label className="flex items-center gap-2 border-2 border-main bg-background px-3 py-2 font-bold text-sm">
+                  <Search size={16} />
+                  <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
+                </label>
+                <select className="border-2 border-main bg-background px-3 py-2 font-black uppercase text-sm" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
+                  {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {revealedCards.length > 0 && (
+              <section className="my-4 border-4 border-main bg-c3 p-4 shadow-[4px_4px_0_var(--color-shadow)]">
+                <h3 className="text-lg font-black uppercase text-main">{t('appPages.cards.revealedCards')}</h3>
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {revealedCards.map((ownedCard) => (
+                    <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {loading ? (
+              <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
+                {filteredCatalog.map((card) => (
+                  <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
+                ))}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+function PackPanel({ title, description, packType, openingPack, onOpen }: {
+  title: string;
+  description: string;
+  packType: PackType;
+  openingPack: PackType | null;
+  onOpen: (packType: PackType) => void;
+}) {
+  const { t } = useTranslation();
+  const pack = CARD_PACKS[packType];
+  return (
+    <section className="bg-card border-4 border-main p-4 shadow-[6px_6px_0_var(--color-shadow)]">
+      <div className="flex items-center gap-2 text-main">
+        <Gift size={22} />
+        <h2 className="text-xl font-black uppercase tracking-tight">{title}</h2>
+      </div>
+      <p className="mt-2 text-sm font-bold text-muted-foreground">{description}</p>
+      <div className="mt-3 flex items-center gap-2 text-sm font-black uppercase text-main">
+        <PointsCoin size="sm" />
+        {pack.priceCoins.toLocaleString()} {t('ui.coinsShort')} · {pack.cardCount} {t('appPages.cards.cards')}
+      </div>
+      <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null} onClick={() => onOpen(packType)}>
+        {openingPack === packType ? t('appPages.cards.opening') : t('appPages.cards.openPack')}
+      </button>
+    </section>
+  );
+}
+
+function CardTile({ card, ownedCount, badge, onSetShowcase }: {
+  key?: string;
+  card: { name: string; position: string; team: string; nation_region: string; image_url: string; rarity: string };
+  ownedCount: number;
+  badge?: string;
+  onSetShowcase?: (slot: number) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <article className="border-4 border-main bg-background p-2 shadow-[4px_4px_0_var(--color-shadow)]">
+      <CardImage card={card} />
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="font-black uppercase text-sm text-main leading-tight">{card.name}</h3>
+          <p className="text-[11px] font-bold uppercase text-muted-foreground">{card.position} · {card.team}</p>
+        </div>
+        <span className="border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main">x{ownedCount}</span>
+      </div>
+      <p className="mt-1 flex items-center gap-1 text-[11px] font-black uppercase text-main"><Star size={12} />{card.rarity}</p>
+      {badge && <p className="mt-2 border-2 border-main bg-c2 px-2 py-1 text-center text-[11px] font-black uppercase text-main">{badge}</p>}
+      {onSetShowcase && (
+        <div className="mt-2 grid grid-cols-3 gap-1">
+          {[1, 2, 3].map((slot) => (
+            <button key={slot} type="button" className="border-2 border-main bg-card px-1 py-1 text-[10px] font-black uppercase text-main" onClick={() => onSetShowcase(slot)}>
+              {t('appPages.cards.slot', { slot })}
+            </button>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function CardImage({ card }: { card: { name: string; image_url: string } }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div className="flex aspect-[3/4] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
+  }
+
+  return <img src={card.image_url} alt={card.name} className="aspect-[3/4] w-full object-cover border-2 border-main bg-muted" onError={() => setFailed(true)} />;
+}
