@@ -401,7 +401,7 @@ export default function Profile({ themeControls }: ProfileProps) {
                       <div key={slot} className="min-h-32 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
                         {showcaseCard ? (
                           <>
-                            <img src={showcaseCard.image_url} alt={showcaseCard.name} className="aspect-[3/4] w-full object-cover border-2 border-main bg-card" />
+                            <img src={showcaseCard.image_url} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
                             <p className="mt-2 truncate">{showcaseCard.name}</p>
                           </>
                         ) : (

@@ -47,3 +47,23 @@ test('manage_cards uses deployable shared Supabase auth helpers', () => {
   assert.match(functionSource, /\.\.\/_shared\/authGuards\.ts/);
   assert.doesNotMatch(functionSource, /\.\.\/_shared\/(auth|http)\.ts/);
 });
+
+test('card image URLs use the direct s6 image host format', () => {
+  const cardListSource = readFileSync('Card_list.txt', 'utf8');
+  const migrationSource = readFileSync('supabase/migrations/20260703000000_gacha_card_collection.sql', 'utf8');
+
+  assert.doesNotMatch(cardListSource, /https:\/\/imgcdn\.dev\/i\//);
+  assert.doesNotMatch(migrationSource, /https:\/\/imgcdn\.dev\/i\//);
+  assert.match(cardListSource, /https:\/\/s6\.imgcdn\.dev\/YquayN\.png/);
+  assert.match(migrationSource, /https:\/\/s6\.imgcdn\.dev\/YquayN\.png/);
+});
+
+test('card art renders at a capped width instead of stretching low-resolution images', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const profileSource = readFileSync('src/pages/Profile.tsx', 'utf8');
+
+  assert.match(cardsSource, /max-w-\[180px\]/);
+  assert.match(cardsSource, /mx-auto/);
+  assert.doesNotMatch(cardsSource, /aspect-\[3\/4\] w-full object-cover/);
+  assert.match(profileSource, /max-w-\[120px\]/);
+});

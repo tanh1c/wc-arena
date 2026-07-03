@@ -245,8 +245,8 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
 function CardImage({ card }: { card: { name: string; image_url: string } }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
-    return <div className="flex aspect-[3/4] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
+    return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
   }
 
-  return <img src={card.image_url} alt={card.name} className="aspect-[3/4] w-full object-cover border-2 border-main bg-muted" onError={() => setFailed(true)} />;
+  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] object-contain border-2 border-main bg-muted" onError={() => setFailed(true)} />;
 }
