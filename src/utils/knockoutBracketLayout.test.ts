@@ -43,8 +43,23 @@ test('groups source matches before the next match they feed', () => {
   ]);
 });
 
-test('aligns left knockout lane by adjacent sources', () => {
+test('matches the reference left-side knockout lane from top to bottom', () => {
   assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'left', matches).map((match) => match.id), [
+    'match-081',
+    'match-082',
+    'match-083',
+    'match-084',
+    'match-085',
+    'match-086',
+    'match-087',
+    'match-088',
+  ]);
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'left', matches).map((match) => match.id), ['match-094', 'match-093', 'match-096', 'match-095']);
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'quarter'), 'left', matches).map((match) => match.id), ['match-098', 'match-100']);
+});
+
+test('matches the reference right-side knockout lane from top to bottom', () => {
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'right', matches).map((match) => match.id), [
     'match-073',
     'match-075',
     'match-074',
@@ -54,19 +69,6 @@ test('aligns left knockout lane by adjacent sources', () => {
     'match-079',
     'match-080',
   ]);
-  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'left', matches).map((match) => match.id), ['match-090', 'match-089', 'match-091', 'match-092']);
-});
-
-test('keeps right-side knockout lane ordered by source matches', () => {
-  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round32'), 'right', matches).map((match) => match.id), [
-    'match-081',
-    'match-082',
-    'match-083',
-    'match-084',
-    'match-085',
-    'match-087',
-    'match-086',
-    'match-088',
-  ]);
-  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'right', matches).map((match) => match.id), ['match-094', 'match-093', 'match-096', 'match-095']);
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'round16'), 'right', matches).map((match) => match.id), ['match-090', 'match-089', 'match-091', 'match-092']);
+  assert.deepEqual(splitDependencyBracketSide(matches.filter((match) => match.stage === 'quarter'), 'right', matches).map((match) => match.id), ['match-097', 'match-099']);
 });
