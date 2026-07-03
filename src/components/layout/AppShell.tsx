@@ -7,6 +7,7 @@ import DailyLoginRewardPopup from '../DailyLoginRewardPopup';
 import { appNavigationGroups, headerNavigation, secondaryHeaderNavigationGroups } from '../../config/navigation';
 import { useAuth } from '../../lib/auth';
 import { claimDailyLoginReward, getTodayDailyLoginReward, type ClaimDailyLoginRewardResponse } from '../../services/dailyLoginReward';
+import { getCurrentUserCoinBalance } from '../../services/leagueEvents';
 import { getCurrentProfile, type ProfileRow } from '../../services/profile';
 import PointsCoin from '../ui/PointsCoin';
 import RankBadge from '../ui/RankBadge';
@@ -89,7 +90,8 @@ function HeaderNavigation() {
   );
 }
 
-function HeaderUserStats({ profile }: { profile: ProfileRow | null }) {
+function HeaderUserStats({ profile, coins }: { profile: ProfileRow | null; coins: number | null }) {
+  const { t } = useTranslation();
   if (!profile) return null;
 
   return (
@@ -103,7 +105,7 @@ function HeaderUserStats({ profile }: { profile: ProfileRow | null }) {
       </div>
       <div className="px-3 py-2 font-black text-xs uppercase text-main whitespace-nowrap flex items-center gap-2">
         <PointsCoin size="sm" />
-        <span>{profile.points.toLocaleString()} PTS</span>
+        <span>{(coins ?? 0).toLocaleString()} {t('ui.coinsShort')}</span>
       </div>
     </Link>
   );
@@ -170,6 +172,7 @@ export default function AppShell({ children, themeControls, fullHeight = false }
   const [dailyCheckInError, setDailyCheckInError] = useState<string | null>(null);
   const [showAlreadyClaimedMessage, setShowAlreadyClaimedMessage] = useState(false);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [coins, setCoins] = useState<number | null>(null);
   const mobileNavRef = useRef<HTMLElement | null>(null);
   const [mobileScrollSpacer, setMobileScrollSpacer] = useState(128);
 
@@ -207,18 +210,25 @@ export default function AppShell({ children, themeControls, fullHeight = false }
       if (typeof detail?.avatar_url !== 'string') return;
       setProfile((currentProfile) => currentProfile ? { ...currentProfile, avatar_url: detail.avatar_url as string, avatar_bg_color: typeof detail.avatar_bg_color === 'string' ? detail.avatar_bg_color : null } : currentProfile);
     };
+    const updateProfileCoins = (event: Event) => {
+      const nextCoins = (event as CustomEvent<{ coins?: unknown }>).detail?.coins;
+      if (typeof nextCoins === 'number') setCoins(nextCoins);
+    };
 
     window.addEventListener('wc26:profile-points-changed', updateProfilePoints);
     window.addEventListener('wc26:profile-avatar-changed', updateProfileAvatar);
+    window.addEventListener('wc26:profile-coins-changed', updateProfileCoins);
     return () => {
       window.removeEventListener('wc26:profile-points-changed', updateProfilePoints);
       window.removeEventListener('wc26:profile-avatar-changed', updateProfileAvatar);
+      window.removeEventListener('wc26:profile-coins-changed', updateProfileCoins);
     };
   }, []);
 
   useEffect(() => {
     if (!user) {
       setProfile(null);
+      setCoins(null);
       setDailyReward(null);
       setDailyCheckInStatus('idle');
       setShowAlreadyClaimedMessage(false);
@@ -227,10 +237,11 @@ export default function AppShell({ children, themeControls, fullHeight = false }
 
     let active = true;
 
-    Promise.all([getCurrentProfile(user.id), getTodayDailyLoginReward()])
-      .then(([nextProfile, reward]) => {
+    Promise.all([getCurrentProfile(user.id), getTodayDailyLoginReward(), getCurrentUserCoinBalance()])
+      .then(([nextProfile, reward, nextCoins]) => {
         if (!active) return;
         setProfile(nextProfile);
+        setCoins(nextCoins);
 
         if (!reward) {
           setDailyReward(null);
@@ -254,6 +265,7 @@ export default function AppShell({ children, themeControls, fullHeight = false }
       .catch(() => {
         if (!active) return;
         setProfile(null);
+        setCoins(null);
         setDailyReward(null);
         setDailyCheckInStatus('idle');
         setShowAlreadyClaimedMessage(false);
@@ -333,7 +345,7 @@ export default function AppShell({ children, themeControls, fullHeight = false }
                 <span className="hidden md:inline">{t('nav.items.agent')}</span>
               </Link>
             )}
-            {user && <HeaderUserStats profile={profile} />}
+            {user && <HeaderUserStats profile={profile} coins={coins} />}
             <ThemeSettings themeControls={themeControls} />
             <Link to={user ? '/profile' : '/login'} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
               {(() => {

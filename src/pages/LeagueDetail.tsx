@@ -424,7 +424,10 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     setError(null);
     try {
       const result = await leaveLeague({ leagueId: league.id });
-      if (typeof result.coins === 'number') setAvailableCoins(result.coins);
+      if (typeof result.coins === 'number') {
+        setAvailableCoins(result.coins);
+        window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
+      }
       navigate('/leagues');
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -440,6 +443,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     try {
       const result = await enterLeagueEvent({ eventId: event.id, stake });
       setAvailableCoins(result.coins);
+      window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -455,6 +459,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
       const result = await settleLeagueEvent({ eventId });
       window.dispatchEvent(new CustomEvent('wc26:profile-points-changed', { detail: { points: result.points } }));
       setAvailableCoins(result.coins);
+      window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -469,6 +474,7 @@ export default function LeagueDetail({ themeControls }: LeagueDetailProps) {
     try {
       const result = await cancelLeagueEvent({ eventId });
       setAvailableCoins(result.coins);
+      window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       loadLeague();
     } catch (nextError) {
       setError(getErrorMessage(nextError));

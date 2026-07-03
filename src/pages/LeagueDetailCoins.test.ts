@@ -11,5 +11,6 @@ test('league pools use spendable coins instead of rank points', () => {
   assert.match(leagueDetailSource, /availableCoins/);
   assert.match(leagueDetailSource, /ui\.availableCoins/);
   assert.match(leagueDetailSource, /ui\.stakeCoins/);
+  assert.match(leagueDetailSource, /profile-coins-changed/);
   assert.doesNotMatch(leagueDetailSource, /profile-points-changed[\s\S]*enterLeagueEvent/);
 });

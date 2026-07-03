@@ -11,6 +11,7 @@ import StreakBadge from '../components/ui/StreakBadge';
 import UserAvatar from '../components/ui/UserAvatar';
 import { useAuth } from '../lib/auth';
 import { listCurrentUserBadges, type UserBadgeWithBadge } from '../services/badges';
+import { getCurrentUserCoinBalance } from '../services/leagueEvents';
 import { listCurrentUserLeagueMemberships, type LeagueMemberRow } from '../services/leagues';
 import { calculateAccuracy, calculateStreak, getPredictionOutcome } from '../lib/scoring';
 import { listCurrentUserPredictions, type PredictionWithMatch } from '../services/predictions';
@@ -68,6 +69,7 @@ export default function Profile({ themeControls }: ProfileProps) {
   const { t } = useTranslation();
   const { user: authUser, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [coins, setCoins] = useState(0);
   const [predictions, setPredictions] = useState<PredictionWithMatch[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [badges, setBadges] = useState<UserBadgeWithBadge[]>([]);
@@ -88,6 +90,7 @@ export default function Profile({ themeControls }: ProfileProps) {
   useEffect(() => {
     if (!authUser) {
       setProfile(null);
+      setCoins(0);
       return;
     }
 
@@ -95,10 +98,11 @@ export default function Profile({ themeControls }: ProfileProps) {
     setProfileLoading(true);
     setProfileError(null);
 
-    Promise.all([ensureCurrentProfile(authUser.id, authUser.email, authUser.user_metadata.username), listCurrentUserPredictions(), getTeamMap(), listCurrentUserBadges(), listCurrentUserLeagueMemberships()])
-      .then(([nextProfile, nextPredictions, nextTeams, nextBadges, nextLeagueMemberships]) => {
+    Promise.all([ensureCurrentProfile(authUser.id, authUser.email, authUser.user_metadata.username), getCurrentUserCoinBalance(), listCurrentUserPredictions(), getTeamMap(), listCurrentUserBadges(), listCurrentUserLeagueMemberships()])
+      .then(([nextProfile, nextCoins, nextPredictions, nextTeams, nextBadges, nextLeagueMemberships]) => {
         if (!active) return;
         setProfile(nextProfile);
+        setCoins(nextCoins ?? 0);
         setDisplayNameDraft(nextProfile.display_name ?? '');
         setDisplayNameStatus('idle');
         setDisplayNameError(null);
@@ -217,7 +221,7 @@ export default function Profile({ themeControls }: ProfileProps) {
               <div className="flex flex-col justify-center min-w-0">
                 <div className="text-[9px] sm:text-xs uppercase font-black tracking-widest leading-none mb-1 opacity-90 truncate">{t('ui.rankTier')}</div>
                 <div className="text-lg sm:text-3xl font-black leading-none truncate"><RankBadge points={profile.points} size="sm" /></div>
-                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 flex items-center gap-1 truncate"><PointsCoin size="sm" />{profile.points.toLocaleString()} {t('ui.pointsShort')}</div>
+                <div className="text-[9px] sm:text-[10px] font-bold uppercase mt-1 flex items-center gap-1 truncate"><PointsCoin size="sm" />{profile.points.toLocaleString()} XP</div>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 border-r-4 xl:border-r-4 border-main p-2.5 sm:p-4 lg:p-5 bg-c3 text-main min-w-0">
@@ -320,7 +324,11 @@ export default function Profile({ themeControls }: ProfileProps) {
                       <RankBadge points={profile.points} size="sm" className="text-main" />
                       <span className="border-2 border-main bg-c1 px-2 py-1 font-black uppercase text-[10px] sm:text-xs flex items-center gap-1 text-main shadow-[2px_2px_0_var(--color-shadow)] rounded-sm">
                         <PointsCoin size="sm" />
-                        {profile.points.toLocaleString()} {t('ui.pointsShort')}
+                        {profile.points.toLocaleString()} XP
+                      </span>
+                      <span className="border-2 border-main bg-c3 px-2 py-1 font-black uppercase text-[10px] sm:text-xs flex items-center gap-1 text-main shadow-[2px_2px_0_var(--color-shadow)] rounded-sm">
+                        <PointsCoin size="sm" />
+                        {coins.toLocaleString()} {t('ui.coinsShort')}
                       </span>
                       <button
                         type="button"
