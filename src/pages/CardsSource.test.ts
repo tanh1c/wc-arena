@@ -67,3 +67,13 @@ test('card art renders at a capped width instead of stretching low-resolution im
   assert.doesNotMatch(cardsSource, /aspect-\[3\/4\] w-full object-cover/);
   assert.match(profileSource, /max-w-\[120px\]/);
 });
+
+test('cards page follows the squad gallery attached layout contract', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /xl:w-\[340px\]/);
+  assert.match(cardsSource, /min-h-\[560px\]/);
+  assert.match(cardsSource, /grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main/);
+  assert.match(cardsSource, /bg-main text-inv border-b-4 border-main/);
+  assert.match(cardsSource, /grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5/);
+});

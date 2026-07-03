@@ -67,6 +67,7 @@ export default function Cards({ themeControls }: CardsProps) {
   }, [catalog, query, rarity]);
 
   const uniqueOwned = catalog.filter((card) => card.ownedCount > 0).length;
+  const showcaseSlotsUsed = showcase.length;
 
   const handleOpenPack = async (packType: PackType) => {
     setOpeningPack(packType);
@@ -94,91 +95,109 @@ export default function Cards({ themeControls }: CardsProps) {
 
   return (
     <AppShell themeControls={themeControls}>
-      <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-        <section className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_var(--color-shadow)]">
+      <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
+        <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
           <p className="text-xs font-black uppercase text-muted-foreground">{t('appPages.cards.kicker')}</p>
-          <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">{t('appPages.cards.title')}</h1>
-          <p className="mt-2 max-w-3xl text-sm font-bold text-muted-foreground">{t('appPages.cards.subtitle')}</p>
+          <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main leading-none">{t('appPages.cards.title')}</h1>
+          <p className="max-w-3xl text-sm font-bold text-muted-foreground">{t('appPages.cards.subtitle')}</p>
         </section>
 
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 lg:gap-6 min-h-0">
-          <aside className="space-y-4">
-            <PackPanel
-              title={t('appPages.cards.dailyPack')}
-              description={t('appPages.cards.dailyPackDescription')}
-              packType="daily"
-              openingPack={openingPack}
-              onOpen={handleOpenPack}
-            />
-            <PackPanel
-              title={t('appPages.cards.premiumPack')}
-              description={t('appPages.cards.premiumPackDescription', {
-                count: CARD_PACKS.premium.cardCount,
-                coins: CARD_PACKS.premium.priceCoins,
-              })}
-              packType="premium"
-              openingPack={openingPack}
-              onOpen={handleOpenPack}
-            />
+        <section className="bg-card border-4 border-main flex flex-col shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm min-h-0">
+          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
+            <StatCell label={t('appPages.cards.collection')} value={uniqueOwned.toLocaleString()} />
+            <StatCell label={t('appPages.cards.cards')} value={catalog.length.toLocaleString()} />
+            <StatCell label={t('appPages.cards.revealedCards')} value={revealedCards.length.toLocaleString()} />
+            <StatCell label={t('appPages.cards.showcase')} value={`${showcaseSlotsUsed}/3`} />
+          </div>
 
-            <section className="bg-card border-4 border-main p-4 shadow-[6px_6px_0_var(--color-shadow)]">
-              <h2 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h2>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((slot) => {
-                  const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
-                  return (
-                    <div key={slot} className="min-h-28 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
-                      {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
-                    </div>
-                  );
+          <div className="flex flex-col xl:flex-row flex-1 min-h-[560px]">
+            <aside className="order-1 xl:order-1 w-full xl:w-[340px] border-b-4 xl:border-b-0 xl:border-r-4 border-main bg-card flex flex-col">
+              <PackPanel
+                title={t('appPages.cards.dailyPack')}
+                description={t('appPages.cards.dailyPackDescription')}
+                packType="daily"
+                openingPack={openingPack}
+                onOpen={handleOpenPack}
+              />
+              <PackPanel
+                title={t('appPages.cards.premiumPack')}
+                description={t('appPages.cards.premiumPackDescription', {
+                  count: CARD_PACKS.premium.cardCount,
+                  coins: CARD_PACKS.premium.priceCoins,
                 })}
-              </div>
-            </section>
-          </aside>
+                packType="premium"
+                openingPack={openingPack}
+                onOpen={handleOpenPack}
+              />
 
-          <main className="bg-card border-4 border-main p-4 lg:p-6 shadow-[8px_8px_0_var(--color-shadow)] min-h-0">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b-4 border-main pb-4">
-              <div>
-                <h2 className="text-2xl font-black uppercase tracking-tight text-main">{t('appPages.cards.collection')}</h2>
-                <p className="text-sm font-bold text-muted-foreground">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <label className="flex items-center gap-2 border-2 border-main bg-background px-3 py-2 font-bold text-sm">
-                  <Search size={16} />
-                  <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
-                </label>
-                <select className="border-2 border-main bg-background px-3 py-2 font-black uppercase text-sm" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
-                  {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {revealedCards.length > 0 && (
-              <section className="my-4 border-4 border-main bg-c3 p-4 shadow-[4px_4px_0_var(--color-shadow)]">
-                <h3 className="text-lg font-black uppercase text-main">{t('appPages.cards.revealedCards')}</h3>
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {revealedCards.map((ownedCard) => (
-                    <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} />
-                  ))}
+              <section className="border-t-4 border-main p-3 sm:p-4">
+                <h2 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h2>
+                <div className="mt-3 grid grid-cols-3 xl:grid-cols-1 gap-2">
+                  {[1, 2, 3].map((slot) => {
+                    const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                    return (
+                      <div key={slot} className="min-h-28 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main flex items-center justify-center">
+                        {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
-            )}
+            </aside>
 
-            {loading ? (
-              <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
-            ) : (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
-                {filteredCatalog.map((card) => (
-                  <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
-                ))}
+            <main className="order-2 xl:order-2 flex-1 bg-muted min-w-0 flex flex-col">
+              <div className="bg-main text-inv border-b-4 border-main p-3 sm:p-4 flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.collection')}</h2>
+                  <p className="text-sm font-bold text-inv/80">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 text-main">
+                  <label className="flex items-center gap-2 border-2 border-main bg-card px-3 py-2 font-bold text-sm shadow-[2px_2px_0_var(--color-shadow)]">
+                    <Search size={16} />
+                    <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
+                  </label>
+                  <select className="border-2 border-main bg-card px-3 py-2 font-black uppercase text-sm shadow-[2px_2px_0_var(--color-shadow)]" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
+                    {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
+                  </select>
+                </div>
               </div>
-            )}
-          </main>
-        </div>
+
+              {revealedCards.length > 0 && (
+                <section className="m-3 sm:m-4 border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <h3 className="border-b-4 border-main bg-card p-3 text-lg font-black uppercase text-main">{t('appPages.cards.revealedCards')}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
+                    {revealedCards.map((ownedCard) => (
+                      <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {loading ? (
+                <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
+                  {filteredCatalog.map((card) => (
+                    <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
+                  ))}
+                </div>
+              )}
+            </main>
+          </div>
+        </section>
       </div>
     </AppShell>
+  );
+}
+
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-r-4 border-b-4 xl:border-b-0 border-main p-3 sm:p-4 last:border-r-0 even:border-r-0 xl:even:border-r-4 xl:last:border-r-0">
+      <p className="text-[10px] font-black uppercase text-muted-foreground">{label}</p>
+      <p className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-main">{value}</p>
+    </div>
   );
 }
 
@@ -192,13 +211,13 @@ function PackPanel({ title, description, packType, openingPack, onOpen }: {
   const { t } = useTranslation();
   const pack = CARD_PACKS[packType];
   return (
-    <section className="bg-card border-4 border-main p-4 shadow-[6px_6px_0_var(--color-shadow)]">
+    <section className="border-b-4 border-main p-3 sm:p-4">
       <div className="flex items-center gap-2 text-main">
         <Gift size={22} />
         <h2 className="text-xl font-black uppercase tracking-tight">{title}</h2>
       </div>
       <p className="mt-2 text-sm font-bold text-muted-foreground">{description}</p>
-      <div className="mt-3 flex items-center gap-2 text-sm font-black uppercase text-main">
+      <div className="mt-3 flex items-center gap-2 border-2 border-main bg-muted px-3 py-2 text-sm font-black uppercase text-main">
         <PointsCoin size="sm" />
         {pack.priceCoins.toLocaleString()} {t('ui.coinsShort')} · {pack.cardCount} {t('appPages.cards.cards')}
       </div>
@@ -218,26 +237,30 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
 }) {
   const { t } = useTranslation();
   return (
-    <article className="border-4 border-main bg-background p-2 shadow-[4px_4px_0_var(--color-shadow)]">
-      <CardImage card={card} />
-      <div className="mt-2 flex items-start justify-between gap-2">
-        <div>
-          <h3 className="font-black uppercase text-sm text-main leading-tight">{card.name}</h3>
-          <p className="text-[11px] font-bold uppercase text-muted-foreground">{card.position} · {card.team}</p>
-        </div>
-        <span className="border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main">x{ownedCount}</span>
+    <article className="border-4 border-main bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0">
+      <div className="relative border-b-4 border-main bg-muted p-2 overflow-hidden">
+        <CardImage card={card} />
+        <span className="absolute left-2 top-2 bg-main text-inv border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)]">{card.rarity}</span>
+        <span className="absolute right-2 top-2 border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
       </div>
-      <p className="mt-1 flex items-center gap-1 text-[11px] font-black uppercase text-main"><Star size={12} />{card.rarity}</p>
-      {badge && <p className="mt-2 border-2 border-main bg-c2 px-2 py-1 text-center text-[11px] font-black uppercase text-main">{badge}</p>}
-      {onSetShowcase && (
-        <div className="mt-2 grid grid-cols-3 gap-1">
-          {[1, 2, 3].map((slot) => (
-            <button key={slot} type="button" className="border-2 border-main bg-card px-1 py-1 text-[10px] font-black uppercase text-main" onClick={() => onSetShowcase(slot)}>
-              {t('appPages.cards.slot', { slot })}
-            </button>
-          ))}
+      <div className="p-3 flex flex-col gap-2 min-w-0">
+        <h3 className="font-black uppercase text-sm sm:text-base leading-tight truncate text-main">{card.name}</h3>
+        <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase">
+          <p className="border-2 border-main bg-muted px-2 py-1 text-main truncate">{card.position}</p>
+          <p className="border-2 border-main bg-muted px-2 py-1 text-main truncate">{card.team}</p>
         </div>
-      )}
+        <p className="flex items-center gap-1 text-[11px] font-black uppercase text-main"><Star size={12} />{card.nation_region}</p>
+        {badge && <p className="border-2 border-main bg-c2 px-2 py-1 text-center text-[11px] font-black uppercase text-main">{badge}</p>}
+        {onSetShowcase && (
+          <div className="grid grid-cols-3 gap-1">
+            {[1, 2, 3].map((slot) => (
+              <button key={slot} type="button" className="border-2 border-main bg-card px-1 py-1 text-[10px] font-black uppercase text-main hover:bg-c1" onClick={() => onSetShowcase(slot)}>
+                {t('appPages.cards.slot', { slot })}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </article>
   );
 }
