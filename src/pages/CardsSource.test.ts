@@ -123,3 +123,15 @@ test('card tiles use rarity-specific animated frame effects', () => {
   assert.match(cssSource, /@keyframes wc-card-epic-pulse/);
   assert.match(cssSource, /@keyframes wc-card-icon-shimmer/);
 });
+
+test('card rarity badges use rarity colors and clipped rounded cards', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /getRarityBadgeClass/);
+  assert.match(cardsSource, /Common: 'bg-\[#d8ff65\] text-main/);
+  assert.match(cardsSource, /Rare: 'bg-\[#00d4ff\] text-main/);
+  assert.match(cardsSource, /Epic: 'bg-\[#ff2bd6\] text-white/);
+  assert.match(cardsSource, /Icon: 'bg-\[#fff0b8\] text-main/);
+  assert.match(cardsSource, /getRarityBadgeClass\(card\.rarity\)/);
+  assert.match(cardsSource, /min-w-0 overflow-hidden/);
+});
