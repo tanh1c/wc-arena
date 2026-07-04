@@ -261,3 +261,38 @@ test('opened cards appear in a flip reveal popup using the Backcard art', () => 
   assert.match(cardsSource, /rounded-sm/);
   assert.match(cardsSource, /setRevealModalOpen\(false\)/);
 });
+
+test('revealed cards review is hidden by default behind a rounded toggle panel', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /showRevealedReview/);
+  assert.match(cardsSource, /setShowRevealedReview\(false\)/);
+  assert.match(cardsSource, /setShowRevealedReview\(\(current\) => !current\)/);
+  assert.match(cardsSource, /revealedCards\.length > 0 && showRevealedReview/);
+  assert.match(cardsSource, /rounded-t-sm border-b-4 border-main bg-card/);
+});
+
+test('reveal modal card flips use a 3d animated effect', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const cssSource = readFileSync('src/index.css', 'utf8');
+
+  assert.match(cardsSource, /wc-card-flip/);
+  assert.match(cardsSource, /wc-card-flip-inner/);
+  assert.match(cardsSource, /wc-card-flip-revealed/);
+  assert.match(cardsSource, /wc-card-flip-face/);
+  assert.match(cssSource, /\.wc-card-flip/);
+  assert.match(cssSource, /perspective: 1000px/);
+  assert.match(cssSource, /transform-style: preserve-3d/);
+  assert.match(cssSource, /backface-visibility: hidden/);
+  assert.match(cssSource, /@keyframes wc-card-reveal-pop/);
+});
+
+test('opened card status badges use distinct readable colors', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /badgeClass/);
+  assert.match(cardsSource, /bg-c1 text-main/);
+  assert.match(cardsSource, /bg-c4 text-main/);
+  assert.match(cardsSource, /duplicate \? 'bg-c4 text-main' : 'bg-c1 text-main'/);
+  assert.doesNotMatch(cardsSource, /bg-c2 px-2 py-1 text-center text-\[11px\] font-black uppercase text-main/);
+});

@@ -459,6 +459,39 @@
     70% { transform: translateY(2px) rotate(-3deg) scale(0.98); filter: drop-shadow(0 0 24px var(--color-c2)); }
   }
 
+  .wc-card-flip {
+    perspective: 1000px;
+  }
+
+  .wc-card-flip-inner {
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.65s ease;
+  }
+
+  .wc-card-flip:not(.wc-card-flip-revealed):hover .wc-card-flip-inner {
+    transform: translateY(-4px) rotateZ(-1deg);
+  }
+
+  .wc-card-flip-revealed .wc-card-flip-inner {
+    transform: rotateY(180deg);
+    animation: wc-card-reveal-pop 0.65s ease-out;
+  }
+
+  .wc-card-flip-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .wc-card-flip-front {
+    transform: rotateY(180deg);
+  }
+
+  @keyframes wc-card-reveal-pop {
+    0% { transform: rotateY(0) scale(0.94); filter: drop-shadow(4px 4px 0 var(--color-shadow)); }
+    65% { transform: rotateY(190deg) scale(1.06); filter: drop-shadow(0 0 24px var(--color-c3)); }
+    100% { transform: rotateY(180deg) scale(1); filter: drop-shadow(4px 4px 0 var(--color-shadow)); }
+  }
+
   .wc-card-frame-common {
     border-color: #2f7d32;
   }
