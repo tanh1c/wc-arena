@@ -25,10 +25,10 @@ type CardsProps = {
 const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
 
 const rarityCardArtClasses: Record<string, string> = {
-  Common: 'bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,.9)_0_8%,transparent_9%),repeating-linear-gradient(135deg,#e8f3ec_0_10px,#d8eadf_10px_20px)]',
-  Rare: 'bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,.9)_0_8%,transparent_9%),radial-gradient(circle,#5ad7ff_1px,transparent_1.5px),linear-gradient(135deg,#d8f3ff,#89dfff)] bg-[length:auto,14px_14px,auto]',
-  Epic: 'bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,.9)_0_8%,transparent_9%),conic-gradient(from_45deg_at_50%_50%,#ffe066,#ff4fd8,#8a5cff,#ffe066)]',
-  Icon: 'bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.95)_0_8%,transparent_9%),repeating-conic-gradient(from_0deg_at_50%_50%,#fff0b8_0deg_10deg,#d99a00_10deg_16deg,#111_16deg_18deg)]',
+  Common: 'bg-[repeating-linear-gradient(135deg,#7fbf5f_0_12px,#d8ff65_12px_24px),linear-gradient(135deg,#173f2b,#7fbf5f)]',
+  Rare: 'bg-[linear-gradient(#0088ff_3px,transparent_3px),linear-gradient(90deg,#0088ff_3px,transparent_3px),linear-gradient(135deg,#031a5f,#00d4ff)] bg-[length:22px_22px,22px_22px,auto]',
+  Epic: 'bg-[linear-gradient(135deg,transparent_0_34%,#ff2bd6_34%_44%,transparent_44%_100%),linear-gradient(45deg,transparent_0_38%,#ffe600_38%_48%,transparent_48%_100%),linear-gradient(135deg,#2b005f,#6f00ff)]',
+  Icon: 'bg-[repeating-conic-gradient(from_0deg_at_50%_50%,#fff0b8_0deg_10deg,#d99a00_10deg_16deg,#111_16deg_18deg)]',
 };
 
 function getRarityCardArtClass(rarity: string) {

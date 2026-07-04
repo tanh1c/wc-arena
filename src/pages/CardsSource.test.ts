@@ -88,13 +88,13 @@ test('cards page separates pack opening from gallery browsing with tabs', () => 
   assert.match(cardsSource, /setActiveTab/);
 });
 
-test('card art panels use rarity-specific colorful backgrounds', () => {
+test('card art panels use bold rarity-specific graphic backgrounds', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
   assert.match(cardsSource, /getRarityCardArtClass/);
-  assert.match(cardsSource, /Common: 'bg-\[radial-gradient/);
-  assert.match(cardsSource, /Rare: 'bg-\[radial-gradient/);
-  assert.match(cardsSource, /Epic: 'bg-\[radial-gradient/);
-  assert.match(cardsSource, /Icon: 'bg-\[radial-gradient/);
+  assert.match(cardsSource, /Common: 'bg-\[repeating-linear-gradient\(135deg,#7fbf5f_0_12px,#d8ff65_12px_24px\)/);
+  assert.match(cardsSource, /Rare: 'bg-\[linear-gradient\(#0088ff_3px,transparent_3px\)/);
+  assert.match(cardsSource, /Epic: 'bg-\[linear-gradient\(135deg,transparent_0_34%,#ff2bd6_34%_44%/);
+  assert.match(cardsSource, /Icon: 'bg-\[repeating-conic-gradient/);
   assert.match(cardsSource, /getRarityCardArtClass\(card\.rarity\)/);
 });
