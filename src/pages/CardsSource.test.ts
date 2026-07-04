@@ -99,9 +99,9 @@ test('card art panels use bold rarity-specific graphic backgrounds', () => {
   assert.match(cardsSource, /getRarityCardArtClass\(card\.rarity\)/);
 });
 
-test('card PNG art blends its white image background into rarity panels', () => {
+test('card PNG art keeps CDN rendering unblended inside rarity panels', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /mix-blend-multiply/);
+  assert.doesNotMatch(cardsSource, /mix-blend-multiply/);
   assert.doesNotMatch(cardsSource, /getRarityInnerBackdrop/);
 });
