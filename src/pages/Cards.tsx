@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gift, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import backCardImage from '../../Backcard.png';
 import dailyPackImage from '../../Daily.png';
 import elitePackImage from '../../Elite.png';
@@ -39,6 +39,14 @@ const packArtwork: Record<PackType, { image: string; imageClass?: string }> = {
   premium: { image: premiumPackImage },
   elite: { image: elitePackImage },
   icon: { image: iconPackImage },
+};
+
+const packTextKeys: Record<PackType, { title: string; description: string }> = {
+  daily: { title: 'appPages.cards.dailyPack', description: 'appPages.cards.dailyPackDescription' },
+  starter: { title: 'appPages.cards.starterPack', description: 'appPages.cards.starterPackDescription' },
+  premium: { title: 'appPages.cards.premiumPack', description: 'appPages.cards.premiumPackDescription' },
+  elite: { title: 'appPages.cards.elitePack', description: 'appPages.cards.elitePackDescription' },
+  icon: { title: 'appPages.cards.iconPack', description: 'appPages.cards.iconPackDescription' },
 };
 
 const rarityCardArtClasses: Record<string, string> = {
@@ -212,24 +220,11 @@ export default function Cards({ themeControls }: CardsProps) {
 
   return (
     <AppShell themeControls={themeControls}>
-      <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
-        <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
-          <p className="inline-flex w-fit border-2 border-main bg-c3 px-3 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.kicker')}</p>
-          <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main leading-none">{t('appPages.cards.title')}</h1>
-          <p className="max-w-3xl text-sm font-bold text-muted-foreground">{t('appPages.cards.subtitle')}</p>
-        </section>
-
+      <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0">
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
 
-        <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
-          <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
-            <StatCell label={t('appPages.cards.collection')} value={uniqueOwned.toLocaleString()} className="bg-c1 text-main" />
-            <StatCell label={t('appPages.cards.cards')} value={catalog.length.toLocaleString()} className="bg-c2 text-inv" />
-            <StatCell label={t('appPages.cards.revealedCards')} value={revealedCards.length.toLocaleString()} className="bg-c3 text-main" />
-            <StatCell label={t('appPages.cards.showcase')} value={`${showcaseSlotsUsed}/3`} className="bg-c4 text-main" />
-          </div>
-
-          <div className="grid grid-cols-2 border-b-4 border-main">
+        <section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+          <div className="grid grid-cols-2 border-4 border-main bg-card">
             {[
               ['openPacks', 'Open Packs'],
               ['gallery', 'Gallery'],
@@ -237,7 +232,7 @@ export default function Cards({ themeControls }: CardsProps) {
               <button
                 key={tab}
                 type="button"
-                className={`border-r-4 border-main px-4 py-3 text-left font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
+                className={`border-r-4 border-main px-4 py-3 text-center font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
                 onClick={() => setActiveTab(tab as 'openPacks' | 'gallery')}
               >
                 {label}
@@ -245,114 +240,130 @@ export default function Cards({ themeControls }: CardsProps) {
             ))}
           </div>
 
-          <div className="flex flex-col flex-1 min-h-[560px]">
-            {activeTab === 'openPacks' ? (
-              <main className="bg-muted min-w-0 flex flex-col">
-                <div className="bg-main text-inv border-b-4 border-main p-3 sm:p-4">
-                  <h2 className="text-2xl font-black uppercase tracking-tight">Open Packs</h2>
-                  <p className="text-sm font-bold text-inv/80">{t('appPages.cards.dailyPack')} · {t('appPages.cards.premiumPack')}</p>
-                </div>
+          {activeTab === 'openPacks' ? (
+            <main className="min-w-0 bg-muted p-3 sm:p-4">
+              <p className="mb-3 inline-flex border-4 border-main bg-c3 text-main px-3 py-2 text-xs font-black uppercase shadow-[3px_3px_0_var(--color-shadow)]">{t('appPages.cards.kicker')}</p>
+              <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_320px]">
+                <PackRail selectedPackType={selectedPackType} setSelectedPackType={setSelectedPackType} />
+                <SelectedPackHero
+                  title={t(packTextKeys[selectedPackType].title)}
+                  description={t(packTextKeys[selectedPackType].description, {
+                    count: CARD_PACKS[selectedPackType].cardCount,
+                    coins: CARD_PACKS[selectedPackType].priceCoins,
+                  })}
+                  packType={selectedPackType}
+                  openingPack={openingPack}
+                  isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
+                  onOpen={handleOpenPack}
+                />
+                <PackInfoPanel
+                  packType={selectedPackType}
+                  isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
+                  dailyResetCountdown={selectedPackType === 'daily' ? dailyResetCountdown : ''}
+                />
+              </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-3 sm:gap-4 p-3 sm:p-4">
-                  <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:self-start">
-                    {packTypes.map((packType) => {
-                      const pack = CARD_PACKS[packType];
-                      return (
-                        <button
-                          key={packType}
-                          type="button"
-                          className={`border-4 border-main p-2 text-left font-black uppercase shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === packType ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
-                          onClick={() => setSelectedPackType(packType)}
-                        >
-                          <span className="block text-xs leading-tight">{t(`appPages.cards.${packType}Pack`)}</span>
-                          <span className="mt-1 flex items-center justify-between gap-2 text-[10px] opacity-80">
-                            <span>{pack.cardCount} cards</span>
-                            <span>{pack.priceCoins === 0 ? 'Free' : `${pack.priceCoins} Coins`}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
+              <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+                <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="font-black uppercase text-main">Potential Rewards</h3>
+                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">View All</span>
                   </div>
-
-                  <PackPanel
-                    title={t(`appPages.cards.${selectedPackType}Pack`)}
-                    description={t(`appPages.cards.${selectedPackType}PackDescription`, {
-                      count: CARD_PACKS[selectedPackType].cardCount,
-                      coins: CARD_PACKS[selectedPackType].priceCoins,
-                    })}
-                    packType={selectedPackType}
-                    openingPack={openingPack}
-                    isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
-                    dailyResetCountdown={selectedPackType === 'daily' ? dailyResetCountdown : ''}
-                    onOpen={handleOpenPack}
-                  />
-                </div>
-
-                {revealedCards.length > 0 && (
-                  <div className="m-3 sm:m-4 mt-0 rounded-sm border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-3 rounded-t-sm border-b-4 border-main bg-card p-3 text-left text-lg font-black uppercase text-main hover:bg-c1"
-                      aria-expanded={showRevealedReview}
-                      onClick={() => setShowRevealedReview((current) => !current)}
-                    >
-                      <span>{t('appPages.cards.revealedCards')}</span>
-                      <span className="border-2 border-main bg-c2 px-2 py-1 text-xs text-inv shadow-[2px_2px_0_var(--color-shadow)]">{showRevealedReview ? 'Hide' : 'Show'}</span>
-                    </button>
-                    {revealedCards.length > 0 && showRevealedReview && (
-                      <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
-                        {revealedCards.map((ownedCard) => (
-                          <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
-                        ))}
-                      </section>
-                    )}
-                  </div>
-                )}
-              </main>
-            ) : (
-              <main className="bg-muted min-w-0 flex flex-col">
-                <div className="bg-main text-inv border-b-4 border-main p-3 sm:p-4 flex flex-col lg:flex-row lg:items-end justify-between gap-3">
-                  <div>
-                    <h2 className="text-2xl font-black uppercase tracking-tight">Gallery</h2>
-                    <p className="text-sm font-bold text-inv/80">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 text-main">
-                    <label className="flex items-center gap-2 border-2 border-main bg-card px-3 py-2 font-bold text-sm shadow-[2px_2px_0_var(--color-shadow)]">
-                      <Search size={16} />
-                      <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
-                    </label>
-                    <select className="border-2 border-main bg-card px-3 py-2 font-black uppercase text-sm shadow-[2px_2px_0_var(--color-shadow)]" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
-                      {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <section className="border-b-4 border-main bg-card p-3 sm:p-4">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h3>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {[1, 2, 3].map((slot) => {
-                      const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
-                      return (
-                        <div key={slot} className="min-h-28 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main flex items-center justify-center">
-                          {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
-                        </div>
-                      );
-                    })}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
+                      <div key={rarity} className="rounded-sm border-4 border-main bg-muted p-2 text-center shadow-[3px_3px_0_var(--color-shadow)]">
+                        <div className={`mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center border-4 border-main text-2xl font-black ${getRarityCardArtClass(rarity)}`}>?</div>
+                        <p className={`border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(rarity)}`}>{rarity}</p>
+                      </div>
+                    ))}
                   </div>
                 </section>
 
-                {loading ? (
-                  <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
-                    {filteredCatalog.map((card) => (
-                      <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
-                    ))}
+                <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="font-black uppercase text-main">Recent Pulls</h3>
+                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">View History</span>
                   </div>
-                )}
-              </main>
-            )}
-          </div>
+                  {revealedCards.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+                      {revealedCards.map((ownedCard) => (
+                        <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="border-2 border-main bg-muted p-6 text-center text-sm font-black uppercase text-muted-foreground">Open a pack to see your latest pulls.</p>
+                  )}
+                </section>
+              </div>
+
+              {revealedCards.length > 0 && (
+                <div className="mt-3 rounded-sm border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 rounded-t-sm border-b-4 border-main bg-card p-3 text-left text-lg font-black uppercase text-main hover:bg-c1"
+                    aria-expanded={showRevealedReview}
+                    onClick={() => setShowRevealedReview((current) => !current)}
+                  >
+                    <span>{t('appPages.cards.revealedCards')}</span>
+                    <span className="border-2 border-main bg-c2 px-2 py-1 text-xs text-inv shadow-[2px_2px_0_var(--color-shadow)]">{showRevealedReview ? 'Hide' : 'Show'}</span>
+                  </button>
+                  {revealedCards.length > 0 && showRevealedReview && (
+                    <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
+                      {revealedCards.map((ownedCard) => (
+                        <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
+                      ))}
+                    </section>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-3 rounded-sm border-4 border-main bg-main p-3 text-xs font-black uppercase text-inv shadow-[4px_4px_0_var(--color-shadow)]">
+                <span className="text-c3">TIP:</span> Higher tier packs have better chances at Epic and Icon cards. PLAY. COLLECT. DOMINATE.
+              </div>
+            </main>
+          ) : (
+            <main className="bg-muted min-w-0 flex flex-col">
+              <div className="bg-main text-inv border-b-4 border-main p-3 sm:p-4 flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">Gallery</h2>
+                  <p className="text-sm font-bold text-inv/80">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 text-main">
+                  <label className="flex items-center gap-2 border-2 border-main bg-card px-3 py-2 font-bold text-sm shadow-[2px_2px_0_var(--color-shadow)]">
+                    <Search size={16} />
+                    <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
+                  </label>
+                  <select className="border-2 border-main bg-card px-3 py-2 font-black uppercase text-sm shadow-[2px_2px_0_var(--color-shadow)]" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
+                    {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <section className="border-b-4 border-main bg-card p-3 sm:p-4">
+                <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h3>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {[1, 2, 3].map((slot) => {
+                    const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                    return (
+                      <div key={slot} className="min-h-28 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main flex items-center justify-center">
+                        {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {loading ? (
+                <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
+                  {filteredCatalog.map((card) => (
+                    <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
+                  ))}
+                </div>
+              )}
+            </main>
+          )}
         </section>
       </div>
 
@@ -401,50 +412,128 @@ function StatCell({ label, value, className }: { label: string; value: string; c
   );
 }
 
-function PackPanel({ title, description, packType, openingPack, isOpenedToday = false, dailyResetCountdown = '', onOpen }: {
-  key?: string;
+function PackRail({ selectedPackType, setSelectedPackType }: {
+  selectedPackType: PackType;
+  setSelectedPackType: (packType: PackType) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <aside className="rounded-sm border-4 border-main bg-card p-2 shadow-[4px_4px_0_var(--color-shadow)]">
+      <p className="mb-2 border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main">Choose Pack</p>
+      <div className="grid gap-2">
+        {packTypes.map((packType) => {
+          const pack = CARD_PACKS[packType];
+          const artwork = packArtwork[packType];
+          return (
+            <button
+              key={packType}
+              type="button"
+              className={`grid grid-cols-[54px_minmax(0,1fr)] items-center gap-2 rounded-sm border-4 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === packType ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`}
+              onClick={() => setSelectedPackType(packType)}
+            >
+              <span className="flex h-16 items-center justify-center border-2 border-main bg-card p-1">
+                <img src={artwork.image} alt="" className={`max-h-full max-w-full object-contain ${artwork.imageClass ?? ''}`} />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-black uppercase">{t(packTextKeys[packType].title)}</span>
+                <span className="mt-1 block text-[10px] font-black uppercase opacity-80">{pack.cardCount} {t('appPages.cards.cards')}</span>
+                <span className="mt-1 inline-flex items-center gap-1 border-2 border-main bg-card px-2 py-0.5 text-[10px] font-black uppercase text-main">
+                  {pack.priceCoins === 0 ? 'FREE' : `${pack.priceCoins.toLocaleString()} ${t('ui.coinsShort')}`}
+                  {pack.priceCoins > 0 && <PointsCoin size="sm" />}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
+function SelectedPackHero({ title, description, packType, openingPack, isOpenedToday, onOpen }: {
   title: string;
   description: string;
   packType: PackType;
   openingPack: PackType | null;
-  isOpenedToday?: boolean;
-  dailyResetCountdown?: string;
+  isOpenedToday: boolean;
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
   const pack = { ...CARD_PACKS[packType], ...packArtwork[packType] };
   const isOpening = openingPack === packType;
   return (
-    <section className="border-4 border-main bg-card p-3 sm:p-4 shadow-[4px_4px_0_var(--color-shadow)]">
-      <div className="flex items-center gap-2 text-main">
-        <Gift size={22} />
-        <h2 className="text-xl font-black uppercase tracking-tight">{title}</h2>
+    <section className="relative min-h-[520px] overflow-hidden rounded-sm border-4 border-main bg-[radial-gradient(circle_at_50%_0%,rgba(228,255,0,0.28),transparent_32%),linear-gradient(135deg,#07111f_0%,#0d47ff_48%,#02040a_100%)] p-4 text-inv shadow-[4px_4px_0_var(--color-shadow)]">
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.14)_0_2px,transparent_2px_34px)] opacity-70" />
+      <div className="relative z-10 grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] lg:items-center">
+        <div className="flex h-64 sm:h-72 items-center justify-center rounded-sm border-4 border-main bg-black/30 p-4 shadow-[4px_4px_0_var(--color-shadow)]">
+          <img src={pack.image} alt={title} className={`max-h-full max-w-full object-contain drop-shadow-[10px_10px_0_rgba(0,0,0,0.55)] ${pack.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'transition-transform hover:-translate-y-2 hover:rotate-1'}`} />
+        </div>
+        <div className="min-w-0">
+          <p className="mb-2 inline-flex border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Featured Pack</p>
+          <h2 className="text-4xl font-black uppercase leading-none tracking-tighter sm:text-5xl">{title}</h2>
+          <p className="mt-3 max-w-xl text-sm font-bold text-white/85">{description}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-main">
+            <div className="border-2 border-main bg-c1 p-2 shadow-[2px_2px_0_var(--color-shadow)]">
+              <p className="text-[10px] font-black uppercase opacity-70">Cards</p>
+              <p className="text-2xl font-black">{pack.cardCount}</p>
+            </div>
+            <div className="border-2 border-main bg-card p-2 shadow-[2px_2px_0_var(--color-shadow)]">
+              <p className="text-[10px] font-black uppercase opacity-70">Price</p>
+              <p className="flex items-center gap-1 text-2xl font-black">{pack.priceCoins === 0 ? 'FREE' : pack.priceCoins.toLocaleString()} {pack.priceCoins > 0 && <PointsCoin size="sm" />}</p>
+            </div>
+          </div>
+          {isOpenedToday && <p className="mt-3 border-2 border-main bg-c4 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
+          <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-4 text-lg font-black uppercase text-main shadow-[5px_5px_0_var(--color-shadow)] transition-transform hover:-translate-y-1 disabled:translate-y-0 disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
+            {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
+          </button>
+        </div>
       </div>
-      <div className="mt-3 flex h-64 sm:h-72 items-center justify-center border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-        <img src={pack.image} alt={title} className={`max-h-full max-w-full object-contain drop-shadow-[6px_6px_0_var(--color-shadow)] ${pack.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'hover:-translate-y-1 transition-transform'}`} />
+    </section>
+  );
+}
+
+function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
+  packType: PackType;
+  isOpenedToday: boolean;
+  dailyResetCountdown: string;
+}) {
+  const { t } = useTranslation();
+  const pack = CARD_PACKS[packType];
+  return (
+    <aside className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+      <p className="border-2 border-main bg-c4 px-2 py-1 text-[10px] font-black uppercase text-main">Pack Status</p>
+      <div className="mt-3 grid gap-2 text-xs font-black uppercase text-main">
+        <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
+          <span>Availability</span>
+          <span className={isOpenedToday ? 'text-c5' : 'text-c3'}>{isOpenedToday ? 'Opened' : 'Available'}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
+          <span>Limit</span>
+          <span>{pack.oncePerUtcDay ? '1 / UTC day' : 'Unlimited'}</span>
+        </div>
+        {isOpenedToday && dailyResetCountdown && (
+          <div className="border-2 border-main bg-c1 px-3 py-2 text-center">
+            {t('appPages.cards.dailyPackResetIn', { time: dailyResetCountdown })}
+          </div>
+        )}
       </div>
-      <p className="mt-3 text-sm font-bold text-muted-foreground">{description}</p>
-      <div className="mt-3 flex items-center gap-2 border-2 border-main bg-muted px-3 py-2 text-sm font-black uppercase text-main">
-        <PointsCoin size="sm" />
-        {pack.priceCoins.toLocaleString()} {t('ui.coinsShort')} · {pack.cardCount} {t('appPages.cards.cards')}
-      </div>
-      <div className="mt-3 border-2 border-main bg-muted p-2">
+      <div className="mt-4 border-2 border-main bg-muted p-2">
         <p className="mb-2 text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.dropRates')}</p>
-        <div className="grid grid-cols-2 gap-1">
+        <div className="grid gap-2">
           {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
-            <div key={rarity} className="flex items-center justify-between gap-2 border-2 border-main bg-card px-2 py-1 text-[10px] font-black uppercase text-main">
-              <span className={`border-2 border-main px-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
-              <span>{pack.rarityWeights[rarity]}%</span>
+            <div key={rarity} className="grid gap-1">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase text-main">
+                <span className={`border-2 border-main px-2 py-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
+                <span>{pack.rarityWeights[rarity]}%</span>
+              </div>
+              <div className="h-4 border-2 border-main bg-card">
+                <div className={`h-full ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarityWeights[rarity]}%` }} />
+              </div>
             </div>
           ))}
         </div>
       </div>
-      {isOpenedToday && <p className="mt-3 border-2 border-main bg-c3 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
-      {isOpenedToday && dailyResetCountdown && <p className="mt-2 border-2 border-main bg-card px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackResetIn', { time: dailyResetCountdown })}</p>}
-      <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
-        {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
-      </button>
-    </section>
+    </aside>
   );
 }
 

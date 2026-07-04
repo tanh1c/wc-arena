@@ -68,16 +68,18 @@ test('card art renders at a capped width instead of stretching low-resolution im
   assert.match(profileSource, /max-w-\[120px\]/);
 });
 
-test('cards page follows the squad gallery attached layout contract', () => {
+test('cards page follows the screenshot-style pack dashboard layout contract', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0/);
-  assert.match(cardsSource, /bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-\[6px_6px_0_0_var\(--color-shadow\)\] lg:shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm/);
-  assert.match(cardsSource, /min-h-\[560px\]/);
-  assert.match(cardsSource, /grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main/);
-  assert.match(cardsSource, /bg-main text-inv border-b-4 border-main/);
-  assert.match(cardsSource, /grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5/);
-  assert.doesNotMatch(cardsSource, /rounded-sm min-h-0/);
+  assert.match(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
+  assert.match(cardsSource, /grid grid-cols-2 border-4 border-main bg-card/);
+  assert.match(cardsSource, /lg:grid-cols-\[240px_minmax\(0,1fr\)_320px\]/);
+  assert.match(cardsSource, /SelectedPackHero/);
+  assert.match(cardsSource, /PackInfoPanel/);
+  assert.match(cardsSource, /Potential Rewards/);
+  assert.match(cardsSource, /Recent Pulls/);
+  assert.match(cardsSource, /PLAY\. COLLECT\. DOMINATE\./);
+  assert.doesNotMatch(cardsSource, /bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6/);
 });
 
 test('cards page separates pack opening from gallery browsing with tabs', () => {
@@ -199,20 +201,23 @@ test('starter pack artwork gets a specific zoom to match Daily scale', () => {
   assert.match(cardsSource, /pack\.imageClass/);
 });
 
-test('open pack tab uses a compact pack rail beside the selected pack panel', () => {
+test('open pack tab uses a screenshot-style pack rail and selected pack dashboard', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
   assert.match(cardsSource, /selectedPackType/);
   assert.match(cardsSource, /setSelectedPackType/);
   assert.match(cardsSource, /useState<PackType>\('daily'\)/);
-  assert.match(cardsSource, /grid grid-cols-1 lg:grid-cols-\[220px_minmax\(0,1fr\)\]/);
   assert.match(cardsSource, /packTypes\.map\(\(packType\) =>/);
   assert.match(cardsSource, /const pack = CARD_PACKS\[packType\]/);
+  assert.match(cardsSource, /const artwork = packArtwork\[packType\]/);
+  assert.match(cardsSource, /src=\{artwork\.image\}/);
   assert.match(cardsSource, /onClick=\{\(\) => setSelectedPackType\(packType\)\}/);
   assert.match(cardsSource, /packType=\{selectedPackType\}/);
   assert.match(cardsSource, /CARD_PACKS\[selectedPackType\]\.cardCount/);
   assert.match(cardsSource, /selectedPackType === 'daily' && dailyPackOpenedToday/);
-  assert.doesNotMatch(cardsSource, /grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4/);
+  assert.match(cardsSource, /pack\.priceCoins === 0 \? 'FREE' : pack\.priceCoins\.toLocaleString\(\)/);
+  assert.match(cardsSource, /style=\{\{ width: `\$\{pack\.rarityWeights\[rarity\]\}%` \}\}/);
+  assert.doesNotMatch(cardsSource, /grid grid-cols-1 lg:grid-cols-\[220px_minmax\(0,1fr\)\]/);
 });
 
 test('cards page uses squad-gallery style colorful chrome', () => {
