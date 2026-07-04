@@ -355,13 +355,13 @@ test('reveal popup is compact and can show five cards per row without the inert 
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
   assert.match(cardsSource, /max-w-\[1280px\]/);
-  assert.match(cardsSource, /max-h-\[88vh\]/);
+  assert.match(cardsSource, /h-\[94vh\]/);
   assert.match(cardsSource, /grid-rows-\[auto_minmax\(0,1fr\)\]/);
   assert.match(cardsSource, /overflow-hidden/);
   assert.match(cardsSource, /min-h-0/);
   assert.match(cardsSource, /sm:grid-cols-2 lg:grid-cols-5/);
-  assert.match(cardsSource, /max-w-\[170px\]/);
-  assert.match(cardsSource, /min-h-\[270px\]/);
+  assert.match(cardsSource, /max-w-\[190px\]/);
+  assert.match(cardsSource, /min-h-\[310px\]/);
   assert.doesNotMatch(cardsSource, /overflow-auto/);
   assert.doesNotMatch(cardsSource, /max-w-\[1600px\]/);
   assert.doesNotMatch(cardsSource, /sm:grid-cols-2 xl:grid-cols-3/);

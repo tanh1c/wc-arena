@@ -402,7 +402,7 @@ export default function Cards({ themeControls }: CardsProps) {
 
       {revealModalOpen && revealedCards.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
-          <section className="grid max-h-[88vh] w-full max-w-[1280px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+          <section className="grid h-[94vh] w-full max-w-[1280px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
             <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
               <div>
                 <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
@@ -417,7 +417,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 const isFlipped = flippedRevealCardIds.has(card.id);
                 return (
                   <button key={card.id} type="button" className={`wc-card-flip group min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
-                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[170px] min-h-[270px]">
+                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[190px] min-h-[310px]">
                       <span className="wc-card-flip-face absolute inset-0">
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />
                       </span>
