@@ -73,6 +73,9 @@ test('cards page follows the attached-card shell layout contract', () => {
 
   assert.match(cardsSource, /relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0/);
   assert.match(cardsSource, /bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1\/2 shadow-\[8px_8px_0_0_var\(--color-shadow\)\]/);
+  assert.match(cardsSource, /<h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">\{t\('nav\.items\.cards'\)\}<\/h1>/);
+  assert.doesNotMatch(cardsSource, /<p className="mb-2 inline-flex[^\n]+appPages\.cards\.kicker/);
+  assert.doesNotMatch(cardsSource, /<p className="mt-2 text-sm font-bold text-muted-foreground">\{t\('appPages\.cards\.collectionProgress'[\s\S]*?catalog\.length/);
   assert.match(cardsSource, /bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm/);
   assert.match(cardsSource, /border-b-4 border-main/);
   assert.match(cardsSource, /lg:grid-cols-\[240px_minmax\(0,1fr\)_320px\]/);
@@ -82,7 +85,7 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /Recent Pulls/);
   assert.match(cardsSource, /PLAY\. COLLECT\. DOMINATE\./);
   assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
-  assert.doesNotMatch(cardsSource, /overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]/);
+  assert.doesNotMatch(cardsSource, /<section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]"/);
 });
 
 test('cards page separates pack opening from gallery browsing with tabs', () => {
@@ -218,6 +221,8 @@ test('card pack panels show rarity drop rates like a gacha game', () => {
   assert.match(cardsSource, /rarityWeights/);
   assert.match(cardsSource, /appPages\.cards\.dropRates/);
   assert.match(cardsSource, /getRarityBadgeClass\(rarity\)/);
+  assert.match(cardsSource, /h-4 rounded-sm border-2 border-main bg-card/);
+  assert.match(cardsSource, /h-full rounded-sm \$\{getRarityBadgeClass\(rarity\)\}/);
   assert.match(resourcesSource, /starterPack: 'Starter Pack'/);
   assert.match(resourcesSource, /elitePack: 'Elite Pack'/);
   assert.match(resourcesSource, /iconPack: 'Icon Chase Pack'/);
@@ -261,7 +266,7 @@ test('open pack tab uses a screenshot-style pack rail and selected pack dashboar
 test('cards page uses squad-gallery style colorful chrome', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /bg-c3[^\n]*appPages\.cards\.kicker/);
+  assert.doesNotMatch(cardsSource, /bg-c3[^\n]*appPages\.cards\.kicker/);
   assert.match(cardsSource, /bg-c1 text-main/);
   assert.match(cardsSource, /bg-c2 text-inv/);
   assert.match(cardsSource, /bg-c3 text-main/);
@@ -344,11 +349,15 @@ test('reveal popup is compact and can show five cards per row without the inert 
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
   assert.match(cardsSource, /max-w-\[1280px\]/);
+  assert.match(cardsSource, /max-h-\[88vh\]/);
+  assert.match(cardsSource, /overflow-hidden/);
   assert.match(cardsSource, /sm:grid-cols-2 lg:grid-cols-5/);
-  assert.match(cardsSource, /max-w-\[220px\]/);
-  assert.match(cardsSource, /min-h-\[360px\]/);
+  assert.match(cardsSource, /max-w-\[170px\]/);
+  assert.match(cardsSource, /min-h-\[270px\]/);
+  assert.doesNotMatch(cardsSource, /overflow-auto/);
   assert.doesNotMatch(cardsSource, /max-w-\[1600px\]/);
   assert.doesNotMatch(cardsSource, /sm:grid-cols-2 xl:grid-cols-3/);
+  assert.doesNotMatch(cardsSource, /max-w-\[220px\] min-h-\[360px\]/);
   assert.doesNotMatch(cardsSource, /max-w-\[320px\] min-h-\[520px\]/);
   assert.doesNotMatch(cardsSource, /m-3 sm:m-4 mt-0 border-4 border-main bg-card p-6 text-center font-black uppercase text-muted-foreground/);
   assert.doesNotMatch(cardsSource, /\{t\('appPages\.cards\.openPack'\)\}\n\s*<\/div>\n\s*\)\}/);

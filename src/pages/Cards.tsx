@@ -246,9 +246,7 @@ export default function Cards({ themeControls }: CardsProps) {
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
         <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
-          <p className="mb-2 inline-flex w-fit border-4 border-main bg-c3 text-main px-3 py-2 text-xs font-black uppercase shadow-[3px_3px_0_var(--color-shadow)]">{t('appPages.cards.kicker')}</p>
           <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">{t('nav.items.cards')}</h1>
-          <p className="mt-2 text-sm font-bold text-muted-foreground">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
         </div>
 
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
@@ -398,7 +396,7 @@ export default function Cards({ themeControls }: CardsProps) {
 
       {revealModalOpen && revealedCards.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
-          <section className="max-h-[92vh] w-full max-w-[1280px] overflow-auto rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+          <section className="max-h-[88vh] w-full max-w-[1280px] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
             <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
               <div>
                 <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
@@ -413,7 +411,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 const isFlipped = flippedRevealCardIds.has(card.id);
                 return (
                   <button key={card.id} type="button" className={`wc-card-flip group min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
-                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[220px] min-h-[360px]">
+                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[170px] min-h-[270px]">
                       <span className="wc-card-flip-face absolute inset-0">
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />
                       </span>
@@ -448,7 +446,7 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
   const { t } = useTranslation();
   return (
     <aside className="rounded-sm border-4 border-main bg-card p-2 shadow-[4px_4px_0_var(--color-shadow)]">
-      <p className="mb-2 border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main">Choose Pack</p>
+      <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">Choose Pack</p>
       <div className="grid gap-2">
         {packTypes.map((packType) => {
           const pack = CARD_PACKS[packType];
@@ -555,8 +553,8 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
                 <span className={`border-2 border-main px-2 py-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
                 <span>{pack.rarityWeights[rarity]}%</span>
               </div>
-              <div className="h-4 border-2 border-main bg-card">
-                <div className={`h-full ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarityWeights[rarity]}%` }} />
+              <div className="h-4 rounded-sm border-2 border-main bg-card overflow-hidden">
+                <div className={`h-full rounded-sm ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarityWeights[rarity]}%` }} />
               </div>
             </div>
           ))}
