@@ -296,3 +296,14 @@ test('opened card status badges use distinct readable colors', () => {
   assert.match(cardsSource, /duplicate \? 'bg-c4 text-main' : 'bg-c1 text-main'/);
   assert.doesNotMatch(cardsSource, /bg-c2 px-2 py-1 text-center text-\[11px\] font-black uppercase text-main/);
 });
+
+test('reveal popup is large enough to show full cards and open-pack tab has no inert placeholder card', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /max-w-\[1600px\]/);
+  assert.match(cardsSource, /sm:grid-cols-2 xl:grid-cols-3/);
+  assert.match(cardsSource, /max-w-\[320px\]/);
+  assert.match(cardsSource, /min-h-\[520px\]/);
+  assert.doesNotMatch(cardsSource, /m-3 sm:m-4 mt-0 border-4 border-main bg-card p-6 text-center font-black uppercase text-muted-foreground/);
+  assert.doesNotMatch(cardsSource, /\{t\('appPages\.cards\.openPack'\)\}\n\s*<\/div>\n\s*\)\}/);
+});

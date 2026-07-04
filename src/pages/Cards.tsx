@@ -288,7 +288,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   />
                 </div>
 
-                {revealedCards.length > 0 ? (
+                {revealedCards.length > 0 && (
                   <div className="m-3 sm:m-4 mt-0 rounded-sm border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
                     <button
                       type="button"
@@ -306,10 +306,6 @@ export default function Cards({ themeControls }: CardsProps) {
                         ))}
                       </section>
                     )}
-                  </div>
-                ) : (
-                  <div className="m-3 sm:m-4 mt-0 border-4 border-main bg-card p-6 text-center font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">
-                    {t('appPages.cards.openPack')}
                   </div>
                 )}
               </main>
@@ -362,7 +358,7 @@ export default function Cards({ themeControls }: CardsProps) {
 
       {revealModalOpen && revealedCards.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
-          <section className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+          <section className="max-h-[96vh] w-full max-w-[1600px] overflow-auto rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
             <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv sm:p-4">
               <div>
                 <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
@@ -372,12 +368,12 @@ export default function Cards({ themeControls }: CardsProps) {
                 Close
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 sm:gap-4 sm:p-4 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 xl:grid-cols-3 sm:gap-5 sm:p-5">
               {revealedCards.map((card) => {
                 const isFlipped = flippedRevealCardIds.has(card.id);
                 return (
                   <button key={card.id} type="button" className={`wc-card-flip group min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
-                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[180px]">
+                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[320px] min-h-[520px]">
                       <span className="wc-card-flip-face absolute inset-0">
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />
                       </span>
