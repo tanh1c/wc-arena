@@ -1,4 +1,4 @@
-export type PackType = 'daily' | 'premium';
+export type PackType = 'daily' | 'starter' | 'premium' | 'elite' | 'icon';
 export type CardRarity = 'Common' | 'Rare' | 'Epic' | 'Icon';
 
 export type CardPackConfig = {
@@ -20,15 +20,48 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
       Icon: 1,
     },
   },
-  premium: {
-    cardCount: 3,
-    priceCoins: 250,
+  starter: {
+    cardCount: 2,
+    priceCoins: 75,
     oncePerUtcDay: false,
     rarityWeights: {
-      Common: 55,
+      Common: 68,
+      Rare: 24,
+      Epic: 7,
+      Icon: 1,
+    },
+  },
+  premium: {
+    cardCount: 3,
+    priceCoins: 150,
+    oncePerUtcDay: false,
+    rarityWeights: {
+      Common: 60,
       Rare: 30,
-      Epic: 12,
-      Icon: 3,
+      Epic: 8,
+      Icon: 2,
+    },
+  },
+  elite: {
+    cardCount: 5,
+    priceCoins: 400,
+    oncePerUtcDay: false,
+    rarityWeights: {
+      Common: 45,
+      Rare: 35,
+      Epic: 16,
+      Icon: 4,
+    },
+  },
+  icon: {
+    cardCount: 5,
+    priceCoins: 1000,
+    oncePerUtcDay: false,
+    rarityWeights: {
+      Common: 25,
+      Rare: 35,
+      Epic: 28,
+      Icon: 12,
     },
   },
 };

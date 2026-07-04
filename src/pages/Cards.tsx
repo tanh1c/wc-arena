@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gift, Search } from 'lucide-react';
 import dailyPackImage from '../../Daily.png';
+import elitePackImage from '../../Elite.png';
+import iconPackImage from '../../Icon.png';
 import premiumPackImage from '../../Premium.png';
+import starterPackImage from '../../Starter.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
 import { CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks';
@@ -27,10 +30,14 @@ type CardsProps = {
 };
 
 const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
+const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
 
 const packArtwork: Record<PackType, { image: string }> = {
   daily: { image: dailyPackImage },
+  starter: { image: starterPackImage },
   premium: { image: premiumPackImage },
+  elite: { image: elitePackImage },
+  icon: { image: iconPackImage },
 };
 
 const rarityCardArtClasses: Record<string, string> = {
@@ -209,24 +216,20 @@ export default function Cards({ themeControls }: CardsProps) {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4">
-                  <PackPanel
-                    title={t('appPages.cards.dailyPack')}
-                    description={t('appPages.cards.dailyPackDescription')}
-                    packType="daily"
-                    openingPack={openingPack}
-                    isOpenedToday={dailyPackOpenedToday}
-                    onOpen={handleOpenPack}
-                  />
-                  <PackPanel
-                    title={t('appPages.cards.premiumPack')}
-                    description={t('appPages.cards.premiumPackDescription', {
-                      count: CARD_PACKS.premium.cardCount,
-                      coins: CARD_PACKS.premium.priceCoins,
-                    })}
-                    packType="premium"
-                    openingPack={openingPack}
-                    onOpen={handleOpenPack}
-                  />
+                  {packTypes.map((packType) => (
+                    <PackPanel
+                      key={packType}
+                      title={t(`appPages.cards.${packType}Pack`)}
+                      description={t(`appPages.cards.${packType}PackDescription`, {
+                        count: CARD_PACKS[packType].cardCount,
+                        coins: CARD_PACKS[packType].priceCoins,
+                      })}
+                      packType={packType}
+                      openingPack={openingPack}
+                      isOpenedToday={packType === 'daily' && dailyPackOpenedToday}
+                      onOpen={handleOpenPack}
+                    />
+                  ))}
                 </div>
 
                 {revealedCards.length > 0 ? (
@@ -304,6 +307,7 @@ function StatCell({ label, value }: { label: string; value: string }) {
 }
 
 function PackPanel({ title, description, packType, openingPack, isOpenedToday = false, onOpen }: {
+  key?: string;
   title: string;
   description: string;
   packType: PackType;
@@ -327,6 +331,17 @@ function PackPanel({ title, description, packType, openingPack, isOpenedToday = 
       <div className="mt-3 flex items-center gap-2 border-2 border-main bg-muted px-3 py-2 text-sm font-black uppercase text-main">
         <PointsCoin size="sm" />
         {pack.priceCoins.toLocaleString()} {t('ui.coinsShort')} · {pack.cardCount} {t('appPages.cards.cards')}
+      </div>
+      <div className="mt-3 border-2 border-main bg-muted p-2">
+        <p className="mb-2 text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.dropRates')}</p>
+        <div className="grid grid-cols-2 gap-1">
+          {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
+            <div key={rarity} className="flex items-center justify-between gap-2 border-2 border-main bg-card px-2 py-1 text-[10px] font-black uppercase text-main">
+              <span className={`border-2 border-main px-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
+              <span>{pack.rarityWeights[rarity]}%</span>
+            </div>
+          ))}
+        </div>
       </div>
       {isOpenedToday && <p className="mt-3 border-2 border-main bg-c3 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
       <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>

@@ -149,16 +149,39 @@ test('card metadata centers names and uses colored position and flag badges', ()
   assert.doesNotMatch(cardsSource, /<Star size=\{12\}/);
 });
 
-test('open pack panels render pack artwork with an opening effect', () => {
+test('open pack panels render expanded pack tiers with artwork and an opening effect', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const cssSource = readFileSync('src/index.css', 'utf8');
 
   assert.match(cardsSource, /\.\.\/\.\.\/Daily\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Starter\.png/);
   assert.match(cardsSource, /\.\.\/\.\.\/Premium\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Elite\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Icon\.png/);
+  assert.match(cardsSource, /starter: \{ image: starterPackImage \}/);
+  assert.match(cardsSource, /elite: \{ image: elitePackImage \}/);
+  assert.match(cardsSource, /icon: \{ image: iconPackImage \}/);
+  assert.match(cardsSource, /packTypes/);
+  assert.match(cardsSource, /starter/);
+  assert.match(cardsSource, /elite/);
+  assert.match(cardsSource, /icon/);
   assert.match(cardsSource, /pack\.image/);
   assert.match(cardsSource, /wc-pack-opening/);
   assert.match(cardsSource, /openingPack === packType/);
   assert.match(cssSource, /@keyframes wc-pack-opening/);
+});
+
+test('card pack panels show rarity drop rates like a gacha game', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
+
+  assert.match(cardsSource, /rarityWeights/);
+  assert.match(cardsSource, /appPages\.cards\.dropRates/);
+  assert.match(cardsSource, /getRarityBadgeClass\(rarity\)/);
+  assert.match(resourcesSource, /starterPack: 'Starter Pack'/);
+  assert.match(resourcesSource, /elitePack: 'Elite Pack'/);
+  assert.match(resourcesSource, /iconPack: 'Icon Chase Pack'/);
+  assert.match(resourcesSource, /dropRates: 'Drop Rates'/);
 });
 
 test('daily pack already-opened state is shown inside the pack panel', () => {

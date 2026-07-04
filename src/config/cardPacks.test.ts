@@ -2,15 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CARD_PACKS, pickWeightedRarity, type CardRarity } from './cardPacks';
 
-test('card pack config keeps daily free and premium paid with editable counts and rates', () => {
+test('card pack config includes five balanced gacha tiers', () => {
+  assert.deepEqual(Object.keys(CARD_PACKS), ['daily', 'starter', 'premium', 'elite', 'icon']);
+
   assert.equal(CARD_PACKS.daily.priceCoins, 0);
   assert.equal(CARD_PACKS.daily.cardCount, 1);
   assert.equal(CARD_PACKS.daily.oncePerUtcDay, true);
 
-  assert.ok(CARD_PACKS.premium.priceCoins > 0);
-  assert.ok(CARD_PACKS.premium.cardCount === 3 || CARD_PACKS.premium.cardCount === 5);
-  assert.equal(CARD_PACKS.premium.oncePerUtcDay, false);
-  assert.ok(Object.values(CARD_PACKS.premium.rarityWeights).some((weight) => weight > 0));
+  assert.equal(CARD_PACKS.starter.priceCoins, 75);
+  assert.equal(CARD_PACKS.premium.priceCoins, 150);
+  assert.equal(CARD_PACKS.elite.priceCoins, 400);
+  assert.equal(CARD_PACKS.icon.priceCoins, 1000);
+  assert.ok(CARD_PACKS.premium.priceCoins < CARD_PACKS.elite.priceCoins);
+  assert.ok(CARD_PACKS.elite.priceCoins < CARD_PACKS.icon.priceCoins);
+
+  for (const pack of Object.values(CARD_PACKS)) {
+    assert.equal(pack.oncePerUtcDay, pack === CARD_PACKS.daily);
+    assert.equal(Object.values(pack.rarityWeights).reduce((sum, weight) => sum + weight, 0), 100);
+  }
 });
 
 test('weighted rarity selection skips rarities unavailable in the catalog', () => {
