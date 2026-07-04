@@ -9,10 +9,10 @@ test('card pack config includes five balanced gacha tiers', () => {
   assert.equal(CARD_PACKS.daily.cardCount, 1);
   assert.equal(CARD_PACKS.daily.oncePerUtcDay, true);
 
-  assert.equal(CARD_PACKS.starter.priceCoins, 75);
-  assert.equal(CARD_PACKS.premium.priceCoins, 150);
-  assert.equal(CARD_PACKS.elite.priceCoins, 400);
-  assert.equal(CARD_PACKS.icon.priceCoins, 1000);
+  assert.equal(CARD_PACKS.starter.priceCoins, 20);
+  assert.equal(CARD_PACKS.premium.priceCoins, 50);
+  assert.equal(CARD_PACKS.elite.priceCoins, 100);
+  assert.equal(CARD_PACKS.icon.priceCoins, 300);
   assert.ok(CARD_PACKS.premium.priceCoins < CARD_PACKS.elite.priceCoins);
   assert.ok(CARD_PACKS.elite.priceCoins < CARD_PACKS.icon.priceCoins);
 

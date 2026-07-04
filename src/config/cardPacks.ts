@@ -22,7 +22,7 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
   },
   starter: {
     cardCount: 2,
-    priceCoins: 75,
+    priceCoins: 20,
     oncePerUtcDay: false,
     rarityWeights: {
       Common: 68,
@@ -33,7 +33,7 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
   },
   premium: {
     cardCount: 3,
-    priceCoins: 150,
+    priceCoins: 50,
     oncePerUtcDay: false,
     rarityWeights: {
       Common: 60,
@@ -44,7 +44,7 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
   },
   elite: {
     cardCount: 5,
-    priceCoins: 400,
+    priceCoins: 100,
     oncePerUtcDay: false,
     rarityWeights: {
       Common: 45,
@@ -55,7 +55,7 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
   },
   icon: {
     cardCount: 5,
-    priceCoins: 1000,
+    priceCoins: 300,
     oncePerUtcDay: false,
     rarityWeights: {
       Common: 25,

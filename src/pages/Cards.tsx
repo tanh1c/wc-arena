@@ -32,9 +32,9 @@ type CardsProps = {
 const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
 const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
 
-const packArtwork: Record<PackType, { image: string }> = {
+const packArtwork: Record<PackType, { image: string; imageClass?: string }> = {
   daily: { image: dailyPackImage },
-  starter: { image: starterPackImage },
+  starter: { image: starterPackImage, imageClass: 'scale-[1.10]' },
   premium: { image: premiumPackImage },
   elite: { image: elitePackImage },
   icon: { image: iconPackImage },
@@ -93,6 +93,15 @@ function getNationFlag(nationRegion: string) {
   return getTeamFlag(nationFlagCodes[nationRegion] ?? nationRegion, nationRegion);
 }
 
+function formatUtcResetCountdown(value = new Date()) {
+  const nextReset = Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate() + 1);
+  const remainingSeconds = Math.max(0, Math.floor((nextReset - value.getTime()) / 1000));
+  const hours = Math.floor(remainingSeconds / 3600).toString().padStart(2, '0');
+  const minutes = Math.floor((remainingSeconds % 3600) / 60).toString().padStart(2, '0');
+  const seconds = Math.floor(remainingSeconds % 60).toString().padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 export default function Cards({ themeControls }: CardsProps) {
   const { t } = useTranslation();
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
@@ -102,7 +111,9 @@ export default function Cards({ themeControls }: CardsProps) {
   const [rarity, setRarity] = useState<'all' | CardRarity>('all');
   const [loading, setLoading] = useState(true);
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
+  const [selectedPackType, setSelectedPackType] = useState<PackType>('daily');
   const [dailyPackOpenedToday, setDailyPackOpenedToday] = useState(false);
+  const [dailyResetCountdown, setDailyResetCountdown] = useState('');
   const [activeTab, setActiveTab] = useState<'openPacks' | 'gallery'>('openPacks');
   const [error, setError] = useState('');
 
@@ -129,6 +140,17 @@ export default function Cards({ themeControls }: CardsProps) {
   useEffect(() => {
     void loadCards();
   }, []);
+
+  useEffect(() => {
+    if (!dailyPackOpenedToday) {
+      setDailyResetCountdown('');
+      return;
+    }
+
+    setDailyResetCountdown(formatUtcResetCountdown());
+    const intervalId = window.setInterval(() => setDailyResetCountdown(formatUtcResetCountdown()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [dailyPackOpenedToday]);
 
   const filteredCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -176,7 +198,7 @@ export default function Cards({ themeControls }: CardsProps) {
     <AppShell themeControls={themeControls}>
       <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0">
         <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 w-full xl:w-1/2 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)]">
-          <p className="text-xs font-black uppercase text-muted-foreground">{t('appPages.cards.kicker')}</p>
+          <p className="inline-flex w-fit border-2 border-main bg-c3 px-3 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.kicker')}</p>
           <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main leading-none">{t('appPages.cards.title')}</h1>
           <p className="max-w-3xl text-sm font-bold text-muted-foreground">{t('appPages.cards.subtitle')}</p>
         </section>
@@ -185,10 +207,10 @@ export default function Cards({ themeControls }: CardsProps) {
 
         <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
           <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
-            <StatCell label={t('appPages.cards.collection')} value={uniqueOwned.toLocaleString()} />
-            <StatCell label={t('appPages.cards.cards')} value={catalog.length.toLocaleString()} />
-            <StatCell label={t('appPages.cards.revealedCards')} value={revealedCards.length.toLocaleString()} />
-            <StatCell label={t('appPages.cards.showcase')} value={`${showcaseSlotsUsed}/3`} />
+            <StatCell label={t('appPages.cards.collection')} value={uniqueOwned.toLocaleString()} className="bg-c1 text-main" />
+            <StatCell label={t('appPages.cards.cards')} value={catalog.length.toLocaleString()} className="bg-c2 text-inv" />
+            <StatCell label={t('appPages.cards.revealedCards')} value={revealedCards.length.toLocaleString()} className="bg-c3 text-main" />
+            <StatCell label={t('appPages.cards.showcase')} value={`${showcaseSlotsUsed}/3`} className="bg-c4 text-main" />
           </div>
 
           <div className="grid grid-cols-2 border-b-4 border-main">
@@ -199,7 +221,7 @@ export default function Cards({ themeControls }: CardsProps) {
               <button
                 key={tab}
                 type="button"
-                className={`border-r-4 border-main px-4 py-3 text-left font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-main text-inv' : 'bg-card text-main hover:bg-c1'}`}
+                className={`border-r-4 border-main px-4 py-3 text-left font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
                 onClick={() => setActiveTab(tab as 'openPacks' | 'gallery')}
               >
                 {label}
@@ -215,21 +237,39 @@ export default function Cards({ themeControls }: CardsProps) {
                   <p className="text-sm font-bold text-inv/80">{t('appPages.cards.dailyPack')} · {t('appPages.cards.premiumPack')}</p>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4">
-                  {packTypes.map((packType) => (
-                    <PackPanel
-                      key={packType}
-                      title={t(`appPages.cards.${packType}Pack`)}
-                      description={t(`appPages.cards.${packType}PackDescription`, {
-                        count: CARD_PACKS[packType].cardCount,
-                        coins: CARD_PACKS[packType].priceCoins,
-                      })}
-                      packType={packType}
-                      openingPack={openingPack}
-                      isOpenedToday={packType === 'daily' && dailyPackOpenedToday}
-                      onOpen={handleOpenPack}
-                    />
-                  ))}
+                <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-3 sm:gap-4 p-3 sm:p-4">
+                  <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:self-start">
+                    {packTypes.map((packType) => {
+                      const pack = CARD_PACKS[packType];
+                      return (
+                        <button
+                          key={packType}
+                          type="button"
+                          className={`border-4 border-main p-2 text-left font-black uppercase shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === packType ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
+                          onClick={() => setSelectedPackType(packType)}
+                        >
+                          <span className="block text-xs leading-tight">{t(`appPages.cards.${packType}Pack`)}</span>
+                          <span className="mt-1 flex items-center justify-between gap-2 text-[10px] opacity-80">
+                            <span>{pack.cardCount} cards</span>
+                            <span>{pack.priceCoins === 0 ? 'Free' : `${pack.priceCoins} Coins`}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <PackPanel
+                    title={t(`appPages.cards.${selectedPackType}Pack`)}
+                    description={t(`appPages.cards.${selectedPackType}PackDescription`, {
+                      count: CARD_PACKS[selectedPackType].cardCount,
+                      coins: CARD_PACKS[selectedPackType].priceCoins,
+                    })}
+                    packType={selectedPackType}
+                    openingPack={openingPack}
+                    isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
+                    dailyResetCountdown={selectedPackType === 'daily' ? dailyResetCountdown : ''}
+                    onOpen={handleOpenPack}
+                  />
                 </div>
 
                 {revealedCards.length > 0 ? (
@@ -297,26 +337,27 @@ export default function Cards({ themeControls }: CardsProps) {
   );
 }
 
-function StatCell({ label, value }: { label: string; value: string }) {
+function StatCell({ label, value, className }: { label: string; value: string; className: string }) {
   return (
-    <div className="border-r-4 border-b-4 xl:border-b-0 border-main p-3 sm:p-4 last:border-r-0 even:border-r-0 xl:even:border-r-4 xl:last:border-r-0">
-      <p className="text-[10px] font-black uppercase text-muted-foreground">{label}</p>
-      <p className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-main">{value}</p>
+    <div className={`border-r-4 border-b-4 xl:border-b-0 border-main p-3 sm:p-4 last:border-r-0 even:border-r-0 xl:even:border-r-4 xl:last:border-r-0 ${className}`}>
+      <p className="text-[10px] font-black uppercase opacity-75">{label}</p>
+      <p className="text-2xl sm:text-3xl font-black uppercase tracking-tight">{value}</p>
     </div>
   );
 }
 
-function PackPanel({ title, description, packType, openingPack, isOpenedToday = false, onOpen }: {
+function PackPanel({ title, description, packType, openingPack, isOpenedToday = false, dailyResetCountdown = '', onOpen }: {
   key?: string;
   title: string;
   description: string;
   packType: PackType;
   openingPack: PackType | null;
   isOpenedToday?: boolean;
+  dailyResetCountdown?: string;
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
-  const pack = { ...CARD_PACKS[packType], image: packArtwork[packType].image };
+  const pack = { ...CARD_PACKS[packType], ...packArtwork[packType] };
   const isOpening = openingPack === packType;
   return (
     <section className="border-4 border-main bg-card p-3 sm:p-4 shadow-[4px_4px_0_var(--color-shadow)]">
@@ -324,8 +365,8 @@ function PackPanel({ title, description, packType, openingPack, isOpenedToday = 
         <Gift size={22} />
         <h2 className="text-xl font-black uppercase tracking-tight">{title}</h2>
       </div>
-      <div className="mt-3 border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-        <img src={pack.image} alt={title} className={`mx-auto h-52 object-contain drop-shadow-[6px_6px_0_var(--color-shadow)] ${isOpening ? 'wc-pack-opening' : 'hover:-translate-y-1 transition-transform'}`} />
+      <div className="mt-3 flex h-64 sm:h-72 items-center justify-center border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+        <img src={pack.image} alt={title} className={`max-h-full max-w-full object-contain drop-shadow-[6px_6px_0_var(--color-shadow)] ${pack.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'hover:-translate-y-1 transition-transform'}`} />
       </div>
       <p className="mt-3 text-sm font-bold text-muted-foreground">{description}</p>
       <div className="mt-3 flex items-center gap-2 border-2 border-main bg-muted px-3 py-2 text-sm font-black uppercase text-main">
@@ -344,6 +385,7 @@ function PackPanel({ title, description, packType, openingPack, isOpenedToday = 
         </div>
       </div>
       {isOpenedToday && <p className="mt-3 border-2 border-main bg-c3 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
+      {isOpenedToday && dailyResetCountdown && <p className="mt-2 border-2 border-main bg-card px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackResetIn', { time: dailyResetCountdown })}</p>}
       <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
         {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
       </button>

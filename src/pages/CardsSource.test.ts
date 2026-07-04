@@ -158,7 +158,7 @@ test('open pack panels render expanded pack tiers with artwork and an opening ef
   assert.match(cardsSource, /\.\.\/\.\.\/Premium\.png/);
   assert.match(cardsSource, /\.\.\/\.\.\/Elite\.png/);
   assert.match(cardsSource, /\.\.\/\.\.\/Icon\.png/);
-  assert.match(cardsSource, /starter: \{ image: starterPackImage \}/);
+  assert.match(cardsSource, /starter: \{ image: starterPackImage, imageClass: 'scale-\[1\.10\]' \}/);
   assert.match(cardsSource, /elite: \{ image: elitePackImage \}/);
   assert.match(cardsSource, /icon: \{ image: iconPackImage \}/);
   assert.match(cardsSource, /packTypes/);
@@ -184,13 +184,63 @@ test('card pack panels show rarity drop rates like a gacha game', () => {
   assert.match(resourcesSource, /dropRates: 'Drop Rates'/);
 });
 
-test('daily pack already-opened state is shown inside the pack panel', () => {
+test('pack artwork renders in a fixed Daily-standard display box', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /h-64 sm:h-72/);
+  assert.match(cardsSource, /max-h-full max-w-full object-contain/);
+  assert.doesNotMatch(cardsSource, /mx-auto h-52 object-contain/);
+});
+
+test('starter pack artwork gets a specific zoom to match Daily scale', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /imageClass: 'scale-\[1\.10\]'/);
+  assert.match(cardsSource, /pack\.imageClass/);
+});
+
+test('open pack tab uses a compact pack rail beside the selected pack panel', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /selectedPackType/);
+  assert.match(cardsSource, /setSelectedPackType/);
+  assert.match(cardsSource, /useState<PackType>\('daily'\)/);
+  assert.match(cardsSource, /grid grid-cols-1 lg:grid-cols-\[220px_minmax\(0,1fr\)\]/);
+  assert.match(cardsSource, /packTypes\.map\(\(packType\) =>/);
+  assert.match(cardsSource, /const pack = CARD_PACKS\[packType\]/);
+  assert.match(cardsSource, /onClick=\{\(\) => setSelectedPackType\(packType\)\}/);
+  assert.match(cardsSource, /packType=\{selectedPackType\}/);
+  assert.match(cardsSource, /CARD_PACKS\[selectedPackType\]\.cardCount/);
+  assert.match(cardsSource, /selectedPackType === 'daily' && dailyPackOpenedToday/);
+  assert.doesNotMatch(cardsSource, /grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4/);
+});
+
+test('cards page uses squad-gallery style colorful chrome', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /bg-c3[^\n]*appPages\.cards\.kicker/);
+  assert.match(cardsSource, /bg-c1 text-main/);
+  assert.match(cardsSource, /bg-c2 text-inv/);
+  assert.match(cardsSource, /bg-c3 text-main/);
+  assert.match(cardsSource, /bg-c4 text-main/);
+  assert.match(cardsSource, /activeTab === tab \? 'bg-c2 text-inv'/);
+  assert.match(cardsSource, /selectedPackType === packType \? 'bg-c2 text-inv'/);
+});
+
+test('daily pack already-opened state is shown inside the pack panel with UTC reset countdown', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
   assert.match(cardsSource, /dailyPackOpenedToday/);
   assert.match(cardsSource, /getCurrentUserDailyPackOpenedToday/);
   assert.match(cardsSource, /Daily pack already opened today\./);
-  assert.match(cardsSource, /appPages\.cards\.dailyPackOpenedToday/);
+  assert.match(cardsSource, /dailyResetCountdown/);
+  assert.match(cardsSource, /formatUtcResetCountdown/);
+  assert.match(cardsSource, /setInterval/);
+  assert.match(cardsSource, /appPages\.cards\.dailyPackResetIn/);
+  assert.match(cardsSource, /isOpenedToday && dailyResetCountdown/);
   assert.match(cardsSource, /isOpenedToday \? t\('appPages\.cards\.dailyPackOpenedToday'\)/);
   assert.match(cardsSource, /disabled=\{openingPack !== null \|\| isOpenedToday\}/);
+  assert.match(resourcesSource, /dailyPackResetIn: 'Resets in \{\{time\}\} UTC'/);
+  assert.match(resourcesSource, /dailyPackResetIn: 'Reset sau \{\{time\}\} UTC'/);
 });
