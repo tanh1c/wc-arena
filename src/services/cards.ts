@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import type { CardRarity, PackType } from '../config/cardPacks';
+import { getFunctionErrorMessage } from './functionErrors';
 
 export type PlayerCard = {
   id: string;
@@ -105,7 +106,7 @@ export async function openCardPack(packType: PackType) {
     body: { action: 'openCardPack', packType },
   });
 
-  if (error) throw error;
+  if (error) throw new Error(await getFunctionErrorMessage(error));
   return data as OpenCardPackResult;
 }
 

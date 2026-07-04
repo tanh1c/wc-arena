@@ -449,6 +449,16 @@
     display: none !important;
   }
 
+  .wc-pack-opening {
+    animation: wc-pack-opening 0.8s ease-in-out infinite;
+  }
+
+  @keyframes wc-pack-opening {
+    0%, 100% { transform: translateY(0) rotate(-1deg) scale(1); filter: drop-shadow(6px 6px 0 var(--color-shadow)); }
+    35% { transform: translateY(-8px) rotate(3deg) scale(1.04); filter: drop-shadow(0 0 18px var(--color-c1)); }
+    70% { transform: translateY(2px) rotate(-3deg) scale(0.98); filter: drop-shadow(0 0 24px var(--color-c2)); }
+  }
+
   .wc-card-frame-common {
     border-color: #2f7d32;
   }

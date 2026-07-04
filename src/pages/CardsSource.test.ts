@@ -148,3 +148,15 @@ test('card metadata centers names and uses colored position and flag badges', ()
   assert.match(cardsSource, /Flag && <Flag/);
   assert.doesNotMatch(cardsSource, /<Star size=\{12\}/);
 });
+
+test('open pack panels render pack artwork with an opening effect', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const cssSource = readFileSync('src/index.css', 'utf8');
+
+  assert.match(cardsSource, /\.\.\/\.\.\/Daily\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Premium\.png/);
+  assert.match(cardsSource, /pack\.image/);
+  assert.match(cardsSource, /wc-pack-opening/);
+  assert.match(cardsSource, /openingPack === packType/);
+  assert.match(cssSource, /@keyframes wc-pack-opening/);
+});

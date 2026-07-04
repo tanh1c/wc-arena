@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gift, Search } from 'lucide-react';
+import dailyPackImage from '../../Daily.png';
+import premiumPackImage from '../../Premium.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
 import { CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks';
@@ -24,6 +26,11 @@ type CardsProps = {
 };
 
 const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
+
+const packArtwork: Record<PackType, { image: string }> = {
+  daily: { image: dailyPackImage },
+  premium: { image: premiumPackImage },
+};
 
 const rarityCardArtClasses: Record<string, string> = {
   Common: 'bg-[repeating-linear-gradient(135deg,#7fbf5f_0_12px,#d8ff65_12px_24px),linear-gradient(135deg,#173f2b,#7fbf5f)]',
@@ -293,20 +300,24 @@ function PackPanel({ title, description, packType, openingPack, onOpen }: {
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
-  const pack = CARD_PACKS[packType];
+  const pack = { ...CARD_PACKS[packType], image: packArtwork[packType].image };
+  const isOpening = openingPack === packType;
   return (
     <section className="border-4 border-main bg-card p-3 sm:p-4 shadow-[4px_4px_0_var(--color-shadow)]">
       <div className="flex items-center gap-2 text-main">
         <Gift size={22} />
         <h2 className="text-xl font-black uppercase tracking-tight">{title}</h2>
       </div>
-      <p className="mt-2 text-sm font-bold text-muted-foreground">{description}</p>
+      <div className="mt-3 border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+        <img src={pack.image} alt={title} className={`mx-auto h-52 object-contain drop-shadow-[6px_6px_0_var(--color-shadow)] ${isOpening ? 'wc-pack-opening' : 'hover:-translate-y-1 transition-transform'}`} />
+      </div>
+      <p className="mt-3 text-sm font-bold text-muted-foreground">{description}</p>
       <div className="mt-3 flex items-center gap-2 border-2 border-main bg-muted px-3 py-2 text-sm font-black uppercase text-main">
         <PointsCoin size="sm" />
         {pack.priceCoins.toLocaleString()} {t('ui.coinsShort')} · {pack.cardCount} {t('appPages.cards.cards')}
       </div>
       <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null} onClick={() => onOpen(packType)}>
-        {openingPack === packType ? t('appPages.cards.opening') : t('appPages.cards.openPack')}
+        {isOpening ? t('appPages.cards.opening') : t('appPages.cards.openPack')}
       </button>
     </section>
   );
