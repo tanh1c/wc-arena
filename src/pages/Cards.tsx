@@ -8,6 +8,7 @@ import PointsCoin from '../components/ui/PointsCoin';
 import { CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks';
 import type { ThemeControls } from '../App';
 import {
+  getCurrentUserDailyPackOpenedToday,
   groupCatalogWithOwnership,
   listCurrentUserOwnedCards,
   listCurrentUserShowcase,
@@ -94,6 +95,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [rarity, setRarity] = useState<'all' | CardRarity>('all');
   const [loading, setLoading] = useState(true);
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
+  const [dailyPackOpenedToday, setDailyPackOpenedToday] = useState(false);
   const [activeTab, setActiveTab] = useState<'openPacks' | 'gallery'>('openPacks');
   const [error, setError] = useState('');
 
@@ -101,13 +103,15 @@ export default function Cards({ themeControls }: CardsProps) {
     setLoading(true);
     setError('');
     try {
-      const [cards, owned, currentShowcase] = await Promise.all([
+      const [cards, owned, currentShowcase, openedDailyToday] = await Promise.all([
         listPlayerCards(),
         listCurrentUserOwnedCards(),
         listCurrentUserShowcase(),
+        getCurrentUserDailyPackOpenedToday(),
       ]);
       setCatalog(groupCatalogWithOwnership(cards, owned));
       setShowcase(currentShowcase);
+      setDailyPackOpenedToday(openedDailyToday);
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
@@ -137,10 +141,16 @@ export default function Cards({ themeControls }: CardsProps) {
     try {
       const result = await openCardPack(packType);
       setRevealedCards(result.cards);
+      if (packType === 'daily') setDailyPackOpenedToday(true);
       window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       await loadCards();
     } catch (nextError) {
-      setError(getErrorMessage(nextError));
+      const message = getErrorMessage(nextError);
+      if (packType === 'daily' && message === 'Daily pack already opened today.') {
+        setDailyPackOpenedToday(true);
+      } else {
+        setError(message);
+      }
     } finally {
       setOpeningPack(null);
     }
@@ -204,6 +214,7 @@ export default function Cards({ themeControls }: CardsProps) {
                     description={t('appPages.cards.dailyPackDescription')}
                     packType="daily"
                     openingPack={openingPack}
+                    isOpenedToday={dailyPackOpenedToday}
                     onOpen={handleOpenPack}
                   />
                   <PackPanel
@@ -292,11 +303,12 @@ function StatCell({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PackPanel({ title, description, packType, openingPack, onOpen }: {
+function PackPanel({ title, description, packType, openingPack, isOpenedToday = false, onOpen }: {
   title: string;
   description: string;
   packType: PackType;
   openingPack: PackType | null;
+  isOpenedToday?: boolean;
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
@@ -316,8 +328,9 @@ function PackPanel({ title, description, packType, openingPack, onOpen }: {
         <PointsCoin size="sm" />
         {pack.priceCoins.toLocaleString()} {t('ui.coinsShort')} · {pack.cardCount} {t('appPages.cards.cards')}
       </div>
-      <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null} onClick={() => onOpen(packType)}>
-        {isOpening ? t('appPages.cards.opening') : t('appPages.cards.openPack')}
+      {isOpenedToday && <p className="mt-3 border-2 border-main bg-c3 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
+      <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-3 font-black uppercase text-main shadow-[4px_4px_0_var(--color-shadow)] disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
+        {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
       </button>
     </section>
   );

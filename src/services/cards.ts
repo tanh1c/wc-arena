@@ -90,6 +90,23 @@ export async function listCurrentUserShowcase() {
   return (data ?? []) as ShowcaseCard[];
 }
 
+export async function getCurrentUserDailyPackOpenedToday() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('card_pack_openings')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('pack_type', 'daily')
+    .eq('opened_on_utc', new Date().toISOString().slice(0, 10))
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data);
+}
+
 export async function listProfileShowcase(userId: string) {
   const { data, error } = await supabase
     .from('profile_card_showcases')

@@ -160,3 +160,14 @@ test('open pack panels render pack artwork with an opening effect', () => {
   assert.match(cardsSource, /openingPack === packType/);
   assert.match(cssSource, /@keyframes wc-pack-opening/);
 });
+
+test('daily pack already-opened state is shown inside the pack panel', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /dailyPackOpenedToday/);
+  assert.match(cardsSource, /getCurrentUserDailyPackOpenedToday/);
+  assert.match(cardsSource, /Daily pack already opened today\./);
+  assert.match(cardsSource, /appPages\.cards\.dailyPackOpenedToday/);
+  assert.match(cardsSource, /isOpenedToday \? t\('appPages\.cards\.dailyPackOpenedToday'\)/);
+  assert.match(cardsSource, /disabled=\{openingPack !== null \|\| isOpenedToday\}/);
+});
