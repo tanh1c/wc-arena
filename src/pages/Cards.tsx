@@ -72,17 +72,41 @@ const rarityBadgeClasses: Record<string, string> = {
 
 const nationFlagCodes: Record<string, string> = {
   Argentina: 'ARG',
+  Austria: 'AUT',
+  Belgium: 'BEL',
+  'Bosnia Herzegovina': 'BIH',
   Brazil: 'BRA',
+  Canada: 'CAN',
+  Colombia: 'COL',
   Croatia: 'CRO',
+  'Czech Republic': 'CZE',
+  Ecuador: 'ECU',
+  Egypt: 'EGY',
   England: 'ENG',
   France: 'FRA',
   Germany: 'GER',
+  Ghana: 'GHA',
+  Haiti: 'HAI',
+  'Ivory Coast': 'CIV',
+  Japan: 'JPN',
+  'Korea Republic': 'KOR',
   Mexico: 'MEX',
+  Morocco: 'MAR',
   Netherlands: 'NED',
+  'New Zealand': 'NZL',
   Norway: 'NOR',
+  Paraguay: 'PAR',
   Portugal: 'POR',
+  Qatar: 'QAT',
   'Saudi Arabia': 'KSA',
+  Scotland: 'SCO',
+  Senegal: 'SEN',
+  'South Africa': 'RSA',
   Spain: 'ESP',
+  Sweden: 'SWE',
+  Switzerland: 'SUI',
+  Türkiye: 'TUR',
+  Uruguay: 'URU',
   'United States': 'USA',
 };
 
@@ -272,8 +296,8 @@ export default function Cards({ themeControls }: CardsProps) {
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
                       <div key={rarity} className="rounded-sm border-4 border-main bg-muted p-2 text-center shadow-[3px_3px_0_var(--color-shadow)]">
-                        <div className={`mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center border-4 border-main text-2xl font-black ${getRarityCardArtClass(rarity)}`}>?</div>
-                        <p className={`border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(rarity)}`}>{rarity}</p>
+                        <div className={`mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center rounded-sm border-4 border-main text-2xl font-black ${getRarityCardArtClass(rarity)}`}>?</div>
+                        <p className={`rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(rarity)}`}>{rarity}</p>
                       </div>
                     ))}
                   </div>
@@ -369,8 +393,8 @@ export default function Cards({ themeControls }: CardsProps) {
 
       {revealModalOpen && revealedCards.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
-          <section className="max-h-[96vh] w-full max-w-[1600px] overflow-auto rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
-            <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv sm:p-4">
+          <section className="max-h-[92vh] w-full max-w-[1280px] overflow-auto rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+            <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
               <div>
                 <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
                 <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.revealedCards')}</h2>
@@ -379,12 +403,12 @@ export default function Cards({ themeControls }: CardsProps) {
                 Close
               </button>
             </div>
-            <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 xl:grid-cols-3 sm:gap-5 sm:p-5">
+            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-5">
               {revealedCards.map((card) => {
                 const isFlipped = flippedRevealCardIds.has(card.id);
                 return (
                   <button key={card.id} type="button" className={`wc-card-flip group min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
-                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[320px] min-h-[520px]">
+                    <span className="wc-card-flip-inner relative mx-auto block aspect-[3/4] w-full max-w-[220px] min-h-[360px]">
                       <span className="wc-card-flip-face absolute inset-0">
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />
                       </span>
@@ -548,27 +572,27 @@ function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', onSe
   const { t } = useTranslation();
   const Flag = getNationFlag(card.nation_region);
   return (
-    <article className={`border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 overflow-hidden ${getRarityCardFrameClass(card.rarity)}`}>
-      <div className={`relative border-b-4 border-main p-2 overflow-hidden ${getRarityCardArtClass(card.rarity)}`}>
+    <article className={`rounded-sm border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 overflow-hidden ${getRarityCardFrameClass(card.rarity)}`}>
+      <div className={`relative rounded-sm border-b-4 border-main p-2 overflow-hidden ${getRarityCardArtClass(card.rarity)}`}>
         <CardImage card={card} />
-        <span className={`absolute left-2 top-2 border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)] ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
-        <span className="absolute right-2 top-2 border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
+        <span className={`absolute left-2 top-2 rounded-sm border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)] ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
+        <span className="absolute right-2 top-2 rounded-sm border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
       </div>
       <div className="p-3 flex flex-col gap-2 min-w-0">
         <h3 className="font-black uppercase text-sm sm:text-base leading-tight truncate text-main text-center" title={card.name}>{card.name}</h3>
         <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase">
-          <p className="border-2 border-main bg-c1 text-main px-2 py-1 text-center truncate">{card.position}</p>
-          <p className="border-2 border-main bg-muted px-2 py-1 text-main text-center truncate">{card.team}</p>
+          <p className="rounded-sm border-2 border-main bg-c1 text-main px-2 py-1 text-center truncate">{card.position}</p>
+          <p className="rounded-sm border-2 border-main bg-muted px-2 py-1 text-main text-center truncate">{card.team}</p>
         </div>
-        <p className="flex items-center justify-center gap-1 border-2 border-main bg-card text-main px-2 py-1 text-[11px] font-black uppercase truncate">
+        <p className="flex items-center justify-center gap-1 rounded-sm border-2 border-main bg-card text-main px-2 py-1 text-[11px] font-black uppercase truncate">
           {Flag && <Flag className="h-3 w-5 shrink-0" title={card.nation_region} />}
           <span className="truncate">{card.nation_region}</span>
         </p>
-        {badge && <p className={`border-2 border-main px-2 py-1 text-center text-[11px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${badgeClass}`}>{badge}</p>}
+        {badge && <p className={`rounded-sm border-2 border-main px-2 py-1 text-center text-[11px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${badgeClass}`}>{badge}</p>}
         {onSetShowcase && (
           <div className="grid grid-cols-3 gap-1">
             {[1, 2, 3].map((slot) => (
-              <button key={slot} type="button" className="border-2 border-main bg-card px-1 py-1 text-[10px] font-black uppercase text-main hover:bg-c1" onClick={() => onSetShowcase(slot)}>
+              <button key={slot} type="button" className="rounded-sm border-2 border-main bg-card px-1 py-1 text-[10px] font-black uppercase text-main hover:bg-c1" onClick={() => onSetShowcase(slot)}>
                 {t('appPages.cards.slot', { slot })}
               </button>
             ))}
@@ -582,8 +606,8 @@ function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', onSe
 function CardImage({ card }: { card: { name: string; image_url: string } }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
-    return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
+    return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center rounded-sm border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
   }
 
-  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] object-contain border-2 border-main bg-muted" onError={() => setFailed(true)} />;
+  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] rounded-sm border-2 border-main bg-muted object-contain" onError={() => setFailed(true)} />;
 }

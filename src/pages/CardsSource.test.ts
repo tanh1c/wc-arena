@@ -148,7 +148,42 @@ test('card metadata centers names and uses colored position and flag badges', ()
   assert.match(cardsSource, /bg-c1 text-main/);
   assert.match(cardsSource, /bg-card text-main/);
   assert.match(cardsSource, /Flag && <Flag/);
+  assert.match(cardsSource, /'Saudi Arabia': 'KSA'/);
+  assert.match(cardsSource, /Belgium: 'BEL'/);
+  assert.match(cardsSource, /Colombia: 'COL'/);
+  assert.match(cardsSource, /'Ivory Coast': 'CIV'/);
+  assert.match(cardsSource, /Scotland: 'SCO'/);
+  assert.match(cardsSource, /'Korea Republic': 'KOR'/);
+  assert.match(cardsSource, /'Czech Republic': 'CZE'/);
+  assert.match(cardsSource, /'South Africa': 'RSA'/);
+  assert.match(cardsSource, /Switzerland: 'SUI'/);
+  assert.match(cardsSource, /'Bosnia Herzegovina': 'BIH'/);
+  assert.match(cardsSource, /Morocco: 'MAR'/);
+  assert.match(cardsSource, /Haiti: 'HAI'/);
+  assert.match(cardsSource, /Türkiye: 'TUR'/);
+  assert.match(cardsSource, /Paraguay: 'PAR'/);
+  assert.match(cardsSource, /Ecuador: 'ECU'/);
+  assert.match(cardsSource, /Japan: 'JPN'/);
+  assert.match(cardsSource, /Egypt: 'EGY'/);
+  assert.match(cardsSource, /'New Zealand': 'NZL'/);
+  assert.match(cardsSource, /Uruguay: 'URU'/);
+  assert.match(cardsSource, /Senegal: 'SEN'/);
+  assert.match(cardsSource, /Austria: 'AUT'/);
+  assert.match(cardsSource, /Ghana: 'GHA'/);
+  assert.match(cardsSource, /Qatar: 'QAT'/);
   assert.doesNotMatch(cardsSource, /<Star size=\{12\}/);
+});
+
+test('cards page card boxes and metadata chips are rounded consistently', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /rounded-sm border-4 bg-card/);
+  assert.match(cardsSource, /rounded-sm border-b-4 border-main/);
+  assert.match(cardsSource, /rounded-sm border-2 border-main bg-muted/);
+  assert.match(cardsSource, /rounded-sm border-2 border-main bg-c1 text-main/);
+  assert.match(cardsSource, /rounded-sm border-2 border-main bg-card text-main/);
+  assert.match(cardsSource, /rounded-sm border-2 border-main px-2 py-1 text-center text-\[11px\]/);
+  assert.match(cardsSource, /rounded-sm border-2 border-main bg-card px-1 py-1/);
 });
 
 test('open pack panels render expanded pack tiers with artwork and an opening effect', () => {
@@ -302,13 +337,16 @@ test('opened card status badges use distinct readable colors', () => {
   assert.doesNotMatch(cardsSource, /bg-c2 px-2 py-1 text-center text-\[11px\] font-black uppercase text-main/);
 });
 
-test('reveal popup is large enough to show full cards and open-pack tab has no inert placeholder card', () => {
+test('reveal popup is compact and can show five cards per row without the inert open-pack placeholder', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /max-w-\[1600px\]/);
-  assert.match(cardsSource, /sm:grid-cols-2 xl:grid-cols-3/);
-  assert.match(cardsSource, /max-w-\[320px\]/);
-  assert.match(cardsSource, /min-h-\[520px\]/);
+  assert.match(cardsSource, /max-w-\[1280px\]/);
+  assert.match(cardsSource, /sm:grid-cols-2 lg:grid-cols-5/);
+  assert.match(cardsSource, /max-w-\[220px\]/);
+  assert.match(cardsSource, /min-h-\[360px\]/);
+  assert.doesNotMatch(cardsSource, /max-w-\[1600px\]/);
+  assert.doesNotMatch(cardsSource, /sm:grid-cols-2 xl:grid-cols-3/);
+  assert.doesNotMatch(cardsSource, /max-w-\[320px\] min-h-\[520px\]/);
   assert.doesNotMatch(cardsSource, /m-3 sm:m-4 mt-0 border-4 border-main bg-card p-6 text-center font-black uppercase text-muted-foreground/);
   assert.doesNotMatch(cardsSource, /\{t\('appPages\.cards\.openPack'\)\}\n\s*<\/div>\n\s*\)\}/);
 });
