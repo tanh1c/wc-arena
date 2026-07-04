@@ -312,5 +312,5 @@ function CardImage({ card }: { card: { name: string; image_url: string } }) {
     return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
   }
 
-  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] object-contain border-2 border-main bg-muted" onError={() => setFailed(true)} />;
+  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] object-contain border-2 border-main bg-muted mix-blend-multiply" onError={() => setFailed(true)} />;
 }
