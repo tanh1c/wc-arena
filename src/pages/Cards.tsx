@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gift, Search, Star } from 'lucide-react';
+import { Gift, Search } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
 import { CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks';
@@ -17,6 +17,7 @@ import {
   type ShowcaseCard,
 } from '../services/cards';
 import { getErrorMessage } from '../services/serviceTypes';
+import { getTeamFlag } from '../utils/teamFlags';
 
 type CardsProps = {
   themeControls: ThemeControls;
@@ -45,6 +46,22 @@ const rarityBadgeClasses: Record<string, string> = {
   Icon: 'bg-[#fff0b8] text-main shadow-[0_0_12px_#fff0b8]',
 };
 
+const nationFlagCodes: Record<string, string> = {
+  Argentina: 'ARG',
+  Brazil: 'BRA',
+  Croatia: 'CRO',
+  England: 'ENG',
+  France: 'FRA',
+  Germany: 'GER',
+  Mexico: 'MEX',
+  Netherlands: 'NED',
+  Norway: 'NOR',
+  Portugal: 'POR',
+  'Saudi Arabia': 'KSA',
+  Spain: 'ESP',
+  'United States': 'USA',
+};
+
 function getRarityCardArtClass(rarity: string) {
   return rarityCardArtClasses[rarity] ?? rarityCardArtClasses.Common;
 }
@@ -55,6 +72,10 @@ function getRarityCardFrameClass(rarity: string) {
 
 function getRarityBadgeClass(rarity: string) {
   return rarityBadgeClasses[rarity] ?? rarityBadgeClasses.Common;
+}
+
+function getNationFlag(nationRegion: string) {
+  return getTeamFlag(nationFlagCodes[nationRegion] ?? nationRegion, nationRegion);
 }
 
 export default function Cards({ themeControls }: CardsProps) {
@@ -299,6 +320,7 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
   onSetShowcase?: (slot: number) => void;
 }) {
   const { t } = useTranslation();
+  const Flag = getNationFlag(card.nation_region);
   return (
     <article className={`border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 overflow-hidden ${getRarityCardFrameClass(card.rarity)}`}>
       <div className={`relative border-b-4 border-main p-2 overflow-hidden ${getRarityCardArtClass(card.rarity)}`}>
@@ -307,12 +329,15 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
         <span className="absolute right-2 top-2 border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
       </div>
       <div className="p-3 flex flex-col gap-2 min-w-0">
-        <h3 className="font-black uppercase text-sm sm:text-base leading-tight truncate text-main">{card.name}</h3>
+        <h3 className="font-black uppercase text-sm sm:text-base leading-tight truncate text-main text-center" title={card.name}>{card.name}</h3>
         <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase">
-          <p className="border-2 border-main bg-muted px-2 py-1 text-main truncate">{card.position}</p>
-          <p className="border-2 border-main bg-muted px-2 py-1 text-main truncate">{card.team}</p>
+          <p className="border-2 border-main bg-c1 text-main px-2 py-1 text-center truncate">{card.position}</p>
+          <p className="border-2 border-main bg-muted px-2 py-1 text-main text-center truncate">{card.team}</p>
         </div>
-        <p className="flex items-center gap-1 text-[11px] font-black uppercase text-main"><Star size={12} />{card.nation_region}</p>
+        <p className="flex items-center justify-center gap-1 border-2 border-main bg-card text-main px-2 py-1 text-[11px] font-black uppercase truncate">
+          {Flag && <Flag className="h-3 w-5 shrink-0" title={card.nation_region} />}
+          <span className="truncate">{card.nation_region}</span>
+        </p>
         {badge && <p className="border-2 border-main bg-c2 px-2 py-1 text-center text-[11px] font-black uppercase text-main">{badge}</p>}
         {onSetShowcase && (
           <div className="grid grid-cols-3 gap-1">

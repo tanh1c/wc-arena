@@ -135,3 +135,16 @@ test('card rarity badges use rarity colors and clipped rounded cards', () => {
   assert.match(cardsSource, /getRarityBadgeClass\(card\.rarity\)/);
   assert.match(cardsSource, /min-w-0 overflow-hidden/);
 });
+
+test('card metadata centers names and uses colored position and flag badges', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /\.\.\/utils\/teamFlags/);
+  assert.match(cardsSource, /getTeamFlag/);
+  assert.match(cardsSource, /getNationFlag/);
+  assert.match(cardsSource, /text-center/);
+  assert.match(cardsSource, /bg-c1 text-main/);
+  assert.match(cardsSource, /bg-card text-main/);
+  assert.match(cardsSource, /Flag && <Flag/);
+  assert.doesNotMatch(cardsSource, /<Star size=\{12\}/);
+});
