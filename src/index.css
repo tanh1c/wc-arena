@@ -448,4 +448,38 @@
   .theme-no-frame #root > div > div > .w-full.h-8:first-child {
     display: none !important;
   }
+
+  .wc-card-frame-common {
+    border-color: #2f7d32;
+  }
+
+  .wc-card-frame-rare {
+    border-color: #00d4ff;
+    animation: wc-card-rare-scan 2.6s linear infinite;
+  }
+
+  .wc-card-frame-epic {
+    border-color: #ff2bd6;
+    animation: wc-card-epic-pulse 2.2s ease-in-out infinite;
+  }
+
+  .wc-card-frame-icon {
+    border-color: #d99a00;
+    animation: wc-card-icon-shimmer 3s linear infinite;
+  }
+
+  @keyframes wc-card-rare-scan {
+    0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 0 #00d4ff; }
+    50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 16px #00d4ff; }
+  }
+
+  @keyframes wc-card-epic-pulse {
+    0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 0 #ff2bd6; }
+    50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 18px #ffe600; }
+  }
+
+  @keyframes wc-card-icon-shimmer {
+    0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 10px #d99a00; }
+    50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 24px #fff0b8; }
+  }
 }

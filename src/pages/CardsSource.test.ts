@@ -108,3 +108,18 @@ test('card PNG art keeps CDN rendering unblended inside rarity panels', () => {
   assert.doesNotMatch(cardsSource, /mix-blend-multiply/);
   assert.doesNotMatch(cardsSource, /getRarityInnerBackdrop/);
 });
+
+test('card tiles use rarity-specific animated frame effects', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const cssSource = readFileSync('src/index.css', 'utf8');
+
+  assert.match(cardsSource, /getRarityCardFrameClass/);
+  assert.match(cardsSource, /Common: 'wc-card-frame-common'/);
+  assert.match(cardsSource, /Rare: 'wc-card-frame-rare'/);
+  assert.match(cardsSource, /Epic: 'wc-card-frame-epic'/);
+  assert.match(cardsSource, /Icon: 'wc-card-frame-icon'/);
+  assert.match(cardsSource, /getRarityCardFrameClass\(card\.rarity\)/);
+  assert.match(cssSource, /@keyframes wc-card-rare-scan/);
+  assert.match(cssSource, /@keyframes wc-card-epic-pulse/);
+  assert.match(cssSource, /@keyframes wc-card-icon-shimmer/);
+});

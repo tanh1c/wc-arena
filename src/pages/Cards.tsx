@@ -31,8 +31,19 @@ const rarityCardArtClasses: Record<string, string> = {
   Icon: 'bg-[repeating-conic-gradient(from_0deg_at_50%_50%,#fff0b8_0deg_10deg,#d99a00_10deg_16deg,#111_16deg_18deg)]',
 };
 
+const rarityCardFrameClasses: Record<string, string> = {
+  Common: 'wc-card-frame-common',
+  Rare: 'wc-card-frame-rare',
+  Epic: 'wc-card-frame-epic',
+  Icon: 'wc-card-frame-icon',
+};
+
 function getRarityCardArtClass(rarity: string) {
   return rarityCardArtClasses[rarity] ?? rarityCardArtClasses.Common;
+}
+
+function getRarityCardFrameClass(rarity: string) {
+  return rarityCardFrameClasses[rarity] ?? rarityCardFrameClasses.Common;
 }
 
 export default function Cards({ themeControls }: CardsProps) {
@@ -278,7 +289,7 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
 }) {
   const { t } = useTranslation();
   return (
-    <article className="border-4 border-main bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0">
+    <article className={`border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 ${getRarityCardFrameClass(card.rarity)}`}>
       <div className={`relative border-b-4 border-main p-2 overflow-hidden ${getRarityCardArtClass(card.rarity)}`}>
         <CardImage card={card} />
         <span className="absolute left-2 top-2 bg-main text-inv border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)]">{card.rarity}</span>
