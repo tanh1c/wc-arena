@@ -68,18 +68,21 @@ test('card art renders at a capped width instead of stretching low-resolution im
   assert.match(profileSource, /max-w-\[120px\]/);
 });
 
-test('cards page follows the screenshot-style pack dashboard layout contract', () => {
+test('cards page follows the attached-card shell layout contract', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
-  assert.match(cardsSource, /grid grid-cols-2 border-4 border-main bg-card/);
+  assert.match(cardsSource, /relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0/);
+  assert.match(cardsSource, /bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1\/2 shadow-\[8px_8px_0_0_var\(--color-shadow\)\]/);
+  assert.match(cardsSource, /bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm/);
+  assert.match(cardsSource, /border-b-4 border-main/);
   assert.match(cardsSource, /lg:grid-cols-\[240px_minmax\(0,1fr\)_320px\]/);
   assert.match(cardsSource, /SelectedPackHero/);
   assert.match(cardsSource, /PackInfoPanel/);
   assert.match(cardsSource, /Potential Rewards/);
   assert.match(cardsSource, /Recent Pulls/);
   assert.match(cardsSource, /PLAY\. COLLECT\. DOMINATE\./);
-  assert.doesNotMatch(cardsSource, /bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6/);
+  assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
+  assert.doesNotMatch(cardsSource, /overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]/);
 });
 
 test('cards page separates pack opening from gallery browsing with tabs', () => {

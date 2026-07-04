@@ -244,11 +244,17 @@ export default function Cards({ themeControls }: CardsProps) {
 
   return (
     <AppShell themeControls={themeControls}>
-      <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0">
+      <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
+        <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
+          <p className="mb-2 inline-flex w-fit border-4 border-main bg-c3 text-main px-3 py-2 text-xs font-black uppercase shadow-[3px_3px_0_var(--color-shadow)]">{t('appPages.cards.kicker')}</p>
+          <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">{t('nav.items.cards')}</h1>
+          <p className="mt-2 text-sm font-bold text-muted-foreground">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
+        </div>
+
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
 
-        <section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
-          <div className="grid grid-cols-2 border-4 border-main bg-card">
+        <section className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
+          <div className="grid grid-cols-2 border-b-4 border-main bg-card">
             {[
               ['openPacks', 'Open Packs'],
               ['gallery', 'Gallery'],
@@ -265,8 +271,7 @@ export default function Cards({ themeControls }: CardsProps) {
           </div>
 
           {activeTab === 'openPacks' ? (
-            <main className="min-w-0 bg-muted p-3 sm:p-4">
-              <p className="mb-3 inline-flex border-4 border-main bg-c3 text-main px-3 py-2 text-xs font-black uppercase shadow-[3px_3px_0_var(--color-shadow)]">{t('appPages.cards.kicker')}</p>
+            <main className="min-w-0 bg-muted">
               <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_320px]">
                 <PackRail selectedPackType={selectedPackType} setSelectedPackType={setSelectedPackType} />
                 <SelectedPackHero
