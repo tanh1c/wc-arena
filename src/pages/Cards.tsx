@@ -35,23 +35,6 @@ function getRarityCardArtClass(rarity: string) {
   return rarityCardArtClasses[rarity] ?? rarityCardArtClasses.Common;
 }
 
-function getRarityInnerBackdrop(rarity: string) {
-  const stroke = {
-    Common: '#173f2b',
-    Rare: '#003d99',
-    Epic: '#ff2bd6',
-    Icon: '#111111',
-  }[rarity] ?? '#173f2b';
-  const fill = {
-    Common: '#d8ff65',
-    Rare: '#00d4ff',
-    Epic: '#ffe600',
-    Icon: '#fff0b8',
-  }[rarity] ?? '#d8ff65';
-
-  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 160'%3E%3Cdefs%3E%3Cpattern id='card-grid' width='16' height='16' patternUnits='userSpaceOnUse'%3E%3Cpath d='M0 0H16V16H0Z' fill='${encodeURIComponent(fill)}' fill-opacity='.34'/%3E%3Cpath d='M0 0H16M0 0V16' stroke='${encodeURIComponent(stroke)}' stroke-width='2' stroke-opacity='.42'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='120' height='160' rx='10' fill='url(%23card-grid)'/%3E%3Cpath d='M-10 126L130 28M-10 148L130 50' stroke='${encodeURIComponent(stroke)}' stroke-width='8' stroke-opacity='.22'/%3E%3Ccircle cx='60' cy='58' r='42' fill='none' stroke='${encodeURIComponent(stroke)}' stroke-width='5' stroke-opacity='.25'/%3E%3C/svg%3E")`;
-}
-
 export default function Cards({ themeControls }: CardsProps) {
   const { t } = useTranslation();
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
@@ -297,13 +280,9 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
   return (
     <article className="border-4 border-main bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0">
       <div className={`relative border-b-4 border-main p-2 overflow-hidden ${getRarityCardArtClass(card.rarity)}`}>
-        <div
-          className="absolute inset-3 border-2 border-main opacity-85"
-          style={{ backgroundImage: getRarityInnerBackdrop(card.rarity), backgroundSize: 'cover' }}
-        />
         <CardImage card={card} />
-        <span className="absolute left-2 top-2 z-20 bg-main text-inv border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)]">{card.rarity}</span>
-        <span className="absolute right-2 top-2 z-20 border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
+        <span className="absolute left-2 top-2 bg-main text-inv border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)]">{card.rarity}</span>
+        <span className="absolute right-2 top-2 border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
       </div>
       <div className="p-3 flex flex-col gap-2 min-w-0">
         <h3 className="font-black uppercase text-sm sm:text-base leading-tight truncate text-main">{card.name}</h3>
@@ -330,8 +309,8 @@ function CardTile({ card, ownedCount, badge, onSetShowcase }: {
 function CardImage({ card }: { card: { name: string; image_url: string } }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
-    return <div className="relative z-10 mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
+    return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
   }
 
-  return <img src={card.image_url} alt={card.name} className="relative z-10 mx-auto aspect-[3/4] w-full max-w-[180px] object-contain border-2 border-main bg-muted mix-blend-multiply" onError={() => setFailed(true)} />;
+  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] object-contain border-2 border-main bg-muted" onError={() => setFailed(true)} />;
 }
