@@ -71,10 +71,13 @@ test('card art renders at a capped width instead of stretching low-resolution im
 test('cards page follows the squad gallery attached layout contract', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
+  assert.match(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 lg:gap-6 min-h-0/);
+  assert.match(cardsSource, /bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-\[6px_6px_0_0_var\(--color-shadow\)\] lg:shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm/);
   assert.match(cardsSource, /min-h-\[560px\]/);
   assert.match(cardsSource, /grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main/);
   assert.match(cardsSource, /bg-main text-inv border-b-4 border-main/);
   assert.match(cardsSource, /grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5/);
+  assert.doesNotMatch(cardsSource, /rounded-sm min-h-0/);
 });
 
 test('cards page separates pack opening from gallery browsing with tabs', () => {

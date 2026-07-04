@@ -116,7 +116,7 @@ export default function Cards({ themeControls }: CardsProps) {
 
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
 
-        <section className="bg-card border-4 border-main flex flex-col shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm min-h-0">
+        <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col gap-3 lg:gap-6 shadow-[6px_6px_0_0_var(--color-shadow)] lg:shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
           <div className="grid grid-cols-2 xl:grid-cols-4 border-b-4 border-main">
             <StatCell label={t('appPages.cards.collection')} value={uniqueOwned.toLocaleString()} />
             <StatCell label={t('appPages.cards.cards')} value={catalog.length.toLocaleString()} />
