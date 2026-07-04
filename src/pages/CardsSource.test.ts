@@ -98,3 +98,13 @@ test('card art panels use bold rarity-specific graphic backgrounds', () => {
   assert.match(cardsSource, /Icon: 'bg-\[repeating-conic-gradient/);
   assert.match(cardsSource, /getRarityCardArtClass\(card\.rarity\)/);
 });
+
+test('card image panels layer SVG pattern backdrops under PNG art', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /getRarityInnerBackdrop/);
+  assert.match(cardsSource, /pattern id=/);
+  assert.match(cardsSource, /mix-blend-multiply/);
+  assert.match(cardsSource, /relative z-10/);
+  assert.match(cardsSource, /getRarityInnerBackdrop\(card\.rarity\)/);
+});
