@@ -281,6 +281,32 @@ test('cards page uses squad-gallery style colorful chrome', () => {
   assert.match(cardsSource, /selectedPackType === packType \? 'bg-c2 text-inv'/);
 });
 
+test('gallery tab presents collection stats, filters, and empty states as a browsing dashboard', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /COLLECTION VAULT/);
+  assert.match(cardsSource, /uniqueOwned/);
+  assert.match(cardsSource, /showcaseSlotsUsed/);
+  assert.match(cardsSource, /filteredCatalog\.length/);
+  assert.match(cardsSource, /Owned/);
+  assert.match(cardsSource, /Total Cards/);
+  assert.match(cardsSource, /Showcase/);
+  assert.match(cardsSource, /Search \+ Filter/);
+  assert.match(cardsSource, /No cards match your current filters\./);
+  assert.match(cardsSource, /ownershipFilter/);
+  assert.match(cardsSource, /useState<'owned' \| 'all' \| 'missing'>\('owned'\)/);
+  assert.match(cardsSource, /card\.ownedCount > 0/);
+  assert.match(cardsSource, /card\.ownedCount === 0/);
+  assert.match(cardsSource, /\['owned', 'all', 'missing'\]/);
+  assert.match(cardsSource, /setOwnershipFilter/);
+  assert.match(cardsSource, /Owned Cards/);
+  assert.match(cardsSource, /Missing/);
+  assert.match(cardsSource, /border-4 border-main bg-c1/);
+  assert.match(cardsSource, /rounded-sm border-2 border-main bg-card px-3 py-2/);
+  assert.match(cardsSource, /rounded-sm border-4 border-main bg-card p-3/);
+  assert.doesNotMatch(cardsSource, /<h2 className="text-2xl font-black uppercase tracking-tight">Gallery<\/h2>/);
+});
+
 test('daily pack already-opened state is shown inside the pack panel with UTC reset countdown', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');

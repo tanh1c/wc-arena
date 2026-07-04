@@ -151,6 +151,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [flippedRevealCardIds, setFlippedRevealCardIds] = useState(new Set<string>());
   const [query, setQuery] = useState('');
   const [rarity, setRarity] = useState<'all' | CardRarity>('all');
+  const [ownershipFilter, setOwnershipFilter] = useState<'owned' | 'all' | 'missing'>('owned');
   const [loading, setLoading] = useState(true);
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
   const [selectedPackType, setSelectedPackType] = useState<PackType>('daily');
@@ -198,10 +199,11 @@ export default function Cards({ themeControls }: CardsProps) {
     const normalizedQuery = query.trim().toLowerCase();
     return catalog.filter((card) => {
       const matchesRarity = rarity === 'all' || card.rarity === rarity;
+      const matchesOwnership = ownershipFilter === 'all' || (ownershipFilter === 'owned' ? card.ownedCount > 0 : card.ownedCount === 0);
       const haystack = `${card.name} ${card.position} ${card.team} ${card.nation_region}`.toLowerCase();
-      return matchesRarity && (!normalizedQuery || haystack.includes(normalizedQuery));
+      return matchesRarity && matchesOwnership && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
-  }, [catalog, query, rarity]);
+  }, [catalog, ownershipFilter, query, rarity]);
 
   const uniqueOwned = catalog.filter((card) => card.ownedCount > 0).length;
   const showcaseSlotsUsed = showcase.length;
@@ -356,29 +358,58 @@ export default function Cards({ themeControls }: CardsProps) {
             </main>
           ) : (
             <main className="bg-muted min-w-0 flex flex-col">
-              <div className="bg-main text-inv border-b-4 border-main p-3 sm:p-4 flex flex-col lg:flex-row lg:items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-black uppercase tracking-tight">Gallery</h2>
-                  <p className="text-sm font-bold text-inv/80">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 text-main">
-                  <label className="flex items-center gap-2 border-2 border-main bg-card px-3 py-2 font-bold text-sm shadow-[2px_2px_0_var(--color-shadow)]">
-                    <Search size={16} />
-                    <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
-                  </label>
-                  <select className="border-2 border-main bg-card px-3 py-2 font-black uppercase text-sm shadow-[2px_2px_0_var(--color-shadow)]" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
-                    {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
-                  </select>
+              <div className="border-b-4 border-main bg-c1 p-3 sm:p-4 text-main">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-stretch xl:justify-between">
+                  <div className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">COLLECTION VAULT</p>
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-main">{t('appPages.cards.collection')}</h2>
+                    <p className="text-sm font-bold text-muted-foreground">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-black uppercase">
+                    <div className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                      <p className="text-muted-foreground">Owned</p>
+                      <p className="text-2xl text-main">{uniqueOwned}</p>
+                    </div>
+                    <div className="rounded-sm border-4 border-main bg-c2 p-3 text-inv shadow-[4px_4px_0_var(--color-shadow)]">
+                      <p className="text-inv/80">Total Cards</p>
+                      <p className="text-2xl">{catalog.length}</p>
+                    </div>
+                    <div className="rounded-sm border-4 border-main bg-c3 p-3 text-main shadow-[4px_4px_0_var(--color-shadow)]">
+                      <p>Showcase</p>
+                      <p className="text-2xl">{showcaseSlotsUsed}/3</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <section className="border-b-4 border-main bg-card p-3 sm:p-4">
-                <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h3>
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">Search + Filter</p>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h3>
+                  </div>
+                  <div className="flex flex-col gap-2 text-main sm:flex-row">
+                    <div className="flex rounded-sm border-2 border-main bg-card shadow-[2px_2px_0_var(--color-shadow)]">
+                      {(['owned', 'all', 'missing'] as const).map((nextFilter) => (
+                        <button key={nextFilter} type="button" className={`px-3 py-2 text-xs font-black uppercase ${ownershipFilter === nextFilter ? 'bg-c2 text-inv' : 'bg-card text-main'}`} onClick={() => setOwnershipFilter(nextFilter)}>
+                          {nextFilter === 'owned' ? 'Owned Cards' : nextFilter === 'all' ? 'All' : 'Missing'}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="flex items-center gap-2 rounded-sm border-2 border-main bg-card px-3 py-2 text-sm font-bold shadow-[2px_2px_0_var(--color-shadow)]">
+                      <Search size={16} />
+                      <input className="bg-transparent outline-none" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('appPages.cards.searchPlaceholder')} />
+                    </label>
+                    <select className="rounded-sm border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase shadow-[2px_2px_0_var(--color-shadow)]" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
+                      {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
+                    </select>
+                  </div>
+                </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[1, 2, 3].map((slot) => {
                     const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
                     return (
-                      <div key={slot} className="min-h-28 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main flex items-center justify-center">
+                      <div key={slot} className="flex min-h-28 items-center justify-center rounded-sm border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
                         {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
                       </div>
                     );
@@ -388,12 +419,14 @@ export default function Cards({ themeControls }: CardsProps) {
 
               {loading ? (
                 <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
-              ) : (
+              ) : filteredCatalog.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
                   {filteredCatalog.map((card) => (
                     <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
                   ))}
                 </div>
+              ) : (
+                <p className="m-3 rounded-sm border-4 border-main bg-card p-6 text-center text-sm font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">No cards match your current filters.</p>
               )}
             </main>
           )}
