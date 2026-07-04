@@ -177,6 +177,12 @@ test('card metadata centers names and uses colored position and flag badges', ()
   assert.match(cardsSource, /Austria: 'AUT'/);
   assert.match(cardsSource, /Ghana: 'GHA'/);
   assert.match(cardsSource, /Qatar: 'QAT'/);
+  assert.match(cardsSource, /Australia: 'AUS'/);
+  assert.match(cardsSource, /'Cape Verde Islands': 'CPV'/);
+  assert.match(cardsSource, /'DR Congo': 'COD'/);
+  assert.match(cardsSource, /Panama: 'PAN'/);
+  assert.match(cardsSource, /Tunisia: 'TUN'/);
+  assert.match(cardsSource, /Uzbekistan: 'UZB'/);
   assert.doesNotMatch(cardsSource, /<Star size=\{12\}/);
 });
 
@@ -350,7 +356,9 @@ test('reveal popup is compact and can show five cards per row without the inert 
 
   assert.match(cardsSource, /max-w-\[1280px\]/);
   assert.match(cardsSource, /max-h-\[88vh\]/);
+  assert.match(cardsSource, /grid-rows-\[auto_minmax\(0,1fr\)\]/);
   assert.match(cardsSource, /overflow-hidden/);
+  assert.match(cardsSource, /min-h-0/);
   assert.match(cardsSource, /sm:grid-cols-2 lg:grid-cols-5/);
   assert.match(cardsSource, /max-w-\[170px\]/);
   assert.match(cardsSource, /min-h-\[270px\]/);

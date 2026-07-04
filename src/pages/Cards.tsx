@@ -72,14 +72,17 @@ const rarityBadgeClasses: Record<string, string> = {
 
 const nationFlagCodes: Record<string, string> = {
   Argentina: 'ARG',
+  Australia: 'AUS',
   Austria: 'AUT',
   Belgium: 'BEL',
   'Bosnia Herzegovina': 'BIH',
   Brazil: 'BRA',
   Canada: 'CAN',
+  'Cape Verde Islands': 'CPV',
   Colombia: 'COL',
   Croatia: 'CRO',
   'Czech Republic': 'CZE',
+  'DR Congo': 'COD',
   Ecuador: 'ECU',
   Egypt: 'EGY',
   England: 'ENG',
@@ -95,6 +98,7 @@ const nationFlagCodes: Record<string, string> = {
   Netherlands: 'NED',
   'New Zealand': 'NZL',
   Norway: 'NOR',
+  Panama: 'PAN',
   Paraguay: 'PAR',
   Portugal: 'POR',
   Qatar: 'QAT',
@@ -105,9 +109,11 @@ const nationFlagCodes: Record<string, string> = {
   Spain: 'ESP',
   Sweden: 'SWE',
   Switzerland: 'SUI',
+  Tunisia: 'TUN',
   Türkiye: 'TUR',
   Uruguay: 'URU',
   'United States': 'USA',
+  Uzbekistan: 'UZB',
 };
 
 function getRarityCardArtClass(rarity: string) {
@@ -396,7 +402,7 @@ export default function Cards({ themeControls }: CardsProps) {
 
       {revealModalOpen && revealedCards.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
-          <section className="max-h-[88vh] w-full max-w-[1280px] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+          <section className="grid max-h-[88vh] w-full max-w-[1280px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
             <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
               <div>
                 <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
@@ -406,7 +412,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 Close
               </button>
             </div>
-            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid min-h-0 grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-5">
               {revealedCards.map((card) => {
                 const isFlipped = flippedRevealCardIds.has(card.id);
                 return (
