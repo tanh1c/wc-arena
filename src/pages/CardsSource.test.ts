@@ -244,3 +244,20 @@ test('daily pack already-opened state is shown inside the pack panel with UTC re
   assert.match(resourcesSource, /dailyPackResetIn: 'Resets in \{\{time\}\} UTC'/);
   assert.match(resourcesSource, /dailyPackResetIn: 'Reset sau \{\{time\}\} UTC'/);
 });
+
+test('opened cards appear in a flip reveal popup using the Backcard art', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /\.\.\/\.\.\/Backcard\.png/);
+  assert.match(cardsSource, /backCardImage/);
+  assert.match(cardsSource, /revealModalOpen/);
+  assert.match(cardsSource, /setRevealModalOpen\(result\.cards\.length > 0\)/);
+  assert.match(cardsSource, /flippedRevealCardIds/);
+  assert.match(cardsSource, /setFlippedRevealCardIds\(new Set<string>\(\)\)/);
+  assert.match(cardsSource, /toggleRevealCard/);
+  assert.match(cardsSource, /aria-label=\{`Reveal \$\{card\.player_cards\.name\}`\}/);
+  assert.match(cardsSource, /src=\{backCardImage\}/);
+  assert.match(cardsSource, /revealedCards\.map\(\(card\) =>/);
+  assert.match(cardsSource, /rounded-sm/);
+  assert.match(cardsSource, /setRevealModalOpen\(false\)/);
+});

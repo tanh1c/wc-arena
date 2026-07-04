@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gift, Search } from 'lucide-react';
+import backCardImage from '../../Backcard.png';
 import dailyPackImage from '../../Daily.png';
 import elitePackImage from '../../Elite.png';
 import iconPackImage from '../../Icon.png';
@@ -107,6 +108,8 @@ export default function Cards({ themeControls }: CardsProps) {
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
   const [showcase, setShowcase] = useState<ShowcaseCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
+  const [revealModalOpen, setRevealModalOpen] = useState(false);
+  const [flippedRevealCardIds, setFlippedRevealCardIds] = useState(new Set<string>());
   const [query, setQuery] = useState('');
   const [rarity, setRarity] = useState<'all' | CardRarity>('all');
   const [loading, setLoading] = useState(true);
@@ -170,6 +173,8 @@ export default function Cards({ themeControls }: CardsProps) {
     try {
       const result = await openCardPack(packType);
       setRevealedCards(result.cards);
+      setFlippedRevealCardIds(new Set<string>());
+      setRevealModalOpen(result.cards.length > 0);
       if (packType === 'daily') setDailyPackOpenedToday(true);
       window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       await loadCards();
@@ -192,6 +197,15 @@ export default function Cards({ themeControls }: CardsProps) {
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     }
+  };
+
+  const toggleRevealCard = (cardId: string) => {
+    setFlippedRevealCardIds((current) => {
+      const next = new Set(current);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
+    });
   };
 
   return (
@@ -273,7 +287,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 </div>
 
                 {revealedCards.length > 0 ? (
-                  <section className="m-3 sm:m-4 mt-0 border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <section className="m-3 sm:m-4 mt-0 rounded-sm border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
                     <h3 className="border-b-4 border-main bg-card p-3 text-lg font-black uppercase text-main">{t('appPages.cards.revealedCards')}</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
                       {revealedCards.map((ownedCard) => (
@@ -333,6 +347,36 @@ export default function Cards({ themeControls }: CardsProps) {
           </div>
         </section>
       </div>
+
+      {revealModalOpen && revealedCards.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+          <section className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+            <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv sm:p-4">
+              <div>
+                <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
+                <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.revealedCards')}</h2>
+              </div>
+              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setRevealModalOpen(false)}>
+                Close
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 sm:gap-4 sm:p-4 lg:grid-cols-5">
+              {revealedCards.map((card) => {
+                const isFlipped = flippedRevealCardIds.has(card.id);
+                return (
+                  <button key={card.id} type="button" className="group min-w-0 text-left" aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
+                    {isFlipped ? (
+                      <CardTile card={card.player_cards} ownedCount={1} badge={card.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} />
+                    ) : (
+                      <img src={backCardImage} alt="" className="mx-auto aspect-[3/4] w-full max-w-[180px] rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)] transition-transform group-hover:-translate-y-1" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      )}
     </AppShell>
   );
 }
