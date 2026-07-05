@@ -17,7 +17,8 @@ type SupabaseClient = ReturnType<typeof createClient>;
 type Body =
   | { action: 'openCardPack'; packType: PackType }
   | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
-  | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] };
+  | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
+  | { action: 'deletePlayerCard'; id: string };
 
 type PlayerCard = {
   id: string;
@@ -55,6 +56,12 @@ Deno.serve(async (req) => {
       const adminAuth = await requireAdminUser(req, corsHeaders);
       if (adminAuth instanceof Response) return adminAuth;
       return jsonResponse(await upsertPlayerCards(adminAuth.supabase, body.cards));
+    }
+
+    if (body.action === 'deletePlayerCard') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await deletePlayerCard(adminAuth.supabase, body.id));
     }
 
     const auth = await requireAuthenticatedUser(req, corsHeaders);
@@ -241,6 +248,13 @@ async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCar
   const { data, error } = await supabase.from('player_cards').upsert(rows).select('*');
   if (error) throw error;
   return { cards: data ?? [] };
+}
+
+async function deletePlayerCard(supabase: SupabaseClient, id: string) {
+  const cardId = normalizeRequiredString(id, 'id');
+  const { error } = await supabase.from('player_cards').delete().eq('id', cardId);
+  if (error) throw error;
+  return { id: cardId };
 }
 
 function normalizeRequiredString(value: unknown, field: string) {

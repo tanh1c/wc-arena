@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
-const supabaseUrlEnv = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseKeyEnv = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+const runtimeEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env;
+const supabaseUrlEnv = import.meta.env?.VITE_SUPABASE_URL as string | undefined ?? runtimeEnv?.VITE_SUPABASE_URL;
+const supabaseKeyEnv = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined ?? runtimeEnv?.VITE_SUPABASE_PUBLISHABLE_KEY;
 const rememberAuthKey = 'predict2026.rememberAuth';
 
 if (!supabaseUrlEnv || !supabaseKeyEnv) {

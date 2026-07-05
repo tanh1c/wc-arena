@@ -68,6 +68,113 @@ export type AdminPlayerCardInput = {
   rarity: CardRarity;
 };
 
+function emptyToNull(value: string) {
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function parseCsvRows(csv: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+
+  for (let index = 0; index < csv.length; index += 1) {
+    const char = csv[index];
+    const nextChar = csv[index + 1];
+
+    if (char === '"') {
+      if (quoted && nextChar === '"') {
+        cell += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+
+    if (char === ',' && !quoted) {
+      row.push(cell.trim());
+      cell = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && nextChar === '\n') index += 1;
+      row.push(cell.trim());
+      if (row.some((value) => value.length > 0)) rows.push(row);
+      row = [];
+      cell = '';
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell.trim());
+  if (row.some((value) => value.length > 0)) rows.push(row);
+  return rows;
+}
+
+function normalizeCsvDate(value: string) {
+  const trimmed = value.trim();
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
+  if (!match) return emptyToNull(trimmed);
+  const [, month, day, year] = match;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+export function parsePlayerCardCsv(csv: string, rarity: CardRarity): AdminPlayerCardInput[] {
+  const [headers, ...rows] = parseCsvRows(csv);
+  if (!headers || rows.length === 0) return [];
+
+  const headerIndex = new Map(headers.map((header, index) => [header, index]));
+  const read = (row: string[], header: string) => row[headerIndex.get(header) ?? -1]?.trim() ?? '';
+
+  return rows.map((row) => {
+    const [workRateAtt, workRateDef] = read(row, 'Work Rate (ATT) / Work Rate (DEF)').split('/').map((value) => value.trim());
+
+    return {
+      name: read(row, 'Name'),
+      position: read(row, 'Position'),
+      alternate_positions: emptyToNull(read(row, 'Alternate Positions')),
+      team: read(row, 'TEAM'),
+      league: read(row, 'LEAGUE'),
+      nation_region: read(row, 'NATION/REGION'),
+      skill_moves: emptyToNull(read(row, 'Skill Moves')),
+      footedness: emptyToNull(read(row, 'STRONG FOOT / WEAK FOOT')),
+      height: emptyToNull(read(row, 'Height')),
+      weight: emptyToNull(read(row, 'Weight')),
+      work_rate_att: emptyToNull(workRateAtt ?? ''),
+      work_rate_def: emptyToNull(workRateDef ?? ''),
+      added_on: normalizeCsvDate(read(row, 'Added on')),
+      image_url: read(row, 'Image URL'),
+      rarity,
+    };
+  });
+}
+
+export function playerCardToAdminInput(card: PlayerCard): AdminPlayerCardInput {
+  return {
+    id: card.id,
+    name: card.name,
+    position: card.position,
+    alternate_positions: card.alternate_positions,
+    team: card.team,
+    league: card.league,
+    nation_region: card.nation_region,
+    skill_moves: card.skill_moves,
+    footedness: card.footedness,
+    height: card.height,
+    weight: card.weight,
+    work_rate_att: card.work_rate_att,
+    work_rate_def: card.work_rate_def,
+    added_on: card.added_on,
+    image_url: card.image_url,
+    rarity: card.rarity,
+  };
+}
+
 export async function listPlayerCards() {
   const { data, error } = await supabase
     .from('player_cards')
@@ -162,6 +269,15 @@ export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {
 
   if (error) throw new Error(await getFunctionErrorMessage(error));
   return data.cards;
+}
+
+export async function deletePlayerCard(id: string) {
+  const { data, error } = await supabase.functions.invoke<{ id: string }>('manage_cards', {
+    body: { action: 'deletePlayerCard', id },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data.id;
 }
 
 export function groupCatalogWithOwnership(cards: PlayerCard[], ownedCards: OwnedPlayerCard[]) {

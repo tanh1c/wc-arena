@@ -2,23 +2,32 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-test('admin dashboard exposes a compact JSON player card import panel', () => {
+test('admin dashboard renders tabbed admin sections with match management as default', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
-  assert.match(source, /upsertPlayerCards/);
-  assert.match(source, /cardImportJson/);
-  assert.match(source, /JSON\.parse\(cardImportJson\)/);
-  assert.match(source, /Array\.isArray\(parsedCards\)/);
-  assert.match(source, /Player cards JSON/);
-  assert.match(source, /Import \/ update cards/);
+  assert.match(source, /activeAdminTab, setActiveAdminTab/);
+  assert.match(source, /useState<'matches' \| 'cards'>\('matches'\)/);
+  assert.match(source, /Match Management/);
+  assert.match(source, /Player Cards/);
+  assert.match(source, /activeAdminTab === 'matches'/);
+  assert.match(source, /activeAdminTab === 'cards'/);
 });
 
-test('admin dashboard keeps card import behind the existing admin screen gate', () => {
+test('admin dashboard exposes player-card CRUD and CSV import only after the admin gate', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
-  const panelIndex = source.lastIndexOf('Player cards JSON');
+  const panelIndex = source.lastIndexOf('Player Cards');
   const adminGateIndex = source.indexOf("role !== 'admin'");
 
   assert.notEqual(panelIndex, -1);
   assert.notEqual(adminGateIndex, -1);
   assert.ok(adminGateIndex < panelIndex);
+  assert.match(source, /listPlayerCards/);
+  assert.match(source, /upsertPlayerCards/);
+  assert.match(source, /deletePlayerCard/);
+  assert.match(source, /parsePlayerCardCsv/);
+  assert.match(source, /cardCsvImport/);
+  assert.match(source, /csvImportRarity/);
+  assert.match(source, /Import CSV/);
+  assert.match(source, /Save card/);
+  assert.match(source, /New card/);
 });

@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
+import type { CardRarity } from '../config/cardPacks';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { upsertPlayerCards, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, listPlayerCards, parsePlayerCardCsv, playerCardToAdminInput, upsertPlayerCards, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -22,25 +23,38 @@ type AdminDashboardProps = {
 type ResultDrafts = Record<string, { homeScore: string; awayScore: string }>;
 type ActionState = { loading?: boolean; error?: string; success?: string };
 
-const playerCardImportExample = JSON.stringify([
-  {
-    name: 'Lionel Messi',
-    position: 'RW',
-    alternate_positions: 'CAM, ST',
-    team: 'Argentina',
-    league: 'National Team',
-    nation_region: 'Argentina',
-    skill_moves: '4',
-    footedness: 'Left',
-    height: '170 cm',
-    weight: '72 kg',
-    work_rate_att: 'Medium',
-    work_rate_def: 'Low',
-    added_on: '2026-07-05',
-    image_url: 'https://example.com/messi.png',
-    rarity: 'Icon',
-  },
-], null, 2);
+type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity'>;
+
+const cardRarities: CardRarity[] = ['Common', 'Rare', 'Epic', 'Icon'];
+const cardDraftFields: Array<{ key: CardDraftTextField; label: string; wide?: boolean }> = [
+  { key: 'id', label: 'ID' },
+  { key: 'name', label: 'Name' },
+  { key: 'position', label: 'Position' },
+  { key: 'alternate_positions', label: 'Alternate Positions' },
+  { key: 'team', label: 'Team' },
+  { key: 'league', label: 'League' },
+  { key: 'nation_region', label: 'Nation/Region' },
+  { key: 'skill_moves', label: 'Skill Moves' },
+  { key: 'footedness', label: 'Footedness' },
+  { key: 'height', label: 'Height' },
+  { key: 'weight', label: 'Weight' },
+  { key: 'work_rate_att', label: 'Work Rate ATT' },
+  { key: 'work_rate_def', label: 'Work Rate DEF' },
+  { key: 'added_on', label: 'Added On' },
+  { key: 'image_url', label: 'Image URL', wide: true },
+];
+
+function emptyPlayerCardDraft(): AdminPlayerCardInput {
+  return {
+    name: '',
+    position: '',
+    team: '',
+    league: '',
+    nation_region: '',
+    image_url: '',
+    rarity: 'Common',
+  };
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -67,18 +81,25 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [resultDrafts, setResultDrafts] = useState<ResultDrafts>({});
   const [matchActionState, setMatchActionState] = useState<Record<string, ActionState>>({});
   const [recalcState, setRecalcState] = useState<ActionState>({});
-  const [cardImportJson, setCardImportJson] = useState(playerCardImportExample);
-  const [cardImportState, setCardImportState] = useState<ActionState>({});
-  const [importedCards, setImportedCards] = useState<PlayerCard[]>([]);
+  const [activeAdminTab, setActiveAdminTab] = useState<'matches' | 'cards'>('matches');
+  const [playerCards, setPlayerCards] = useState<PlayerCard[]>([]);
+  const [cardDraft, setCardDraft] = useState<AdminPlayerCardInput>(emptyPlayerCardDraft());
+  const [cardActionState, setCardActionState] = useState<ActionState>({});
+  const [cardCsvImport, setCardCsvImport] = useState('');
+  const [csvImportRarity, setCsvImportRarity] = useState<CardRarity>('Common');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  async function loadPlayerCards() {
+    setPlayerCards(await listPlayerCards());
+  }
 
   async function loadAdminData() {
     setLoading(true);
     setError(null);
 
     try {
-      const [nextMatches, nextTeams, nextLeaderboard, nextAuditLogs, nextSignals, nextRewardReviews, nextRecentPredictions] = await Promise.all([
+      const [nextMatches, nextTeams, nextLeaderboard, nextAuditLogs, nextSignals, nextRewardReviews, nextRecentPredictions, nextPlayerCards] = await Promise.all([
         listMatches(),
         getTeamMap(),
         listGlobalLeaderboard(),
@@ -86,6 +107,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
         listUserTrustSignalsForAdmin(),
         listRewardReviewsForAdmin(),
         listRecentPredictionsForAdmin(),
+        listPlayerCards(),
       ]);
       setMatches(nextMatches);
       setTeams(nextTeams);
@@ -94,6 +116,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       setTrustSignals(nextSignals);
       setRewardReviews(nextRewardReviews);
       setRecentPredictions(nextRecentPredictions);
+      setPlayerCards(nextPlayerCards);
       setResultDrafts(Object.fromEntries(nextMatches.map((match) => [match.id, {
         homeScore: match.home_score?.toString() ?? '',
         awayScore: match.away_score?.toString() ?? '',
@@ -171,18 +194,47 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     }
   }
 
-  async function importPlayerCards() {
-    setCardImportState({ loading: true });
+  function setCardDraftField(field: CardDraftTextField, value: string) {
+    setCardDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  async function savePlayerCard() {
+    setCardActionState({ loading: true });
 
     try {
-      const parsedCards = JSON.parse(cardImportJson) as unknown;
-      if (!Array.isArray(parsedCards)) throw new Error('Player cards JSON must be an array.');
-
-      const nextCards = await upsertPlayerCards(parsedCards as AdminPlayerCardInput[]);
-      setImportedCards(nextCards);
-      setCardImportState({ success: `Imported ${nextCards.length} player cards.` });
+      const savedCards = await upsertPlayerCards([cardDraft]);
+      await loadPlayerCards();
+      setCardDraft(savedCards[0] ? playerCardToAdminInput(savedCards[0]) : emptyPlayerCardDraft());
+      setCardActionState({ success: `Saved ${savedCards[0]?.name ?? 'player card'}.` });
     } catch (nextError) {
-      setCardImportState({ error: getErrorMessage(nextError) });
+      setCardActionState({ error: getErrorMessage(nextError) });
+    }
+  }
+
+  async function removePlayerCard(card: PlayerCard) {
+    if (!window.confirm(`Delete ${card.name}?`)) return;
+    setCardActionState({ loading: true });
+
+    try {
+      await deletePlayerCard(card.id);
+      await loadPlayerCards();
+      if (cardDraft.id === card.id) setCardDraft(emptyPlayerCardDraft());
+      setCardActionState({ success: `Deleted ${card.name}.` });
+    } catch (nextError) {
+      setCardActionState({ error: getErrorMessage(nextError) });
+    }
+  }
+
+  async function importPlayerCardCsv() {
+    setCardActionState({ loading: true });
+
+    try {
+      const parsedCards = parsePlayerCardCsv(cardCsvImport, csvImportRarity);
+      const savedCards = await upsertPlayerCards(parsedCards);
+      await loadPlayerCards();
+      setCardActionState({ success: `Imported ${savedCards.length} player cards.` });
+    } catch (nextError) {
+      setCardActionState({ error: getErrorMessage(nextError) });
     }
   }
 
@@ -278,7 +330,23 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
             </div>
           </div>
 
-          <div className="flex flex-col xl:flex-row flex-1">
+          <div className="flex flex-wrap gap-3">
+            {[
+              ['matches', 'Match Management'],
+              ['cards', 'Player Cards'],
+            ].map(([tab, label]) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveAdminTab(tab as 'matches' | 'cards')}
+                className={`border-4 border-main px-4 py-3 font-black uppercase text-xs shadow-[4px_4px_0_var(--color-shadow)] ${activeAdminTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeAdminTab === 'matches' && <div className="flex flex-col xl:flex-row flex-1">
             <div className="flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-card min-w-0">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('ui.matchOperations')}
@@ -364,23 +432,6 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 {(recalcState.error || recalcState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${recalcState.error ? 'bg-c5' : 'bg-c3'}`}>{recalcState.error ?? recalcState.success}</div>}
               </div>
 
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                Player cards JSON
-              </div>
-              <div className="p-4 bg-card flex flex-col gap-3 border-b-4 border-main">
-                <textarea
-                  value={cardImportJson}
-                  onChange={(event) => setCardImportJson(event.target.value)}
-                  className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main"
-                  spellCheck={false}
-                  aria-label="Player cards JSON"
-                />
-                <button type="button" onClick={() => void importPlayerCards()} disabled={cardImportState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">
-                  {cardImportState.loading ? 'Importing cards' : 'Import / update cards'}
-                </button>
-                {(cardImportState.error || cardImportState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${cardImportState.error ? 'bg-c5' : 'bg-c3'}`}>{cardImportState.error ?? cardImportState.success}</div>}
-                {importedCards.length > 0 && <div className="font-black uppercase text-[10px] text-subtle">Latest: {importedCards.slice(0, 3).map((card) => card.name).join(', ')}</div>}
-              </div>
 
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
                 {t('ui.suspiciousSignals')}
@@ -411,7 +462,83 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 </div>
               </div>
             </div>
-          </div>
+          </div>}
+
+          {activeAdminTab === 'cards' && <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] border-4 border-main bg-card">
+            <div className="border-b-4 xl:border-b-0 xl:border-r-4 border-main flex flex-col">
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Player Cards</div>
+              <div className="p-4 flex flex-col gap-3 border-b-4 border-main">
+                <button type="button" onClick={() => setCardDraft(emptyPlayerCardDraft())} className="border-2 border-main bg-c1 p-3 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)]">New card</button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {cardDraftFields.map((field) => (
+                    <label key={field.key} className={`flex flex-col gap-1 text-[10px] font-black uppercase ${field.wide ? 'sm:col-span-2' : ''}`}>
+                      {field.label}
+                      <input value={cardDraft[field.key] ?? ''} onChange={(event) => setCardDraftField(field.key, event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" />
+                    </label>
+                  ))}
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Rarity
+                    <select value={cardDraft.rarity} onChange={(event) => setCardDraft((current) => ({ ...current, rarity: event.target.value as CardRarity }))} className="border-2 border-main bg-muted p-2 text-sm font-bold">
+                      {cardRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <button type="button" onClick={() => void savePlayerCard()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save card</button>
+                {(cardActionState.error || cardActionState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${cardActionState.error ? 'bg-c5' : 'bg-c3'}`}>{cardActionState.error ?? cardActionState.success}</div>}
+              </div>
+
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">CSV Import</div>
+              <div className="p-4 flex flex-col gap-3">
+                <select value={csvImportRarity} onChange={(event) => setCsvImportRarity(event.target.value as CardRarity)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase" aria-label="CSV rarity">
+                  {cardRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                </select>
+                <textarea value={cardCsvImport} onChange={(event) => setCardCsvImport(event.target.value)} className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main" spellCheck={false} aria-label="Player card CSV" placeholder="Paste Card_list.txt CSV here" />
+                <button type="button" onClick={() => void importPlayerCardCsv()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Import CSV</button>
+              </div>
+            </div>
+
+            <div className="min-w-0 flex flex-col">
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Catalog ({playerCards.length})</div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-left text-xs font-bold">
+                  <thead className="bg-muted font-black uppercase">
+                    <tr>
+                      <th className="border-b-4 border-r-2 border-main p-3">Card</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Position</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Team</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Rarity</th>
+                      <th className="border-b-4 border-main p-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {playerCards.map((card) => (
+                      <tr key={card.id} className="border-b-2 border-main last:border-b-0">
+                        <td className="border-r-2 border-main p-3">
+                          <div className="flex items-center gap-3">
+                            <img src={card.image_url} alt="" className="h-12 w-12 border-2 border-main object-cover bg-muted" loading="lazy" />
+                            <div>
+                              <div className="font-black uppercase">{card.name}</div>
+                              <a href={card.image_url} target="_blank" rel="noreferrer" className="text-[10px] text-c2 underline">Image link</a>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.position}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.team}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.rarity}</td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => setCardDraft(playerCardToAdminInput(card))} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button>
+                            <button type="button" onClick={() => void removePlayerCard(card)} disabled={cardActionState.loading} className="border-2 border-main bg-c5 px-3 py-2 font-black uppercase text-[10px] disabled:opacity-60">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!loading && playerCards.length === 0 && <tr><td colSpan={5} className="p-4 font-black uppercase">No player cards yet.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>}
         </div>
       </div>
     </AppShell>
