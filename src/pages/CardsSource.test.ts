@@ -81,7 +81,7 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /SelectedPackHero/);
   assert.match(cardsSource, /PackInfoPanel/);
   assert.match(cardsSource, /appPages\.cards\.potentialRewards/);
-  assert.doesNotMatch(cardsSource, /appPages\.cards\.recentPulls/);
+  assert.match(cardsSource, /appPages\.cards\.recentPulls/);
   assert.doesNotMatch(cardsSource, /appPages\.cards\.packTip/);
   assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
   assert.doesNotMatch(cardsSource, /<section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]"/);
@@ -358,30 +358,24 @@ test('opened cards appear in a flip reveal popup using the Backcard art', () => 
   assert.match(cardsSource, /setRevealModalOpen\(false\)/);
 });
 
-test('revealed cards review is hidden by default behind a rounded toggle panel', () => {
-  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
-
-  assert.match(cardsSource, /showRevealedReview/);
-  assert.match(cardsSource, /setShowRevealedReview\(false\)/);
-  assert.match(cardsSource, /setShowRevealedReview\(\(current\) => !current\)/);
-  assert.match(cardsSource, /revealedCards\.length > 0 && showRevealedReview/);
-  assert.match(cardsSource, /rounded-t-sm border-b-4 border-main bg-card/);
-});
-
-test('open packs page omits redundant recent pulls and footer tip panels', () => {
+test('open packs page keeps recent pulls and omits the revealed review toggle panel', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
-  assert.doesNotMatch(cardsSource, /recentPullCards/);
-  assert.doesNotMatch(cardsSource, /appPages\.cards\.recentPulls/);
-  assert.doesNotMatch(cardsSource, /appPages\.cards\.emptyRecentPulls/);
-  assert.doesNotMatch(cardsSource, /appPages\.cards\.viewHistory/);
-  assert.doesNotMatch(cardsSource, /appPages\.cards\.tipLabel/);
+  assert.match(cardsSource, /recentPullCards/);
+  assert.match(cardsSource, /setRecentPullCards\(revealedCards\)/);
+  assert.match(cardsSource, /flippedRevealCardIds\.size === revealedCards\.length/);
+  assert.match(cardsSource, /recentPullCards\.length > 0/);
+  assert.match(cardsSource, /recentPullCards\.map\(\(ownedCard\) =>/);
+  assert.match(cardsSource, /appPages\.cards\.recentPulls/);
+  assert.match(cardsSource, /appPages\.cards\.emptyRecentPulls/);
+  assert.match(resourcesSource, /recentPulls:/);
+  assert.match(resourcesSource, /emptyRecentPulls:/);
+  assert.doesNotMatch(cardsSource, /showRevealedReview/);
+  assert.doesNotMatch(cardsSource, /setShowRevealedReview/);
+  assert.doesNotMatch(cardsSource, /revealedCards\.length > 0 && showRevealedReview/);
+  assert.doesNotMatch(cardsSource, /rounded-t-sm border-b-4 border-main bg-card/);
   assert.doesNotMatch(cardsSource, /appPages\.cards\.packTip/);
-  assert.doesNotMatch(resourcesSource, /recentPulls:/);
-  assert.doesNotMatch(resourcesSource, /emptyRecentPulls:/);
-  assert.doesNotMatch(resourcesSource, /viewHistory:/);
-  assert.doesNotMatch(resourcesSource, /tipLabel:/);
   assert.doesNotMatch(resourcesSource, /packTip:/);
 });
 
