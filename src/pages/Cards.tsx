@@ -150,7 +150,6 @@ export default function Cards({ themeControls }: CardsProps) {
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
   const [showcase, setShowcase] = useState<ShowcaseCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
-  const [recentPullCards, setRecentPullCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
   const [showRevealedReview, setShowRevealedReview] = useState(false);
   const [revealModalOpen, setRevealModalOpen] = useState(false);
   const [flippedRevealCardIds, setFlippedRevealCardIds] = useState(new Set<string>());
@@ -200,11 +199,6 @@ export default function Cards({ themeControls }: CardsProps) {
     return () => window.clearInterval(intervalId);
   }, [dailyPackOpenedToday]);
 
-  useEffect(() => {
-    if (revealedCards.length > 0 && flippedRevealCardIds.size === revealedCards.length) {
-      setRecentPullCards(revealedCards);
-    }
-  }, [flippedRevealCardIds.size, revealedCards]);
 
   const filteredCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -224,7 +218,6 @@ export default function Cards({ themeControls }: CardsProps) {
     try {
       const result = await openCardPack(packType);
       setRevealedCards(result.cards);
-      setRecentPullCards([]);
       setShowRevealedReview(false);
       setFlippedRevealCardIds(new Set<string>());
       setRevealModalOpen(result.cards.length > 0);
@@ -309,38 +302,20 @@ export default function Cards({ themeControls }: CardsProps) {
                 />
               </div>
 
-              <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-                <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="font-black uppercase text-main">{t('appPages.cards.potentialRewards')}</h3>
-                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewAll')}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
-                      <div key={rarity} className="rounded-sm border-4 border-main bg-muted p-2 text-center shadow-[3px_3px_0_var(--color-shadow)]">
-                        <div className="mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center rounded-sm border-4 border-main bg-cover bg-center text-2xl font-black" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(rarity)})` }}>?</div>
-                        <p className={`rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(rarity)}`}>{rarity}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="font-black uppercase text-main">{t('appPages.cards.recentPulls')}</h3>
-                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewHistory')}</span>
-                  </div>
-                  {recentPullCards.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
-                      {recentPullCards.map((ownedCard) => (
-                        <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
-                      ))}
+              <section className="mt-3 rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="font-black uppercase text-main">{t('appPages.cards.potentialRewards')}</h3>
+                  <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewAll')}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
+                    <div key={rarity} className="rounded-sm border-4 border-main bg-muted p-2 text-center shadow-[3px_3px_0_var(--color-shadow)]">
+                      <div className="mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center rounded-sm border-4 border-main bg-cover bg-center text-2xl font-black" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(rarity)})` }}>?</div>
+                      <p className={`rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(rarity)}`}>{rarity}</p>
                     </div>
-                  ) : (
-                    <p className="border-2 border-main bg-muted p-6 text-center text-sm font-black uppercase text-muted-foreground">{t('appPages.cards.emptyRecentPulls')}</p>
-                  )}
-                </section>
-              </div>
+                  ))}
+                </div>
+              </section>
 
               {revealedCards.length > 0 && (
                 <div className="mt-3 rounded-sm border-4 border-main bg-c3 shadow-[4px_4px_0_var(--color-shadow)]">
@@ -361,12 +336,7 @@ export default function Cards({ themeControls }: CardsProps) {
                     </section>
                   )}
                 </div>
-              )}
-
-              <div className="mt-3 rounded-sm border-4 border-main bg-main p-3 text-xs font-black uppercase text-inv shadow-[4px_4px_0_var(--color-shadow)]">
-                <span className="text-c3">{t('appPages.cards.tipLabel')}</span> {t('appPages.cards.packTip')}
-              </div>
-            </main>
+              )}            </main>
           ) : (
             <main className="bg-muted min-w-0 flex flex-col">
               <section className="border-b-4 border-main bg-card p-3 sm:p-4">

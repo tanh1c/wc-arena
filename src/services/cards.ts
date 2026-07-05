@@ -49,6 +49,25 @@ export type OpenCardPackResult = {
   openedOnUtc: string;
 };
 
+export type AdminPlayerCardInput = {
+  id?: string;
+  name: string;
+  position: string;
+  alternate_positions?: string | null;
+  team: string;
+  league: string;
+  nation_region: string;
+  skill_moves?: string | null;
+  footedness?: string | null;
+  height?: string | null;
+  weight?: string | null;
+  work_rate_att?: string | null;
+  work_rate_def?: string | null;
+  added_on?: string | null;
+  image_url: string;
+  rarity: CardRarity;
+};
+
 export async function listPlayerCards() {
   const { data, error } = await supabase
     .from('player_cards')
@@ -134,6 +153,15 @@ export async function setShowcaseCard(slotNumber: number, userPlayerCardId: stri
 
   if (error) throw error;
   return data.showcase;
+}
+
+export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {
+  const { data, error } = await supabase.functions.invoke<{ cards: PlayerCard[] }>('manage_cards', {
+    body: { action: 'upsertPlayerCards', cards },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data.cards;
 }
 
 export function groupCatalogWithOwnership(cards: PlayerCard[], ownedCards: OwnedPlayerCard[]) {

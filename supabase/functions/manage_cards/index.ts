@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { CARD_PACKS, getUtcDay, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
-import { jsonResponse as sharedJsonResponse, requireAuthenticatedUser } from '../_shared/authGuards.ts';
+import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
@@ -16,17 +16,47 @@ type SupabaseClient = ReturnType<typeof createClient>;
 
 type Body =
   | { action: 'openCardPack'; packType: PackType }
-  | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string };
+  | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
+  | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] };
 
 type PlayerCard = {
   id: string;
   rarity: CardRarity;
 };
 
+type AdminPlayerCardInput = {
+  id?: unknown;
+  name?: unknown;
+  position?: unknown;
+  alternate_positions?: unknown;
+  team?: unknown;
+  league?: unknown;
+  nation_region?: unknown;
+  skill_moves?: unknown;
+  footedness?: unknown;
+  height?: unknown;
+  weight?: unknown;
+  work_rate_att?: unknown;
+  work_rate_def?: unknown;
+  added_on?: unknown;
+  image_url?: unknown;
+  rarity?: unknown;
+};
+
+const cardRarities = ['Common', 'Rare', 'Epic', 'Icon'] as const;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    const body = await req.json() as Body;
+
+    if (body.action === 'upsertPlayerCards') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await upsertPlayerCards(adminAuth.supabase, body.cards));
+    }
+
     const auth = await requireAuthenticatedUser(req, corsHeaders);
     if (auth instanceof Response) return auth;
     const { supabase, user } = auth;
@@ -38,8 +68,6 @@ Deno.serve(async (req) => {
       maxCount: 60,
     });
     if (!rateLimit.allowed) return jsonResponse({ error: 'Too many card actions. Try again soon.' }, 429);
-
-    const body = await req.json() as Body;
 
     if (body.action === 'openCardPack') {
       return jsonResponse(await openCardPack(supabase, user.id, body.packType));
@@ -181,6 +209,52 @@ async function setShowcaseCard(supabase: SupabaseClient, userId: string, slotNum
 
   if (showcaseError) throw showcaseError;
   return { showcase: showcase ?? [] };
+}
+
+async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCardInput[]) {
+  if (!Array.isArray(cards) || cards.length === 0) throw new Error('Cards must be a non-empty array.');
+
+  const rows = cards.map((card) => {
+    const rarity = normalizeRequiredString(card.rarity, 'rarity') as CardRarity;
+    if (!cardRarities.includes(rarity)) throw new Error('Card rarity must be Common, Rare, Epic, or Icon.');
+
+    return {
+      ...(card.id == null ? {} : { id: normalizeRequiredString(card.id, 'id') }),
+      name: normalizeRequiredString(card.name, 'name'),
+      position: normalizeRequiredString(card.position, 'position'),
+      alternate_positions: normalizeOptionalString(card.alternate_positions),
+      team: normalizeRequiredString(card.team, 'team'),
+      league: normalizeRequiredString(card.league, 'league'),
+      nation_region: normalizeRequiredString(card.nation_region, 'nation_region'),
+      skill_moves: normalizeOptionalString(card.skill_moves),
+      footedness: normalizeOptionalString(card.footedness),
+      height: normalizeOptionalString(card.height),
+      weight: normalizeOptionalString(card.weight),
+      work_rate_att: normalizeOptionalString(card.work_rate_att),
+      work_rate_def: normalizeOptionalString(card.work_rate_def),
+      added_on: normalizeOptionalString(card.added_on),
+      image_url: normalizeRequiredString(card.image_url, 'image_url'),
+      rarity,
+    };
+  });
+
+  const { data, error } = await supabase.from('player_cards').upsert(rows).select('*');
+  if (error) throw error;
+  return { cards: data ?? [] };
+}
+
+function normalizeRequiredString(value: unknown, field: string) {
+  if (typeof value !== 'string') throw new Error(`Card ${field} is required.`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error(`Card ${field} is required.`);
+  return trimmed;
+}
+
+function normalizeOptionalString(value: unknown) {
+  if (value == null) return null;
+  if (typeof value !== 'string') throw new Error('Optional card fields must be strings or null.');
+  const trimmed = value.trim();
+  return trimmed || null;
 }
 
 async function getUserCoins(supabase: SupabaseClient, userId: string) {

@@ -81,8 +81,8 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /SelectedPackHero/);
   assert.match(cardsSource, /PackInfoPanel/);
   assert.match(cardsSource, /appPages\.cards\.potentialRewards/);
-  assert.match(cardsSource, /appPages\.cards\.recentPulls/);
-  assert.match(cardsSource, /appPages\.cards\.packTip/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.recentPulls/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.packTip/);
   assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
   assert.doesNotMatch(cardsSource, /<section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]"/);
 });
@@ -368,15 +368,21 @@ test('revealed cards review is hidden by default behind a rounded toggle panel',
   assert.match(cardsSource, /rounded-t-sm border-b-4 border-main bg-card/);
 });
 
-test('recent pulls wait until every reveal popup card is flipped', () => {
+test('open packs page omits redundant recent pulls and footer tip panels', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
-  assert.match(cardsSource, /recentPullCards/);
-  assert.match(cardsSource, /setRecentPullCards\(\[\]\)/);
-  assert.match(cardsSource, /setRecentPullCards\(revealedCards\)/);
-  assert.match(cardsSource, /flippedRevealCardIds\.size === revealedCards\.length/);
-  assert.match(cardsSource, /recentPullCards\.length > 0/);
-  assert.match(cardsSource, /recentPullCards\.map\(\(ownedCard\) =>/);
+  assert.doesNotMatch(cardsSource, /recentPullCards/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.recentPulls/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.emptyRecentPulls/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.viewHistory/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.tipLabel/);
+  assert.doesNotMatch(cardsSource, /appPages\.cards\.packTip/);
+  assert.doesNotMatch(resourcesSource, /recentPulls:/);
+  assert.doesNotMatch(resourcesSource, /emptyRecentPulls:/);
+  assert.doesNotMatch(resourcesSource, /viewHistory:/);
+  assert.doesNotMatch(resourcesSource, /tipLabel:/);
+  assert.doesNotMatch(resourcesSource, /packTip:/);
 });
 
 test('reveal modal card flips use a 3d animated effect', () => {

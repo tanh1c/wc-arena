@@ -5,6 +5,7 @@ import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucid
 import AppShell from '../components/layout/AppShell';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
+import { upsertPlayerCards, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -20,6 +21,26 @@ type AdminDashboardProps = {
 
 type ResultDrafts = Record<string, { homeScore: string; awayScore: string }>;
 type ActionState = { loading?: boolean; error?: string; success?: string };
+
+const playerCardImportExample = JSON.stringify([
+  {
+    name: 'Lionel Messi',
+    position: 'RW',
+    alternate_positions: 'CAM, ST',
+    team: 'Argentina',
+    league: 'National Team',
+    nation_region: 'Argentina',
+    skill_moves: '4',
+    footedness: 'Left',
+    height: '170 cm',
+    weight: '72 kg',
+    work_rate_att: 'Medium',
+    work_rate_def: 'Low',
+    added_on: '2026-07-05',
+    image_url: 'https://example.com/messi.png',
+    rarity: 'Icon',
+  },
+], null, 2);
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -46,6 +67,9 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [resultDrafts, setResultDrafts] = useState<ResultDrafts>({});
   const [matchActionState, setMatchActionState] = useState<Record<string, ActionState>>({});
   const [recalcState, setRecalcState] = useState<ActionState>({});
+  const [cardImportJson, setCardImportJson] = useState(playerCardImportExample);
+  const [cardImportState, setCardImportState] = useState<ActionState>({});
+  const [importedCards, setImportedCards] = useState<PlayerCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,6 +168,21 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       setRecalcState({ success: t('ui.recalcUpdated', { scores: result.predictionScores ?? 0, entries: result.leaderboardEntries ?? 0 }) });
     } catch (nextError) {
       setRecalcState({ error: getErrorMessage(nextError) });
+    }
+  }
+
+  async function importPlayerCards() {
+    setCardImportState({ loading: true });
+
+    try {
+      const parsedCards = JSON.parse(cardImportJson) as unknown;
+      if (!Array.isArray(parsedCards)) throw new Error('Player cards JSON must be an array.');
+
+      const nextCards = await upsertPlayerCards(parsedCards as AdminPlayerCardInput[]);
+      setImportedCards(nextCards);
+      setCardImportState({ success: `Imported ${nextCards.length} player cards.` });
+    } catch (nextError) {
+      setCardImportState({ error: getErrorMessage(nextError) });
     }
   }
 
@@ -323,6 +362,24 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   {recalcState.loading ? t('ui.recalculating') : t('ui.recalculateScores')}
                 </button>
                 {(recalcState.error || recalcState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${recalcState.error ? 'bg-c5' : 'bg-c3'}`}>{recalcState.error ?? recalcState.success}</div>}
+              </div>
+
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
+                Player cards JSON
+              </div>
+              <div className="p-4 bg-card flex flex-col gap-3 border-b-4 border-main">
+                <textarea
+                  value={cardImportJson}
+                  onChange={(event) => setCardImportJson(event.target.value)}
+                  className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main"
+                  spellCheck={false}
+                  aria-label="Player cards JSON"
+                />
+                <button type="button" onClick={() => void importPlayerCards()} disabled={cardImportState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">
+                  {cardImportState.loading ? 'Importing cards' : 'Import / update cards'}
+                </button>
+                {(cardImportState.error || cardImportState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${cardImportState.error ? 'bg-c5' : 'bg-c3'}`}>{cardImportState.error ?? cardImportState.success}</div>}
+                {importedCards.length > 0 && <div className="font-black uppercase text-[10px] text-subtle">Latest: {importedCards.slice(0, 3).map((card) => card.name).join(', ')}</div>}
               </div>
 
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
