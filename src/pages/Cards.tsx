@@ -267,26 +267,27 @@ export default function Cards({ themeControls }: CardsProps) {
 
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
 
-        <section className="bg-card border-4 border-main p-0 sm:p-4 lg:p-6 flex flex-col gap-3 sm:gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm overflow-hidden">
-          <div className="grid grid-cols-2 border-b-4 border-main bg-card">
-            {[
-              ['openPacks', 'appPages.cards.openPacks'],
-              ['gallery', 'appPages.cards.gallery'],
-            ].map(([tab, label]) => (
-              <button
-                key={tab}
-                type="button"
-                className={`border-r-4 border-main px-4 py-3 text-center font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
-                onClick={() => setActiveTab(tab as 'openPacks' | 'gallery')}
-              >
-                {t(label)}
-              </button>
-            ))}
-          </div>
+        <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm overflow-hidden">
+          <div className="overflow-hidden">
+            <div className="grid grid-cols-2 border-b-4 border-main bg-card">
+              {[
+                ['openPacks', 'appPages.cards.openPacks'],
+                ['gallery', 'appPages.cards.gallery'],
+              ].map(([tab, label]) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`border-r-4 border-main px-4 py-4 text-center font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
+                  onClick={() => setActiveTab(tab as 'openPacks' | 'gallery')}
+                >
+                  {t(label)}
+                </button>
+              ))}
+            </div>
 
-          {activeTab === 'openPacks' ? (
-            <main className="min-w-0 bg-muted">
-              <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_320px]">
+            {activeTab === 'openPacks' ? (
+              <main className="min-w-0 bg-card pt-4 sm:pt-5 lg:pt-6">
+              <div className="grid lg:grid-cols-[240px_minmax(0,1fr)_320px]">
                 <PackRail selectedPackType={selectedPackType} setSelectedPackType={setSelectedPackType} />
                 <SelectedPackHero
                   title={t(packTextKeys[selectedPackType].title)}
@@ -306,8 +307,8 @@ export default function Cards({ themeControls }: CardsProps) {
                 />
               </div>
 
-              <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-                <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+              <div className="grid border-t-4 border-main xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+                <section className="border-b-4 border-main bg-card p-3 xl:border-b-0 xl:border-r-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h3 className="font-black uppercase text-main">{t('appPages.cards.potentialRewards')}</h3>
                     <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewAll')}</span>
@@ -322,7 +323,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   </div>
                 </section>
 
-                <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                <section className="bg-card p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h3 className="font-black uppercase text-main">{t('appPages.cards.recentPulls')}</h3>
                     <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewHistory')}</span>
@@ -339,8 +340,8 @@ export default function Cards({ themeControls }: CardsProps) {
                 </section>
               </div>
             </main>
-          ) : (
-            <main className="bg-muted min-w-0 flex flex-col">
+            ) : (
+              <main className="bg-card min-w-0 flex flex-col pt-4 sm:pt-5 lg:pt-6">
               <section className="border-b-4 border-main bg-card p-3 sm:p-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                   <div>
@@ -390,6 +391,7 @@ export default function Cards({ themeControls }: CardsProps) {
               )}
             </main>
           )}
+          </div>
         </section>
       </div>
 
@@ -444,7 +446,7 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
 }) {
   const { t } = useTranslation();
   return (
-    <aside className="rounded-sm border-4 border-main bg-card p-2 shadow-[4px_4px_0_var(--color-shadow)] overflow-x-auto lg:overflow-visible">
+    <aside className="border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2 overflow-x-auto lg:overflow-visible">
       <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">{t('appPages.cards.choosePack')}</p>
       <div className="grid auto-cols-[minmax(210px,72vw)] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row">
         {packTypes.map((packType) => {
@@ -488,7 +490,7 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
   const pack = { ...CARD_PACKS[packType], ...packArtwork[packType] };
   const isOpening = openingPack === packType;
   return (
-    <section className="relative min-h-[420px] sm:min-h-[520px] overflow-hidden rounded-sm border-4 border-main bg-[radial-gradient(circle_at_50%_0%,rgba(228,255,0,0.28),transparent_32%),linear-gradient(135deg,#07111f_0%,#0d47ff_48%,#02040a_100%)] p-3 sm:p-4 text-inv shadow-[4px_4px_0_var(--color-shadow)]">
+    <section className="relative min-h-[420px] sm:min-h-[520px] overflow-hidden border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-[radial-gradient(circle_at_50%_0%,rgba(228,255,0,0.28),transparent_32%),linear-gradient(135deg,#07111f_0%,#0d47ff_48%,#02040a_100%)] p-3 sm:p-4 text-inv">
       <div className="absolute inset-x-0 bottom-0 h-32 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.14)_0_2px,transparent_2px_34px)] opacity-70" />
       <div className="relative z-10 grid h-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] lg:items-center">
         <div className="flex h-48 sm:h-72 items-center justify-center rounded-sm border-4 border-main bg-black/30 p-3 sm:p-4 shadow-[4px_4px_0_var(--color-shadow)]">
@@ -526,7 +528,7 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
   const { t } = useTranslation();
   const pack = CARD_PACKS[packType];
   return (
-    <aside className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+    <aside className="bg-card p-3">
       <p className="border-2 border-main bg-c4 px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.packStatus')}</p>
       <div className="mt-3 grid gap-2 text-xs font-black uppercase text-main">
         <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
