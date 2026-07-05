@@ -24,8 +24,10 @@ type ResultDrafts = Record<string, { homeScore: string; awayScore: string }>;
 type ActionState = { loading?: boolean; error?: string; success?: string };
 
 type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity'>;
+type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
 
 const cardRarities: CardRarity[] = ['Common', 'Rare', 'Epic', 'Icon'];
+const cardRarityRank = new Map(cardRarities.map((rarity, index) => [rarity, index]));
 const cardDraftFields: Array<{ key: CardDraftTextField; label: string; wide?: boolean }> = [
   { key: 'id', label: 'ID' },
   { key: 'name', label: 'Name' },
@@ -58,6 +60,14 @@ function emptyPlayerCardDraft(): AdminPlayerCardInput {
   };
 }
 
+function compareCardText(left: string | null | undefined, right: string | null | undefined) {
+  return (left ?? '').localeCompare(right ?? '', undefined, { sensitivity: 'base' });
+}
+
+function getCardSearchText(card: PlayerCard) {
+  return [card.id, card.name, card.position, card.team, card.league, card.nation_region, card.rarity].join(' ').toLowerCase();
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
@@ -87,6 +97,8 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [playerCards, setPlayerCards] = useState<PlayerCard[]>([]);
   const [cardDraft, setCardDraft] = useState<AdminPlayerCardInput>(emptyPlayerCardDraft());
   const [cardActionState, setCardActionState] = useState<ActionState>({});
+  const [cardSearchQuery, setCardSearchQuery] = useState('');
+  const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
   const [cardCsvImport, setCardCsvImport] = useState('');
   const [csvImportRarity, setCsvImportRarity] = useState<CardRarity>('Common');
   const [loading, setLoading] = useState(true);
@@ -285,6 +297,17 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const finishedMatches = matches.filter((match) => match.status === 'finished').length;
   const lockedMatches = matches.filter((match) => match.status === 'locked' || match.status === 'live').length;
   const pendingRewards = rewardReviews.filter((reward) => reward.status === 'pending').length;
+  const normalizedCardSearch = cardSearchQuery.trim().toLowerCase();
+  const visiblePlayerCards = [...playerCards]
+    .filter((card) => !normalizedCardSearch || getCardSearchText(card).includes(normalizedCardSearch))
+    .sort((left, right) => {
+      if (cardCatalogSort === 'name-asc') return compareCardText(left.name, right.name);
+      if (cardCatalogSort === 'name-desc') return compareCardText(right.name, left.name);
+      if (cardCatalogSort === 'team-asc') return compareCardText(left.team, right.team) || compareCardText(left.name, right.name);
+      if (cardCatalogSort === 'position-asc') return compareCardText(left.position, right.position) || compareCardText(left.name, right.name);
+
+      return (cardRarityRank.get(left.rarity) ?? 99) - (cardRarityRank.get(right.rarity) ?? 99) || compareCardText(left.name, right.name);
+    });
 
   return (
     <AppShell themeControls={themeControls}>
@@ -500,7 +523,23 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
             </div>
 
             <div className="min-w-0 flex flex-col">
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Catalog ({playerCards.length})</div>
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Catalog ({visiblePlayerCards.length}/{playerCards.length})</div>
+              <div className="grid grid-cols-1 gap-3 border-b-4 border-main bg-card p-4 md:grid-cols-[1fr_220px]">
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Search cards
+                  <input value={cardSearchQuery} onChange={(event) => setCardSearchQuery(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" placeholder="Name, team, position, league..." />
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Sort by
+                  <select value={cardCatalogSort} onChange={(event) => setCardCatalogSort(event.target.value as CardCatalogSort)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                    <option value="rarity-asc">Rarity, then name</option>
+                    <option value="name-asc">Name A-Z</option>
+                    <option value="name-desc">Name Z-A</option>
+                    <option value="team-asc">Team A-Z</option>
+                    <option value="position-asc">Position A-Z</option>
+                  </select>
+                </label>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-xs font-bold">
                   <thead className="bg-muted font-black uppercase">
@@ -513,7 +552,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {playerCards.map((card) => (
+                    {visiblePlayerCards.map((card) => (
                       <tr key={card.id} className="border-b-2 border-main last:border-b-0">
                         <td className="border-r-2 border-main p-3">
                           <div className="flex items-center gap-3">
@@ -535,7 +574,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         </td>
                       </tr>
                     ))}
-                    {!loading && playerCards.length === 0 && <tr><td colSpan={5} className="p-4 font-black uppercase">No player cards yet.</td></tr>}
+                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={5} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
                   </tbody>
                 </table>
               </div>
