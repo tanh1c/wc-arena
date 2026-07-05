@@ -83,6 +83,8 @@ test('player cards render GIF only after upgrade unlock and expose a five-copy u
   assert.match(cardsSource, /baseOwnedCount=\{card\.baseOwnedCount\}/);
   assert.match(cardsSource, /Preview GIF/);
   assert.match(cardsSource, /getPlayerCardDisplayImageUrl\(previewGifCard, true\)/);
+  assert.match(cardsSource, /loading="lazy" decoding="async"/);
+  assert.match(cardsSource, /max-w-\[220px\]/);
   assert.match(cardsSource, /getPlayerCardDisplayImageUrl\(card, useGif\)/);
   assert.match(cardsSource, /useGif=\{card\.hasGifUpgrade\}/);
   assert.match(cardsSource, /useGif=\{ownedCard\.is_gif_upgrade\}/);
