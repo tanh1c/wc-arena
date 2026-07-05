@@ -347,7 +347,7 @@ export default function AppShell({ children, themeControls, fullHeight = false }
             )}
             {user && <HeaderUserStats profile={profile} coins={coins} />}
             <ThemeSettings themeControls={themeControls} />
-            <Link to={user ? '/profile' : '/login'} className="bg-c2 hover:opacity-80 transition-opacity text-inv font-black py-2 px-4 border-2 border-main flex items-center gap-3 transform active:scale-95 shadow-[4px_4px_0_0_var(--color-shadow)]">
+            <Link to={user ? '/profile' : '/login'} aria-label={user ? t('common.profile') : t('auth.signIn')} className="flex h-10 w-10 items-center justify-center border-2 border-main bg-c2 text-inv shadow-[4px_4px_0_0_var(--color-shadow)] transition-opacity hover:opacity-80 active:scale-95">
               {(() => {
                 const avatarUrl = user ? getPublicAvatarUrl(profile) : null;
                 return avatarUrl
@@ -357,16 +357,12 @@ export default function AppShell({ children, themeControls, fullHeight = false }
                       avatarBgColor={profile?.avatar_bg_color}
                       displayName={profile?.display_name ?? profile?.username ?? t('common.profile')}
                       initials=""
-                      className="w-[18px] h-[18px] rounded-full border border-inv shrink-0 text-[8px] font-black"
+                      className="h-7 w-7 rounded-full border border-inv shrink-0 text-[8px] font-black"
                       imageClassName={avatarUrl.startsWith('/clubs/') ? 'w-full h-full object-contain p-0.5' : undefined}
                     />
                   )
                   : <User size={18} strokeWidth={2.5} />;
               })()}
-              <div className="flex-col items-start leading-[1.1] hidden sm:flex">
-                <span className="text-[10px] uppercase font-bold opacity-80">{t('common.account')}</span>
-                <span className="text-sm">{user ? t('common.profile') : t('auth.signIn')}</span>
-              </div>
             </Link>
           </div>
         </header>
