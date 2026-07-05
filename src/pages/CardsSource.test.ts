@@ -401,8 +401,9 @@ test('reveal popup is compact and can show five cards per row without the inert 
   assert.match(cardsSource, /grid-rows-\[auto_minmax\(0,1fr\)\]/);
   assert.match(cardsSource, /overflow-hidden/);
   assert.match(cardsSource, /min-h-0/);
-  assert.match(cardsSource, /sm:grid-cols-2 lg:grid-cols-5/);
-  assert.match(cardsSource, /max-w-\[190px\]/);
+  assert.match(cardsSource, /flex flex-wrap justify-center/);
+  assert.match(cardsSource, /w-full max-w-\[190px\]/);
+  assert.doesNotMatch(cardsSource, /sm:grid-cols-2 lg:grid-cols-5/);
   assert.match(cardsSource, /min-h-\[400px\]/);
   assert.doesNotMatch(cardsSource, /h-\[94vh\]/);
   assert.doesNotMatch(cardsSource, /overflow-auto/);

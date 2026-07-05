@@ -425,11 +425,11 @@ export default function Cards({ themeControls }: CardsProps) {
                 Close
               </button>
             </div>
-            <div className="grid min-h-0 grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="flex flex-wrap justify-center min-h-0 gap-3 p-3">
               {revealedCards.map((card) => {
                 const isFlipped = flippedRevealCardIds.has(card.id);
                 return (
-                  <button key={card.id} type="button" className={`wc-card-flip group min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
+                  <button key={card.id} type="button" className={`wc-card-flip group w-full max-w-[190px] min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
                     <span className="wc-card-flip-inner relative mx-auto block w-full max-w-[190px] min-h-[400px]">
                       <span className="wc-card-flip-face absolute inset-0">
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />

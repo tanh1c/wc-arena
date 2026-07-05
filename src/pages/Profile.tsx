@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Award, BarChart2, Shield, Star, Trophy, Users } from 'lucide-react';
+import commonCardBackground from '../../Common_card.png';
+import epicCardBackground from '../../Epic_card.png';
+import iconCardBackground from '../../Icon_card.png';
+import rareCardBackground from '../../Rare_card.png';
 import AppShell from '../components/layout/AppShell';
 import AvatarPicker from '../components/AvatarPicker';
 import PointsCoin from '../components/ui/PointsCoin';
@@ -29,6 +33,17 @@ import type { MatchResult, Prediction, PredictionDisplayStatus, PredictionType }
 type ProfileProps = {
   themeControls: ThemeControls;
 };
+
+const profileCardBackgroundImages: Record<string, string> = {
+  Common: commonCardBackground,
+  Rare: rareCardBackground,
+  Epic: epicCardBackground,
+  Icon: iconCardBackground,
+};
+
+function getProfileCardBackgroundImage(rarity: string) {
+  return profileCardBackgroundImages[rarity] ?? profileCardBackgroundImages.Common;
+}
 
 function toPrediction(row: PredictionWithMatch): Prediction {
   const predictedOutcome = row.predicted_outcome as Prediction['predictedOutcome'];
@@ -398,7 +413,7 @@ export default function Profile({ themeControls }: ProfileProps) {
                   {[1, 2, 3].map((slot) => {
                     const showcaseCard = showcaseCards.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
                     return (
-                      <div key={slot} className="min-h-32 border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
+                      <div key={slot} className={`min-h-32 border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${showcaseCard ? 'bg-cover bg-center' : 'bg-muted'}`} style={{ backgroundImage: showcaseCard ? `url(${getProfileCardBackgroundImage(showcaseCard.rarity)})` : undefined }}>
                         {showcaseCard ? (
                           <>
                             <img src={showcaseCard.image_url} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
