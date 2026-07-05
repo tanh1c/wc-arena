@@ -417,7 +417,7 @@ export default function Profile({ themeControls }: ProfileProps) {
                         {showcaseCard ? (
                           <>
                             <img src={showcaseCard.image_url} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
-                            <p className="mt-2 truncate">{showcaseCard.name}</p>
+                            <p className="mt-2 truncate text-white">{showcaseCard.name}</p>
                           </>
                         ) : (
                           <span>{t('appPages.cards.emptySlot', { slot })}</span>

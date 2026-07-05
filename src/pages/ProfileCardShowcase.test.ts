@@ -19,6 +19,7 @@ test('profile renders compact card showcase linked to the cards page', () => {
   assert.match(profileSource, /getProfileCardBackgroundImage/);
   assert.match(profileSource, /showcaseCard \? 'bg-cover bg-center' : 'bg-muted'/);
   assert.match(profileSource, /backgroundImage: showcaseCard \? `url\(\$\{getProfileCardBackgroundImage\(showcaseCard\.rarity\)\}\)` : undefined/);
+  assert.match(profileSource, /className="mt-2 truncate text-white"/);
 
   assert.match(cardsServiceSource, /listCurrentUserShowcase/);
   assert.match(cardsServiceSource, /profile_card_showcases/);
