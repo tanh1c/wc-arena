@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { parsePlayerCardCsv } from './cards';
+import { getPlayerCardDisplayImageUrl, groupCatalogWithOwnership, parsePlayerCardCsv } from './cards';
 
-test('cards service sends admin player card upserts and deletes through manage_cards', () => {
+test('cards service sends admin player card upserts, deletes, and user GIF upgrades through manage_cards', () => {
   const source = readFileSync('src/services/cards.ts', 'utf8');
 
   assert.match(source, /export type AdminPlayerCardInput/);
@@ -11,7 +11,56 @@ test('cards service sends admin player card upserts and deletes through manage_c
   assert.match(source, /body: \{ action: 'upsertPlayerCards', cards \}/);
   assert.match(source, /export async function deletePlayerCard\(id: string\)/);
   assert.match(source, /body: \{ action: 'deletePlayerCard', id \}/);
+  assert.match(source, /export async function upgradePlayerCardToGif\(cardId: string\)/);
+  assert.match(source, /body: \{ action: 'upgradeCardToGif', cardId \}/);
   assert.match(source, /getFunctionErrorMessage\(error\)/);
+});
+
+test('player card display image only uses gif_url after GIF unlock', () => {
+  assert.equal(getPlayerCardDisplayImageUrl({ image_url: 'card.png', gif_url: 'card.gif' }, false), 'card.png');
+  assert.equal(getPlayerCardDisplayImageUrl({ image_url: 'card.png', gif_url: 'card.gif' }, true), 'card.gif');
+  assert.equal(getPlayerCardDisplayImageUrl({ image_url: 'card.png', gif_url: null }, true), 'card.png');
+});
+
+test('catalog ownership grouping tracks base copies and GIF upgrades separately', () => {
+  const card = {
+    id: 'card-1',
+    name: 'Neymar Jr',
+    position: 'LW',
+    alternate_positions: null,
+    team: 'Brazil',
+    league: 'International',
+    nation_region: 'Brazil',
+    skill_moves: null,
+    footedness: null,
+    height: null,
+    weight: null,
+    work_rate_att: null,
+    work_rate_def: null,
+    added_on: null,
+    image_url: 'card.png',
+    gif_url: 'card.gif',
+    rarity: 'Icon' as const,
+  };
+  const ownedCards = Array.from({ length: 6 }, (_, index) => ({
+    id: `owned-${index}`,
+    user_id: 'user-1',
+    card_id: 'card-1',
+    source_pack_type: index === 5 ? 'upgrade' as const : 'daily' as const,
+    opened_at: `2026-07-05T00:00:0${index}Z`,
+    is_gif_upgrade: index === 5,
+    player_cards: card,
+  }));
+
+  assert.deepEqual(groupCatalogWithOwnership([card], ownedCards), [{
+    ...card,
+    ownedCount: 6,
+    ownedCards,
+    baseOwnedCount: 5,
+    gifOwnedCount: 1,
+    hasGifUpgrade: true,
+    gifOwnedCards: [ownedCards[5]],
+  }]);
 });
 
 test('player card CSV parser maps Card_list rows into admin card inputs', () => {

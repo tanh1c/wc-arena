@@ -12,7 +12,7 @@ import RankBadge from '../components/ui/RankBadge';
 import StatusPill from '../components/ui/StatusPill';
 import StreakBadge from '../components/ui/StreakBadge';
 import UserAvatar from '../components/ui/UserAvatar';
-import { listProfileShowcase, type ShowcaseCard } from '../services/cards';
+import { getPlayerCardDisplayImageUrl, listProfileShowcase, type ShowcaseCard } from '../services/cards';
 import { getPublicUserPredictionHistory, type PublicPredictionHistory, type PublicPredictionHistoryRow } from '../services/publicPredictions';
 import { getPublicProfile, type PublicProfileRow } from '../services/profile';
 import { getErrorMessage } from '../services/serviceTypes';
@@ -247,12 +247,13 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
             <h2 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.profileShowcase')}</h2>
             <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
               {[1, 2, 3].map((slot) => {
-                const showcaseCard = showcaseCards.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                const showcase = showcaseCards.find((item) => item.slot_number === slot);
+                const showcaseCard = showcase?.user_player_cards.player_cards;
                 return (
                   <div key={slot} className={`min-h-32 border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${showcaseCard ? 'bg-cover bg-center' : 'bg-muted'}`} style={{ backgroundImage: showcaseCard ? `url(${getPublicProfileCardBackgroundImage(showcaseCard.rarity)})` : undefined }}>
                     {showcaseCard ? (
                       <>
-                        <img src={showcaseCard.image_url} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
+                        <img src={getPlayerCardDisplayImageUrl(showcaseCard, showcase.user_player_cards.is_gif_upgrade)} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
                         <p className="mt-2 truncate text-main">{showcaseCard.name}</p>
                       </>
                     ) : (

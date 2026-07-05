@@ -17,6 +17,7 @@ type SupabaseClient = ReturnType<typeof createClient>;
 type Body =
   | { action: 'openCardPack'; packType: PackType }
   | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
+  | { action: 'upgradeCardToGif'; cardId: string }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'deletePlayerCard'; id: string };
 
@@ -83,6 +84,10 @@ Deno.serve(async (req) => {
 
     if (body.action === 'setShowcaseCard') {
       return jsonResponse(await setShowcaseCard(supabase, user.id, body.slotNumber, body.userPlayerCardId));
+    }
+
+    if (body.action === 'upgradeCardToGif') {
+      return jsonResponse(await upgradeCardToGif(supabase, user.id, body.cardId));
     }
 
     return jsonResponse({ error: 'Unknown card action.' }, 400);
@@ -205,6 +210,16 @@ async function setShowcaseCard(supabase: SupabaseClient, userId: string, slotNum
 
   if (showcaseError) throw showcaseError;
   return { showcase: showcase ?? [] };
+}
+
+async function upgradeCardToGif(supabase: SupabaseClient, userId: string, id: string) {
+  const cardId = normalizeRequiredString(id, 'id');
+  const { data, error } = await supabase.rpc('upgrade_card_to_gif_transaction', {
+    p_user_id: userId,
+    p_card_id: cardId,
+  });
+  if (error) throw error;
+  return { card: data?.[0]?.owned_card ?? null };
 }
 
 async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCardInput[]) {

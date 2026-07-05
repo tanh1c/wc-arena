@@ -21,8 +21,10 @@ import {
   listCurrentUserOwnedCards,
   listCurrentUserShowcase,
   listPlayerCards,
+  getPlayerCardDisplayImageUrl,
   openCardPack,
   setShowcaseCard,
+  upgradePlayerCardToGif,
   type CatalogCardWithOwnedCount,
   type OwnedPlayerCard,
   type ShowcaseCard,
@@ -162,6 +164,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [dailyPackOpenedToday, setDailyPackOpenedToday] = useState(false);
   const [dailyResetCountdown, setDailyResetCountdown] = useState('');
   const [activeTab, setActiveTab] = useState<'openPacks' | 'gallery'>('openPacks');
+  const [upgradingGifCardId, setUpgradingGifCardId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const loadCards = async () => {
@@ -241,6 +244,19 @@ export default function Cards({ themeControls }: CardsProps) {
       setShowcase(await setShowcaseCard(slotNumber, ownedCardId));
     } catch (nextError) {
       setError(getErrorMessage(nextError));
+    }
+  };
+
+  const handleUpgradeToGif = async (cardId: string) => {
+    setUpgradingGifCardId(cardId);
+    setError('');
+    try {
+      await upgradePlayerCardToGif(cardId);
+      await loadCards();
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setUpgradingGifCardId(null);
     }
   };
 
@@ -331,7 +347,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   {recentPullCards.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                       {recentPullCards.map((ownedCard) => (
-                        <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
+                        <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} useGif={ownedCard.is_gif_upgrade} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
                       ))}
                     </div>
                   ) : (
@@ -367,10 +383,11 @@ export default function Cards({ themeControls }: CardsProps) {
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[1, 2, 3].map((slot) => {
-                    const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                    const cardShowcase = showcase.find((item) => item.slot_number === slot);
+                    const card = cardShowcase?.user_player_cards.player_cards;
                     return (
                       <div key={slot} className={`flex min-h-28 items-center justify-center rounded-sm border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${card ? 'bg-cover bg-center' : 'bg-muted'}`} style={{ backgroundImage: card ? `url(${getRarityCardBackgroundImage(card.rarity)})` : undefined }}>
-                        {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
+                        {card ? <CardImage card={card} useGif={cardShowcase.user_player_cards.is_gif_upgrade} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
                       </div>
                     );
                   })}
@@ -383,7 +400,8 @@ export default function Cards({ themeControls }: CardsProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
                   {filteredCatalog.map((card) => {
                     const isMissing = card.ownedCount === 0;
-                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} dimmed={isMissing} badge={isMissing ? t('appPages.cards.locked') : undefined} badgeClass="bg-muted text-muted-foreground" onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />;
+                    const showcaseCard = card.gifOwnedCards[0] ?? card.ownedCards[0];
+                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} useGif={card.hasGifUpgrade} dimmed={isMissing} badge={card.hasGifUpgrade ? 'GIF' : isMissing ? t('appPages.cards.locked') : undefined} badgeClass={card.hasGifUpgrade ? 'bg-c3 text-main' : 'bg-muted text-muted-foreground'} onSetShowcase={showcaseCard ? (slot) => handleSetShowcase(slot, showcaseCard.id) : undefined} onUpgradeToGif={card.gif_url && !card.hasGifUpgrade && card.baseOwnedCount >= 5 ? () => handleUpgradeToGif(card.id) : undefined} upgradingGif={upgradingGifCardId === card.id} />;
                   })}
                 </div>
               ) : (
@@ -417,7 +435,7 @@ export default function Cards({ themeControls }: CardsProps) {
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />
                       </span>
                       <span className="wc-card-flip-face wc-card-flip-front absolute inset-0">
-                        <CardTile card={card.player_cards} ownedCount={1} badge={card.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={card.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
+                        <CardTile card={card.player_cards} ownedCount={1} useGif={card.is_gif_upgrade} badge={card.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={card.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
                       </span>
                     </span>
                   </button>
@@ -565,21 +583,24 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
   );
 }
 
-function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase }: {
+function CardTile({ card, ownedCount, useGif = false, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase, onUpgradeToGif, upgradingGif = false }: {
   key?: string;
-  card: { name: string; position: string; team: string; nation_region: string; image_url: string; rarity: string };
+  card: { name: string; position: string; team: string; nation_region: string; image_url: string; gif_url?: string | null; rarity: string };
   ownedCount: number;
+  useGif?: boolean;
   badge?: string;
   badgeClass?: string;
   dimmed?: boolean;
   onSetShowcase?: (slot: number) => void;
+  onUpgradeToGif?: () => void;
+  upgradingGif?: boolean;
 }) {
   const { t } = useTranslation();
   const Flag = getNationFlag(card.nation_region);
   return (
     <article className={`rounded-sm border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 overflow-hidden ${dimmed ? 'opacity-45 grayscale' : ''} ${getRarityCardFrameClass(card.rarity)}`}>
       <div className="relative rounded-sm border-b-4 border-main bg-cover bg-center p-2 overflow-hidden" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(card.rarity)})` }}>
-        <CardImage card={card} />
+        <CardImage card={card} useGif={useGif} />
         <span className={`absolute left-2 top-2 rounded-sm border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)] ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
         <span className="absolute right-2 top-2 rounded-sm border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>
       </div>
@@ -594,6 +615,11 @@ function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', dimm
           <span className="truncate">{card.nation_region}</span>
         </p>
         {badge && <p className={`rounded-sm border-2 border-main px-2 py-1 text-center text-[11px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${badgeClass}`}>{badge}</p>}
+        {onUpgradeToGif && (
+          <button type="button" className="rounded-sm border-2 border-main bg-c3 px-2 py-2 text-[11px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-c1 disabled:opacity-60" disabled={upgradingGif} onClick={onUpgradeToGif}>
+            {upgradingGif ? t('ui.savingEllipsis') : 'Upgrade GIF'}
+          </button>
+        )}
         {onSetShowcase && (
           <div className="grid grid-cols-3 gap-1">
             {[1, 2, 3].map((slot) => (
@@ -608,11 +634,11 @@ function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', dimm
   );
 }
 
-function CardImage({ card }: { card: { name: string; image_url: string } }) {
+function CardImage({ card, useGif }: { card: { name: string; image_url: string; gif_url?: string | null }; useGif: boolean }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center rounded-sm border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
   }
 
-  return <img src={card.image_url} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] rounded-sm border-2 border-main bg-muted object-contain" onError={() => setFailed(true)} />;
+  return <img src={getPlayerCardDisplayImageUrl(card, useGif)} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] rounded-sm border-2 border-main bg-muted object-contain" onError={() => setFailed(true)} />;
 }

@@ -67,6 +67,23 @@ test('card art renders at a capped width instead of stretching low-resolution im
   assert.match(profileSource, /max-w-\[120px\]/);
 });
 
+test('player cards render GIF only after upgrade unlock and expose a five-copy upgrade action', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const profileSource = readFileSync('src/pages/Profile.tsx', 'utf8');
+  const publicProfileSource = readFileSync('src/pages/PublicProfile.tsx', 'utf8');
+
+  assert.match(cardsSource, /upgradePlayerCardToGif/);
+  assert.match(cardsSource, /upgradingGifCardId/);
+  assert.match(cardsSource, /card\.gif_url && !card\.hasGifUpgrade && card\.baseOwnedCount >= 5/);
+  assert.match(cardsSource, /handleUpgradeToGif\(card\.id\)/);
+  assert.match(cardsSource, /getPlayerCardDisplayImageUrl\(card, useGif\)/);
+  assert.match(cardsSource, /useGif=\{card\.hasGifUpgrade\}/);
+  assert.match(cardsSource, /useGif=\{ownedCard\.is_gif_upgrade\}/);
+  assert.match(cardsSource, /useGif=\{cardShowcase\.user_player_cards\.is_gif_upgrade\}/);
+  assert.match(profileSource, /getPlayerCardDisplayImageUrl\(showcaseCard, showcase\.user_player_cards\.is_gif_upgrade\)/);
+  assert.match(publicProfileSource, /getPlayerCardDisplayImageUrl\(showcaseCard, showcase\.user_player_cards\.is_gif_upgrade\)/);
+});
+
 test('cards page follows the attached-card shell layout contract', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 

@@ -19,6 +19,18 @@ test('manage_cards exposes admin-only player card upserts and deletes without re
   assert.match(source, /body\.action === 'setShowcaseCard'/);
 });
 
+test('manage_cards exposes authenticated card GIF upgrades through one RPC', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /action: 'upgradeCardToGif'; cardId: string/);
+  assert.match(source, /body\.action === 'upgradeCardToGif'/);
+  assert.match(source, /upgradeCardToGif\(supabase, user\.id, body\.cardId\)/);
+  assert.match(source, /upgrade_card_to_gif_transaction/);
+  assert.match(source, /p_user_id: userId/);
+  assert.match(source, /p_card_id: cardId/);
+  assert.match(source, /requireAuthenticatedUser\(req, corsHeaders\)[\s\S]*body\.action === 'upgradeCardToGif'/);
+});
+
 test('openCardPack commits coin spend, awarded cards, and opening log through one RPC', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 

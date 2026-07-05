@@ -2,6 +2,12 @@ import { supabase } from '../lib/supabaseClient';
 import type { CardRarity, PackType } from '../config/cardPacks';
 import { getFunctionErrorMessage } from './functionErrors';
 
+export function getPlayerCardDisplayImageUrl(card: { image_url: string; gif_url?: string | null }, useGif = false) {
+  return useGif && card.gif_url ? card.gif_url : card.image_url;
+}
+
+export type CardSourceType = PackType | 'upgrade';
+
 export type PlayerCard = {
   id: string;
   name: string;
@@ -26,14 +32,19 @@ export type OwnedPlayerCard = {
   id: string;
   user_id: string;
   card_id: string;
-  source_pack_type: PackType;
+  source_pack_type: CardSourceType;
   opened_at: string;
+  is_gif_upgrade: boolean;
   player_cards: PlayerCard;
 };
 
 export type CatalogCardWithOwnedCount = PlayerCard & {
   ownedCount: number;
   ownedCards: OwnedPlayerCard[];
+  baseOwnedCount: number;
+  gifOwnedCount: number;
+  hasGifUpgrade: boolean;
+  gifOwnedCards: OwnedPlayerCard[];
 };
 
 export type ShowcaseCard = {
@@ -266,6 +277,15 @@ export async function setShowcaseCard(slotNumber: number, userPlayerCardId: stri
   return data.showcase;
 }
 
+export async function upgradePlayerCardToGif(cardId: string) {
+  const { data, error } = await supabase.functions.invoke<{ card: OwnedPlayerCard }>('manage_cards', {
+    body: { action: 'upgradeCardToGif', cardId },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data.card;
+}
+
 export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {
   const { data, error } = await supabase.functions.invoke<{ cards: PlayerCard[] }>('manage_cards', {
     body: { action: 'upsertPlayerCards', cards },
@@ -294,6 +314,15 @@ export function groupCatalogWithOwnership(cards: PlayerCard[], ownedCards: Owned
 
   return cards.map((card) => {
     const owned = ownedByCardId.get(card.id) ?? [];
-    return { ...card, ownedCount: owned.length, ownedCards: owned };
+    const gifOwnedCards = owned.filter((ownedCard) => ownedCard.is_gif_upgrade);
+    return {
+      ...card,
+      ownedCount: owned.length,
+      ownedCards: owned,
+      baseOwnedCount: owned.length - gifOwnedCards.length,
+      gifOwnedCount: gifOwnedCards.length,
+      hasGifUpgrade: gifOwnedCards.length > 0,
+      gifOwnedCards,
+    };
   });
 }

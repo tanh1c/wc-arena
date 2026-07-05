@@ -1471,6 +1471,7 @@ export type Database = {
         Row: {
           card_id: string
           id: string
+          is_gif_upgrade: boolean
           opened_at: string
           source_pack_type: string
           user_id: string
@@ -1478,6 +1479,7 @@ export type Database = {
         Insert: {
           card_id: string
           id?: string
+          is_gif_upgrade?: boolean
           opened_at?: string
           source_pack_type: string
           user_id: string
@@ -1485,6 +1487,7 @@ export type Database = {
         Update: {
           card_id?: string
           id?: string
+          is_gif_upgrade?: boolean
           opened_at?: string
           source_pack_type?: string
           user_id?: string
