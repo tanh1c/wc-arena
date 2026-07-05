@@ -16,5 +16,19 @@ test('public profile renders card showcase near the player summary', () => {
   assert.match(publicProfileSource, /getPublicProfileCardBackgroundImage/);
   assert.match(publicProfileSource, /showcaseCard \? 'bg-cover bg-center' : 'bg-muted'/);
   assert.match(publicProfileSource, /backgroundImage: showcaseCard \? `url\(\$\{getPublicProfileCardBackgroundImage\(showcaseCard\.rarity\)\}\)` : undefined/);
-  assert.match(publicProfileSource, /className="mt-2 truncate text-white"/);
+  assert.match(publicProfileSource, /className="mt-2 truncate text-main"/);
+});
+
+test('public profile prediction history paginates ten rows at a time', () => {
+  const publicProfileSource = readFileSync('src/pages/PublicProfile.tsx', 'utf8');
+
+  assert.match(publicProfileSource, /const publicHistoryPageSize = 10/);
+  assert.match(publicProfileSource, /predictionHistoryPage/);
+  assert.match(publicProfileSource, /paginatedHistory/);
+  assert.match(publicProfileSource, /history\.slice\(predictionHistoryStart, predictionHistoryStart \+ publicHistoryPageSize\)/);
+  assert.match(publicProfileSource, /setPredictionHistoryPage\(\(page\) => Math\.max\(1, page - 1\)\)/);
+  assert.match(publicProfileSource, /setPredictionHistoryPage\(\(page\) => Math\.min\(predictionHistoryPageCount, page \+ 1\)\)/);
+  assert.match(publicProfileSource, />&lt;</);
+  assert.match(publicProfileSource, />&gt;</);
+  assert.doesNotMatch(publicProfileSource, /\{history\.map\(\(row\) =>/);
 });

@@ -28,6 +28,8 @@ type PublicProfileProps = {
 
 type PublicProfileHeader = PublicProfileRow | NonNullable<PublicPredictionHistory['profile']>;
 
+const publicHistoryPageSize = 10;
+
 const publicProfileCardBackgroundImages: Record<string, string> = {
   Common: commonCardBackground,
   Rare: rareCardBackground,
@@ -91,6 +93,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
   const [profile, setProfile] = useState<PublicProfileHeader | null>(null);
   const [history, setHistory] = useState<PublicPredictionHistoryRow[]>([]);
   const [showcaseCards, setShowcaseCards] = useState<ShowcaseCard[]>([]);
+  const [predictionHistoryPage, setPredictionHistoryPage] = useState(1);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +117,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
         if (!active) return;
         setProfile(nextProfile ?? nextHistory.profile);
         setHistory(nextHistory.predictions);
+        setPredictionHistoryPage(1);
         setTeams(nextTeams);
         setShowcaseCards(nextShowcaseCards);
       })
@@ -177,6 +181,9 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
   const favoriteTeam = profile.fan_club_team_id ? teams.get(profile.fan_club_team_id) : undefined;
   const predictionPoints = totals.points;
   const rewardPoints = Math.max(profile.points - predictionPoints, 0);
+  const predictionHistoryPageCount = Math.max(1, Math.ceil(history.length / publicHistoryPageSize));
+  const predictionHistoryStart = (predictionHistoryPage - 1) * publicHistoryPageSize;
+  const paginatedHistory = history.slice(predictionHistoryStart, predictionHistoryStart + publicHistoryPageSize);
 
   return (
     <AppShell themeControls={themeControls}>
@@ -246,7 +253,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
                     {showcaseCard ? (
                       <>
                         <img src={showcaseCard.image_url} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
-                        <p className="mt-2 truncate text-white">{showcaseCard.name}</p>
+                        <p className="mt-2 truncate text-main">{showcaseCard.name}</p>
                       </>
                     ) : (
                       <span>{t('appPages.cards.emptySlot', { slot })}</span>
@@ -259,8 +266,13 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
 
           <div className="flex flex-col xl:flex-row flex-1 mt-4 lg:mt-6">
             <div className="flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-muted min-w-0">
-              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">
-                {t('publicProfile.finishedHistory')}
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main flex items-center justify-between gap-3">
+                <span>{t('publicProfile.finishedHistory')}</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" className="border-2 border-main bg-card px-2 py-1 text-main disabled:opacity-40" disabled={predictionHistoryPage === 1} onClick={() => setPredictionHistoryPage((page) => Math.max(1, page - 1))}>&lt;</button>
+                  <span className="text-[10px] font-black">{predictionHistoryPage}/{predictionHistoryPageCount}</span>
+                  <button type="button" className="border-2 border-main bg-card px-2 py-1 text-main disabled:opacity-40" disabled={predictionHistoryPage === predictionHistoryPageCount} onClick={() => setPredictionHistoryPage((page) => Math.min(predictionHistoryPageCount, page + 1))}>&gt;</button>
+                </div>
               </div>
               <div className="hidden lg:grid grid-cols-[140px_1.4fr_140px_140px_120px_90px] bg-card border-b-4 border-main font-black uppercase text-[10px] tracking-widest text-subtle">
                 <div className="p-3 border-r-2 border-main">{t('appPages.common.kickoff')}</div>
@@ -275,7 +287,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
                 {history.length === 0 && (
                   <div className="p-6 bg-card font-black uppercase text-sm border-b-4 border-main">{t('publicProfile.noPublicPredictions')}</div>
                 )}
-                {history.map((row) => {
+                {paginatedHistory.map((row) => {
                   const prediction = toPrediction(row);
                   const homeTeam = teams.get(row.match_home_team_id);
                   const awayTeam = teams.get(row.match_away_team_id);
