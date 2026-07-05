@@ -70,12 +70,12 @@ test('card art renders at a capped width instead of stretching low-resolution im
 test('cards page follows the attached-card shell layout contract', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0/);
-  assert.match(cardsSource, /bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1\/2 shadow-\[8px_8px_0_0_var\(--color-shadow\)\]/);
+  assert.match(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 sm:gap-4 lg:gap-6 min-h-0/);
+  assert.match(cardsSource, /bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full xl:w-1\/2 shadow-\[8px_8px_0_0_var\(--color-shadow\)\]/);
   assert.match(cardsSource, /<h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">\{t\('nav\.items\.cards'\)\}<\/h1>/);
   assert.doesNotMatch(cardsSource, /<p className="mb-2 inline-flex[^\n]+appPages\.cards\.kicker/);
   assert.doesNotMatch(cardsSource, /<p className="mt-2 text-sm font-bold text-muted-foreground">\{t\('appPages\.cards\.collectionProgress'[\s\S]*?catalog\.length/);
-  assert.match(cardsSource, /bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm/);
+  assert.match(cardsSource, /bg-card border-4 border-main p-0 sm:p-4 lg:p-6 flex flex-col gap-3 sm:gap-4 lg:gap-6 shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm overflow-hidden/);
   assert.match(cardsSource, /border-b-4 border-main/);
   assert.match(cardsSource, /lg:grid-cols-\[240px_minmax\(0,1fr\)_320px\]/);
   assert.match(cardsSource, /SelectedPackHero/);
@@ -83,8 +83,7 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /appPages\.cards\.potentialRewards/);
   assert.match(cardsSource, /appPages\.cards\.recentPulls/);
   assert.doesNotMatch(cardsSource, /appPages\.cards\.packTip/);
-  assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
-  assert.doesNotMatch(cardsSource, /<section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]"/);
+  assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0/);
 });
 
 test('cards page separates pack opening from gallery browsing with tabs', () => {
@@ -242,11 +241,12 @@ test('card pack panels show rarity drop rates like a gacha game', () => {
   assert.match(resourcesSource, /dropRates: 'Drop Rates'/);
 });
 
-test('pack artwork renders in a fixed Daily-standard display box', () => {
+test('pack artwork renders in a compact mobile Daily-standard display box', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /h-64 sm:h-72/);
+  assert.match(cardsSource, /h-48 sm:h-72/);
   assert.match(cardsSource, /max-h-full max-w-full object-contain/);
+  assert.doesNotMatch(cardsSource, /h-64 sm:h-72/);
   assert.doesNotMatch(cardsSource, /mx-auto h-52 object-contain/);
 });
 
@@ -273,6 +273,12 @@ test('open pack tab uses a screenshot-style pack rail and selected pack dashboar
   assert.match(cardsSource, /selectedPackType === 'daily' && dailyPackOpenedToday/);
   assert.match(cardsSource, /pack\.priceCoins === 0 \? t\('appPages\.cards\.free'\)/);
   assert.match(cardsSource, /style=\{\{ width: `\$\{pack\.rarityWeights\[rarity\]\}%` \}\}/);
+  assert.match(cardsSource, /overflow-x-auto lg:overflow-visible/);
+  assert.match(cardsSource, /grid auto-cols-\[minmax\(210px,72vw\)\] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row/);
+  assert.match(cardsSource, /relative min-h-\[420px\] sm:min-h-\[520px\]/);
+  assert.match(cardsSource, /h-48 sm:h-72/);
+  assert.doesNotMatch(cardsSource, /relative min-h-\[520px\]/);
+  assert.doesNotMatch(cardsSource, /flex h-64 sm:h-72/);
   assert.doesNotMatch(cardsSource, /grid grid-cols-1 lg:grid-cols-\[220px_minmax\(0,1fr\)\]/);
 });
 
@@ -363,8 +369,9 @@ test('open packs page keeps recent pulls and omits the revealed review toggle pa
   const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
   assert.match(cardsSource, /recentPullCards/);
+  assert.match(cardsSource, /closeRevealModal/);
   assert.match(cardsSource, /setRecentPullCards\(revealedCards\)/);
-  assert.match(cardsSource, /flippedRevealCardIds\.size === revealedCards\.length/);
+  assert.doesNotMatch(cardsSource, /flippedRevealCardIds\.size === revealedCards\.length/);
   assert.match(cardsSource, /recentPullCards\.length > 0/);
   assert.match(cardsSource, /recentPullCards\.map\(\(ownedCard\) =>/);
   assert.match(cardsSource, /appPages\.cards\.recentPulls/);

@@ -321,7 +321,7 @@ export default function AppShell({ children, themeControls, fullHeight = false }
       <div className="flex-1 min-w-0 min-h-0 flex flex-col pb-[var(--mobile-scroll-clearance)] lg:pb-0 h-[100dvh] overflow-y-auto relative z-10 scroll-pb-[var(--mobile-scroll-clearance)] lg:scroll-pb-0" style={{ '--mobile-scroll-clearance': mobileScrollClearance } as React.CSSProperties}>
         <header className="flex items-center justify-between border-b-4 border-main px-4 md:px-6 py-4 bg-card z-30 sticky top-0 shrink-0 gap-4">
           <div className="flex items-center min-w-0">
-            <Link to="/" className="text-xl md:text-3xl font-black uppercase tracking-tighter whitespace-nowrap hover:text-c2 transition-colors">{t('common.product')}</Link>
+            <Link to="/" className="text-xl md:text-3xl font-black uppercase tracking-tighter whitespace-nowrap hover:text-c2 transition-colors"><span className="md:hidden">WKB</span><span className="hidden md:inline">{t('common.product')}</span></Link>
             <HeaderNavigation />
           </div>
           <div className="flex items-center gap-3 ml-auto">

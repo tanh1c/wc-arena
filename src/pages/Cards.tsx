@@ -199,12 +199,6 @@ export default function Cards({ themeControls }: CardsProps) {
     return () => window.clearInterval(intervalId);
   }, [dailyPackOpenedToday]);
 
-  useEffect(() => {
-    if (revealedCards.length > 0 && flippedRevealCardIds.size === revealedCards.length) {
-      setRecentPullCards(revealedCards);
-    }
-  }, [flippedRevealCardIds.size, revealedCards]);
-
   const filteredCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return catalog.filter((card) => {
@@ -259,16 +253,21 @@ export default function Cards({ themeControls }: CardsProps) {
     });
   };
 
+  const closeRevealModal = () => {
+    setRecentPullCards(revealedCards);
+    setRevealModalOpen(false);
+  };
+
   return (
     <AppShell themeControls={themeControls}>
-      <div className="relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0">
-        <div className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
+      <div className="relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 sm:gap-4 lg:gap-6 min-h-0">
+        <div className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full xl:w-1/2 shadow-[8px_8px_0_0_var(--color-shadow)]">
           <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter text-main">{t('nav.items.cards')}</h1>
         </div>
 
         {error && <div className="border-4 border-main bg-c2 p-3 font-black uppercase text-sm text-main shadow-[4px_4px_0_var(--color-shadow)]">{error}</div>}
 
-        <section className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
+        <section className="bg-card border-4 border-main p-0 sm:p-4 lg:p-6 flex flex-col gap-3 sm:gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm overflow-hidden">
           <div className="grid grid-cols-2 border-b-4 border-main bg-card">
             {[
               ['openPacks', 'appPages.cards.openPacks'],
@@ -402,7 +401,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.openPack')}</p>
                 <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.revealedCards')}</h2>
               </div>
-              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setRevealModalOpen(false)}>
+              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={closeRevealModal}>
                 {t('ui.close')}
               </button>
             </div>
@@ -445,9 +444,9 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
 }) {
   const { t } = useTranslation();
   return (
-    <aside className="rounded-sm border-4 border-main bg-card p-2 shadow-[4px_4px_0_var(--color-shadow)]">
+    <aside className="rounded-sm border-4 border-main bg-card p-2 shadow-[4px_4px_0_var(--color-shadow)] overflow-x-auto lg:overflow-visible">
       <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">{t('appPages.cards.choosePack')}</p>
-      <div className="grid gap-2">
+      <div className="grid auto-cols-[minmax(210px,72vw)] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row">
         {packTypes.map((packType) => {
           const pack = CARD_PACKS[packType];
           const artwork = packArtwork[packType];
@@ -489,10 +488,10 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
   const pack = { ...CARD_PACKS[packType], ...packArtwork[packType] };
   const isOpening = openingPack === packType;
   return (
-    <section className="relative min-h-[520px] overflow-hidden rounded-sm border-4 border-main bg-[radial-gradient(circle_at_50%_0%,rgba(228,255,0,0.28),transparent_32%),linear-gradient(135deg,#07111f_0%,#0d47ff_48%,#02040a_100%)] p-4 text-inv shadow-[4px_4px_0_var(--color-shadow)]">
+    <section className="relative min-h-[420px] sm:min-h-[520px] overflow-hidden rounded-sm border-4 border-main bg-[radial-gradient(circle_at_50%_0%,rgba(228,255,0,0.28),transparent_32%),linear-gradient(135deg,#07111f_0%,#0d47ff_48%,#02040a_100%)] p-3 sm:p-4 text-inv shadow-[4px_4px_0_var(--color-shadow)]">
       <div className="absolute inset-x-0 bottom-0 h-32 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.14)_0_2px,transparent_2px_34px)] opacity-70" />
-      <div className="relative z-10 grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] lg:items-center">
-        <div className="flex h-64 sm:h-72 items-center justify-center rounded-sm border-4 border-main bg-black/30 p-4 shadow-[4px_4px_0_var(--color-shadow)]">
+      <div className="relative z-10 grid h-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] lg:items-center">
+        <div className="flex h-48 sm:h-72 items-center justify-center rounded-sm border-4 border-main bg-black/30 p-3 sm:p-4 shadow-[4px_4px_0_var(--color-shadow)]">
           <img src={pack.image} alt={title} className={`max-h-full max-w-full object-contain drop-shadow-[10px_10px_0_rgba(0,0,0,0.55)] ${pack.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'transition-transform hover:-translate-y-2 hover:rotate-1'}`} />
         </div>
         <div className="min-w-0">
