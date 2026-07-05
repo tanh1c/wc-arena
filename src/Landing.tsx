@@ -29,7 +29,7 @@ export function PitchIcon({ className }: { className?: string }) {
 export const RainbowGraphic = ({ alt }: { alt: string }) => (
   <div className="absolute top-0 right-0 w-full md:w-[55%] lg:w-[60%] xl:w-[65%] h-full pointer-events-none z-0 overflow-hidden hidden md:block">
     <div className="wc-rainbow-fade absolute inset-0 bg-gradient-to-r from-card via-transparent to-transparent w-full z-10 hidden md:block"></div>
-    <img src="https://s6.imgcdn.dev/Ybh5S0.webp" alt={alt} className="wc-rainbow-img w-full h-full object-cover object-left lg:object-center relative z-0" />
+    <img src="https://s6.imgcdn.dev/Yq55Uh.webp" alt={alt} className="wc-rainbow-img w-full h-full object-cover object-left lg:object-center relative z-0" />
   </div>
 );
 

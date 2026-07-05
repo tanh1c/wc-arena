@@ -94,7 +94,7 @@ export default function Login({ onNavigate, ...themeControls }: LoginProps) {
   return (
     <div className="min-h-screen bg-page font-sans relative overflow-hidden">
       <div className="absolute inset-0 z-0 pointer-events-none opacity-90 overflow-hidden flex justify-center">
-        <img src="https://s6.imgcdn.dev/Ybh5S0.webp" alt="" aria-hidden="true" className="w-full h-full object-cover object-top" />
+        <img src="https://s6.imgcdn.dev/Yq55Uh.webp" alt="" aria-hidden="true" className="w-full h-full object-cover object-top" />
       </div>
       <div className="absolute inset-0 z-0 bg-page/15 pointer-events-none" />
 
