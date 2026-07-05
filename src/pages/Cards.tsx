@@ -2,10 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import backCardImage from '../../Backcard.png';
+import commonCardBackground from '../../Common_card.png';
 import dailyPackImage from '../../Daily.png';
 import elitePackImage from '../../Elite.png';
+import epicCardBackground from '../../Epic_card.png';
 import iconPackImage from '../../Icon.png';
+import iconCardBackground from '../../Icon_card.png';
 import premiumPackImage from '../../Premium.png';
+import rareCardBackground from '../../Rare_card.png';
 import starterPackImage from '../../Starter.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
@@ -49,11 +53,11 @@ const packTextKeys: Record<PackType, { title: string; description: string }> = {
   icon: { title: 'appPages.cards.iconPack', description: 'appPages.cards.iconPackDescription' },
 };
 
-const rarityCardArtClasses: Record<string, string> = {
-  Common: 'bg-[repeating-linear-gradient(135deg,#7fbf5f_0_12px,#d8ff65_12px_24px),linear-gradient(135deg,#173f2b,#7fbf5f)]',
-  Rare: 'bg-[linear-gradient(#0088ff_3px,transparent_3px),linear-gradient(90deg,#0088ff_3px,transparent_3px),linear-gradient(135deg,#031a5f,#00d4ff)] bg-[length:22px_22px,22px_22px,auto]',
-  Epic: 'bg-[linear-gradient(135deg,transparent_0_34%,#ff2bd6_34%_44%,transparent_44%_100%),linear-gradient(45deg,transparent_0_38%,#ffe600_38%_48%,transparent_48%_100%),linear-gradient(135deg,#2b005f,#6f00ff)]',
-  Icon: 'bg-[repeating-conic-gradient(from_0deg_at_50%_50%,#fff0b8_0deg_10deg,#d99a00_10deg_16deg,#111_16deg_18deg)]',
+const rarityCardBackgroundImages: Record<string, string> = {
+  Common: commonCardBackground,
+  Rare: rareCardBackground,
+  Epic: epicCardBackground,
+  Icon: iconCardBackground,
 };
 
 const rarityCardFrameClasses: Record<string, string> = {
@@ -116,8 +120,8 @@ const nationFlagCodes: Record<string, string> = {
   Uzbekistan: 'UZB',
 };
 
-function getRarityCardArtClass(rarity: string) {
-  return rarityCardArtClasses[rarity] ?? rarityCardArtClasses.Common;
+function getRarityCardBackgroundImage(rarity: string) {
+  return rarityCardBackgroundImages[rarity] ?? rarityCardBackgroundImages.Common;
 }
 
 function getRarityCardFrameClass(rarity: string) {
@@ -151,7 +155,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [flippedRevealCardIds, setFlippedRevealCardIds] = useState(new Set<string>());
   const [query, setQuery] = useState('');
   const [rarity, setRarity] = useState<'all' | CardRarity>('all');
-  const [ownershipFilter, setOwnershipFilter] = useState<'owned' | 'all' | 'missing'>('owned');
+  const [ownershipFilter, setOwnershipFilter] = useState<'owned' | 'missing'>('owned');
   const [loading, setLoading] = useState(true);
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
   const [selectedPackType, setSelectedPackType] = useState<PackType>('daily');
@@ -199,7 +203,7 @@ export default function Cards({ themeControls }: CardsProps) {
     const normalizedQuery = query.trim().toLowerCase();
     return catalog.filter((card) => {
       const matchesRarity = rarity === 'all' || card.rarity === rarity;
-      const matchesOwnership = ownershipFilter === 'all' || (ownershipFilter === 'owned' ? card.ownedCount > 0 : card.ownedCount === 0);
+      const matchesOwnership = ownershipFilter === 'owned' ? card.ownedCount > 0 : card.ownedCount === 0;
       const haystack = `${card.name} ${card.position} ${card.team} ${card.nation_region}`.toLowerCase();
       return matchesRarity && matchesOwnership && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
@@ -307,7 +311,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
                       <div key={rarity} className="rounded-sm border-4 border-main bg-muted p-2 text-center shadow-[3px_3px_0_var(--color-shadow)]">
-                        <div className={`mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center rounded-sm border-4 border-main text-2xl font-black ${getRarityCardArtClass(rarity)}`}>?</div>
+                        <div className="mx-auto mb-2 flex aspect-[3/4] max-w-[120px] items-center justify-center rounded-sm border-4 border-main bg-cover bg-center text-2xl font-black" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(rarity)})` }}>?</div>
                         <p className={`rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(rarity)}`}>{rarity}</p>
                       </div>
                     ))}
@@ -390,9 +394,9 @@ export default function Cards({ themeControls }: CardsProps) {
                   </div>
                   <div className="flex flex-col gap-2 text-main sm:flex-row">
                     <div className="flex rounded-sm border-2 border-main bg-card shadow-[2px_2px_0_var(--color-shadow)]">
-                      {(['owned', 'all', 'missing'] as const).map((nextFilter) => (
+                      {(['owned', 'missing'] as const).map((nextFilter) => (
                         <button key={nextFilter} type="button" className={`px-3 py-2 text-xs font-black uppercase ${ownershipFilter === nextFilter ? 'bg-c2 text-inv' : 'bg-card text-main'}`} onClick={() => setOwnershipFilter(nextFilter)}>
-                          {nextFilter === 'owned' ? 'Owned Cards' : nextFilter === 'all' ? 'All' : 'Missing'}
+                          {nextFilter === 'owned' ? 'Owned Cards' : 'Missing Cards'}
                         </button>
                       ))}
                     </div>
@@ -421,9 +425,10 @@ export default function Cards({ themeControls }: CardsProps) {
                 <p className="p-6 text-center font-black uppercase text-muted-foreground">{t('common.loading')}</p>
               ) : filteredCatalog.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
-                  {filteredCatalog.map((card) => (
-                    <CardTile key={card.id} card={card} ownedCount={card.ownedCount} onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />
-                  ))}
+                  {filteredCatalog.map((card) => {
+                    const isMissing = card.ownedCount === 0;
+                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} dimmed={isMissing} badge={isMissing ? 'LOCKED' : undefined} badgeClass="bg-muted text-muted-foreground" onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />;
+                  })}
                 </div>
               ) : (
                 <p className="m-3 rounded-sm border-4 border-main bg-card p-6 text-center text-sm font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">No cards match your current filters.</p>
@@ -603,19 +608,20 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
   );
 }
 
-function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', onSetShowcase }: {
+function CardTile({ card, ownedCount, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase }: {
   key?: string;
   card: { name: string; position: string; team: string; nation_region: string; image_url: string; rarity: string };
   ownedCount: number;
   badge?: string;
   badgeClass?: string;
+  dimmed?: boolean;
   onSetShowcase?: (slot: number) => void;
 }) {
   const { t } = useTranslation();
   const Flag = getNationFlag(card.nation_region);
   return (
-    <article className={`rounded-sm border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 overflow-hidden ${getRarityCardFrameClass(card.rarity)}`}>
-      <div className={`relative rounded-sm border-b-4 border-main p-2 overflow-hidden ${getRarityCardArtClass(card.rarity)}`}>
+    <article className={`rounded-sm border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] min-w-0 overflow-hidden ${dimmed ? 'opacity-45 grayscale' : ''} ${getRarityCardFrameClass(card.rarity)}`}>
+      <div className="relative rounded-sm border-b-4 border-main bg-cover bg-center p-2 overflow-hidden" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(card.rarity)})` }}>
         <CardImage card={card} />
         <span className={`absolute left-2 top-2 rounded-sm border-2 border-main px-2 py-1 font-black text-xs shadow-[2px_2px_0_var(--color-shadow)] ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
         <span className="absolute right-2 top-2 rounded-sm border-2 border-main bg-c1 px-2 py-1 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">x{ownedCount}</span>

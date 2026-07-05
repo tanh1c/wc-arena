@@ -99,15 +99,23 @@ test('cards page separates pack opening from gallery browsing with tabs', () => 
   assert.match(cardsSource, /setActiveTab/);
 });
 
-test('card art panels use bold rarity-specific graphic backgrounds', () => {
+test('card art panels use imported rarity background PNGs', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /getRarityCardArtClass/);
-  assert.match(cardsSource, /Common: 'bg-\[repeating-linear-gradient\(135deg,#7fbf5f_0_12px,#d8ff65_12px_24px\)/);
-  assert.match(cardsSource, /Rare: 'bg-\[linear-gradient\(#0088ff_3px,transparent_3px\)/);
-  assert.match(cardsSource, /Epic: 'bg-\[linear-gradient\(135deg,transparent_0_34%,#ff2bd6_34%_44%/);
-  assert.match(cardsSource, /Icon: 'bg-\[repeating-conic-gradient/);
-  assert.match(cardsSource, /getRarityCardArtClass\(card\.rarity\)/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Common_card\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Rare_card\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Epic_card\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Icon_card\.png/);
+  assert.match(cardsSource, /rarityCardBackgroundImages/);
+  assert.match(cardsSource, /Common: commonCardBackground/);
+  assert.match(cardsSource, /Rare: rareCardBackground/);
+  assert.match(cardsSource, /Epic: epicCardBackground/);
+  assert.match(cardsSource, /Icon: iconCardBackground/);
+  assert.match(cardsSource, /getRarityCardBackgroundImage/);
+  assert.match(cardsSource, /backgroundImage: `url\(\$\{getRarityCardBackgroundImage\(card\.rarity\)\}\)`/);
+  assert.match(cardsSource, /backgroundImage: `url\(\$\{getRarityCardBackgroundImage\(rarity\)\}\)`/);
+  assert.match(cardsSource, /bg-cover bg-center/);
+  assert.doesNotMatch(cardsSource, /getRarityCardArtClass/);
 });
 
 test('card PNG art keeps CDN rendering unblended inside rarity panels', () => {
@@ -294,13 +302,20 @@ test('gallery tab presents collection stats, filters, and empty states as a brow
   assert.match(cardsSource, /Search \+ Filter/);
   assert.match(cardsSource, /No cards match your current filters\./);
   assert.match(cardsSource, /ownershipFilter/);
-  assert.match(cardsSource, /useState<'owned' \| 'all' \| 'missing'>\('owned'\)/);
+  assert.match(cardsSource, /useState<'owned' | 'missing'>\('owned'\)/);
   assert.match(cardsSource, /card\.ownedCount > 0/);
   assert.match(cardsSource, /card\.ownedCount === 0/);
-  assert.match(cardsSource, /\['owned', 'all', 'missing'\]/);
+  assert.match(cardsSource, /\['owned', 'missing'\]/);
   assert.match(cardsSource, /setOwnershipFilter/);
   assert.match(cardsSource, /Owned Cards/);
-  assert.match(cardsSource, /Missing/);
+  assert.match(cardsSource, /Missing Cards/);
+  assert.match(cardsSource, /dimmed/);
+  assert.match(cardsSource, /LOCKED/);
+  assert.match(cardsSource, /opacity-45 grayscale/);
+  assert.match(cardsSource, /isMissing/);
+  assert.doesNotMatch(cardsSource, /\['owned', 'all', 'missing'\]/);
+  assert.doesNotMatch(cardsSource, /ownershipFilter === 'all'/);
+  assert.doesNotMatch(cardsSource, />All</);
   assert.match(cardsSource, /border-4 border-main bg-c1/);
   assert.match(cardsSource, /rounded-sm border-2 border-main bg-card px-3 py-2/);
   assert.match(cardsSource, /rounded-sm border-4 border-main bg-card p-3/);
