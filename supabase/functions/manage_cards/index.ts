@@ -125,34 +125,22 @@ async function openCardPack(supabase: SupabaseClient, userId: string, packType: 
   const awardedCards = await drawCards(supabase, pack.cardCount, pack.rarityWeights);
   if (awardedCards.length !== pack.cardCount) throw new Error('Not enough cards are available for this pack.');
 
-  const nextCoins = currentCoins - pack.priceCoins;
-  if (pack.priceCoins > 0) await setUserCoins(supabase, userId, nextCoins);
-
-  const { data: ownedRows, error: insertOwnedError } = await supabase
-    .from('user_player_cards')
-    .insert(awardedCards.map((card) => ({
-      user_id: userId,
-      card_id: card.id,
-      source_pack_type: packType,
-    })))
-    .select('*, player_cards(*)');
-  if (insertOwnedError) throw insertOwnedError;
-
-  const { error: openingError } = await supabase.from('card_pack_openings').insert({
-    user_id: userId,
-    pack_type: packType,
-    coins_spent: pack.priceCoins,
-    cards_awarded: awardedCards.length,
-    opened_on_utc: openedOnUtc,
+  const { data: openedRows, error: openError } = await supabase.rpc('open_card_pack_transaction', {
+    p_user_id: userId,
+    p_pack_type: packType,
+    p_card_ids: awardedCards.map((card) => card.id),
+    p_price_coins: pack.priceCoins,
+    p_opened_on_utc: openedOnUtc,
   });
-  if (openingError) throw openingError;
+  if (openError) throw openError;
 
+  const rows = openedRows ?? [];
   return {
-    cards: (ownedRows ?? []).map((row: { card_id: string }) => ({
-      ...row,
-      duplicate: ownedCardIdsBefore.has(row.card_id),
+    cards: rows.map((row: { owned_card: { card_id: string } }) => ({
+      ...row.owned_card,
+      duplicate: ownedCardIdsBefore.has(row.owned_card.card_id),
     })),
-    coins: nextCoins,
+    coins: rows[0]?.next_coins ?? currentCoins - pack.priceCoins,
     openedOnUtc,
   };
 }
@@ -284,12 +272,3 @@ async function getUserCoins(supabase: SupabaseClient, userId: string) {
   return Math.max(0, wallet?.balance ?? 0);
 }
 
-async function setUserCoins(supabase: SupabaseClient, userId: string, coins: number) {
-  const { error } = await supabase.from('point_wallets').upsert({
-    user_id: userId,
-    balance: coins,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' });
-
-  if (error) throw error;
-}

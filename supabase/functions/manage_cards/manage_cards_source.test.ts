@@ -19,6 +19,20 @@ test('manage_cards exposes admin-only player card upserts and deletes without re
   assert.match(source, /body\.action === 'setShowcaseCard'/);
 });
 
+test('openCardPack commits coin spend, awarded cards, and opening log through one RPC', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /open_card_pack_transaction/);
+  assert.match(source, /p_user_id: userId/);
+  assert.match(source, /p_pack_type: packType/);
+  assert.match(source, /p_card_ids: awardedCards\.map\(\(card\) => card\.id\)/);
+  assert.match(source, /p_price_coins: pack\.priceCoins/);
+  assert.match(source, /p_opened_on_utc: openedOnUtc/);
+  assert.doesNotMatch(source, /setUserCoins\(supabase, userId, nextCoins\)/);
+  assert.doesNotMatch(source, /\.from\('user_player_cards'\)\s*\.insert\(awardedCards/);
+  assert.doesNotMatch(source, /\.from\('card_pack_openings'\)\.insert/);
+});
+
 test('manage_cards validates admin card import boundary input', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 
