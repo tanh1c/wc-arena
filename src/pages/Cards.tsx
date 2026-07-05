@@ -150,6 +150,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
   const [showcase, setShowcase] = useState<ShowcaseCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
+  const [recentPullCards, setRecentPullCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
   const [showRevealedReview, setShowRevealedReview] = useState(false);
   const [revealModalOpen, setRevealModalOpen] = useState(false);
   const [flippedRevealCardIds, setFlippedRevealCardIds] = useState(new Set<string>());
@@ -199,6 +200,12 @@ export default function Cards({ themeControls }: CardsProps) {
     return () => window.clearInterval(intervalId);
   }, [dailyPackOpenedToday]);
 
+  useEffect(() => {
+    if (revealedCards.length > 0 && flippedRevealCardIds.size === revealedCards.length) {
+      setRecentPullCards(revealedCards);
+    }
+  }, [flippedRevealCardIds.size, revealedCards]);
+
   const filteredCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return catalog.filter((card) => {
@@ -217,6 +224,7 @@ export default function Cards({ themeControls }: CardsProps) {
     try {
       const result = await openCardPack(packType);
       setRevealedCards(result.cards);
+      setRecentPullCards([]);
       setShowRevealedReview(false);
       setFlippedRevealCardIds(new Set<string>());
       setRevealModalOpen(result.cards.length > 0);
@@ -265,8 +273,8 @@ export default function Cards({ themeControls }: CardsProps) {
         <section className="bg-card border-4 border-main p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm">
           <div className="grid grid-cols-2 border-b-4 border-main bg-card">
             {[
-              ['openPacks', 'Open Packs'],
-              ['gallery', 'Gallery'],
+              ['openPacks', 'appPages.cards.openPacks'],
+              ['gallery', 'appPages.cards.gallery'],
             ].map(([tab, label]) => (
               <button
                 key={tab}
@@ -274,7 +282,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 className={`border-r-4 border-main px-4 py-3 text-center font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
                 onClick={() => setActiveTab(tab as 'openPacks' | 'gallery')}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
@@ -304,8 +312,8 @@ export default function Cards({ themeControls }: CardsProps) {
               <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
                 <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="font-black uppercase text-main">Potential Rewards</h3>
-                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">View All</span>
+                    <h3 className="font-black uppercase text-main">{t('appPages.cards.potentialRewards')}</h3>
+                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewAll')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
@@ -319,17 +327,17 @@ export default function Cards({ themeControls }: CardsProps) {
 
                 <section className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="font-black uppercase text-main">Recent Pulls</h3>
-                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">View History</span>
+                    <h3 className="font-black uppercase text-main">{t('appPages.cards.recentPulls')}</h3>
+                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewHistory')}</span>
                   </div>
-                  {revealedCards.length > 0 ? (
+                  {recentPullCards.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
-                      {revealedCards.map((ownedCard) => (
+                      {recentPullCards.map((ownedCard) => (
                         <CardTile key={ownedCard.id} card={ownedCard.player_cards} ownedCount={1} badge={ownedCard.duplicate ? t('appPages.cards.duplicate') : t('appPages.cards.newCard')} badgeClass={ownedCard.duplicate ? 'bg-c4 text-main' : 'bg-c1 text-main'} />
                       ))}
                     </div>
                   ) : (
-                    <p className="border-2 border-main bg-muted p-6 text-center text-sm font-black uppercase text-muted-foreground">Open a pack to see your latest pulls.</p>
+                    <p className="border-2 border-main bg-muted p-6 text-center text-sm font-black uppercase text-muted-foreground">{t('appPages.cards.emptyRecentPulls')}</p>
                   )}
                 </section>
               </div>
@@ -343,7 +351,7 @@ export default function Cards({ themeControls }: CardsProps) {
                     onClick={() => setShowRevealedReview((current) => !current)}
                   >
                     <span>{t('appPages.cards.revealedCards')}</span>
-                    <span className="border-2 border-main bg-c2 px-2 py-1 text-xs text-inv shadow-[2px_2px_0_var(--color-shadow)]">{showRevealedReview ? 'Hide' : 'Show'}</span>
+                    <span className="border-2 border-main bg-c2 px-2 py-1 text-xs text-inv shadow-[2px_2px_0_var(--color-shadow)]">{showRevealedReview ? t('appPages.cards.hide') : t('appPages.cards.show')}</span>
                   </button>
                   {revealedCards.length > 0 && showRevealedReview && (
                     <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
@@ -356,7 +364,7 @@ export default function Cards({ themeControls }: CardsProps) {
               )}
 
               <div className="mt-3 rounded-sm border-4 border-main bg-main p-3 text-xs font-black uppercase text-inv shadow-[4px_4px_0_var(--color-shadow)]">
-                <span className="text-c3">TIP:</span> Higher tier packs have better chances at Epic and Icon cards. PLAY. COLLECT. DOMINATE.
+                <span className="text-c3">{t('appPages.cards.tipLabel')}</span> {t('appPages.cards.packTip')}
               </div>
             </main>
           ) : (
@@ -364,14 +372,14 @@ export default function Cards({ themeControls }: CardsProps) {
               <section className="border-b-4 border-main bg-card p-3 sm:p-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                   <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">Search + Filter</p>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.searchFilter')}</p>
                     <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h3>
                   </div>
                   <div className="flex flex-col gap-2 text-main sm:flex-row">
                     <div className="flex gap-2 rounded-sm border-2 border-main bg-card p-1 shadow-[2px_2px_0_var(--color-shadow)]">
                       {(['owned', 'missing'] as const).map((nextFilter) => (
                         <button key={nextFilter} type="button" className={`rounded-sm px-3 py-2 text-xs font-black uppercase ${ownershipFilter === nextFilter ? 'bg-c2 text-inv' : 'bg-card text-main'}`} onClick={() => setOwnershipFilter(nextFilter)}>
-                          {nextFilter === 'owned' ? 'Owned Cards' : 'Missing Cards'}
+                          {nextFilter === 'owned' ? t('appPages.cards.ownedCards') : t('appPages.cards.missingCards')}
                         </button>
                       ))}
                     </div>
@@ -402,11 +410,11 @@ export default function Cards({ themeControls }: CardsProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4">
                   {filteredCatalog.map((card) => {
                     const isMissing = card.ownedCount === 0;
-                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} dimmed={isMissing} badge={isMissing ? 'LOCKED' : undefined} badgeClass="bg-muted text-muted-foreground" onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />;
+                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} dimmed={isMissing} badge={isMissing ? t('appPages.cards.locked') : undefined} badgeClass="bg-muted text-muted-foreground" onSetShowcase={card.ownedCards[0] ? (slot) => handleSetShowcase(slot, card.ownedCards[0].id) : undefined} />;
                   })}
                 </div>
               ) : (
-                <p className="m-3 rounded-sm border-4 border-main bg-card p-6 text-center text-sm font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">No cards match your current filters.</p>
+                <p className="m-3 rounded-sm border-4 border-main bg-card p-6 text-center text-sm font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">{t('appPages.cards.noCardsMatch')}</p>
               )}
             </main>
           )}
@@ -422,7 +430,7 @@ export default function Cards({ themeControls }: CardsProps) {
                 <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.revealedCards')}</h2>
               </div>
               <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setRevealModalOpen(false)}>
-                Close
+                {t('ui.close')}
               </button>
             </div>
             <div className="flex flex-wrap justify-center min-h-0 gap-3 p-3">
@@ -465,7 +473,7 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
   const { t } = useTranslation();
   return (
     <aside className="rounded-sm border-4 border-main bg-card p-2 shadow-[4px_4px_0_var(--color-shadow)]">
-      <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">Choose Pack</p>
+      <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">{t('appPages.cards.choosePack')}</p>
       <div className="grid gap-2">
         {packTypes.map((packType) => {
           const pack = CARD_PACKS[packType];
@@ -484,7 +492,7 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
                 <span className="block truncate text-sm font-black uppercase">{t(packTextKeys[packType].title)}</span>
                 <span className="mt-1 block text-[10px] font-black uppercase opacity-80">{pack.cardCount} {t('appPages.cards.cards')}</span>
                 <span className="mt-1 inline-flex items-center gap-1 border-2 border-main bg-card px-2 py-0.5 text-[10px] font-black uppercase text-main">
-                  {pack.priceCoins === 0 ? 'FREE' : `${pack.priceCoins.toLocaleString()} ${t('ui.coinsShort')}`}
+                  {pack.priceCoins === 0 ? t('appPages.cards.free') : `${pack.priceCoins.toLocaleString()} ${t('ui.coinsShort')}`}
                   {pack.priceCoins > 0 && <PointsCoin size="sm" />}
                 </span>
               </span>
@@ -515,17 +523,17 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
           <img src={pack.image} alt={title} className={`max-h-full max-w-full object-contain drop-shadow-[10px_10px_0_rgba(0,0,0,0.55)] ${pack.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'transition-transform hover:-translate-y-2 hover:rotate-1'}`} />
         </div>
         <div className="min-w-0">
-          <p className="mb-2 inline-flex border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Featured Pack</p>
+          <p className="mb-2 inline-flex border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.featuredPack')}</p>
           <h2 className="text-4xl font-black uppercase leading-none tracking-tighter sm:text-5xl">{title}</h2>
           <p className="mt-3 max-w-xl text-sm font-bold text-white/85">{description}</p>
           <div className="mt-4 grid grid-cols-2 gap-2 text-main">
             <div className="border-2 border-main bg-c1 p-2 shadow-[2px_2px_0_var(--color-shadow)]">
-              <p className="text-[10px] font-black uppercase opacity-70">Cards</p>
+              <p className="text-[10px] font-black uppercase opacity-70">{t('appPages.cards.cardsLabel')}</p>
               <p className="text-2xl font-black">{pack.cardCount}</p>
             </div>
             <div className="border-2 border-main bg-card p-2 shadow-[2px_2px_0_var(--color-shadow)]">
-              <p className="text-[10px] font-black uppercase opacity-70">Price</p>
-              <p className="flex items-center gap-1 text-2xl font-black">{pack.priceCoins === 0 ? 'FREE' : pack.priceCoins.toLocaleString()} {pack.priceCoins > 0 && <PointsCoin size="sm" />}</p>
+              <p className="text-[10px] font-black uppercase opacity-70">{t('appPages.cards.price')}</p>
+              <p className="flex items-center gap-1 text-2xl font-black">{pack.priceCoins === 0 ? t('appPages.cards.free') : pack.priceCoins.toLocaleString()} {pack.priceCoins > 0 && <PointsCoin size="sm" />}</p>
             </div>
           </div>
           {isOpenedToday && <p className="mt-3 border-2 border-main bg-c4 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
@@ -547,15 +555,15 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
   const pack = CARD_PACKS[packType];
   return (
     <aside className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-      <p className="border-2 border-main bg-c4 px-2 py-1 text-[10px] font-black uppercase text-main">Pack Status</p>
+      <p className="border-2 border-main bg-c4 px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.packStatus')}</p>
       <div className="mt-3 grid gap-2 text-xs font-black uppercase text-main">
         <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
-          <span>Availability</span>
-          <span className={isOpenedToday ? 'text-c5' : 'text-c3'}>{isOpenedToday ? 'Opened' : 'Available'}</span>
+          <span>{t('appPages.cards.availability')}</span>
+          <span className={isOpenedToday ? 'text-c5' : 'text-c3'}>{isOpenedToday ? t('appPages.cards.opened') : t('appPages.cards.available')}</span>
         </div>
         <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
-          <span>Limit</span>
-          <span>{pack.oncePerUtcDay ? '1 / UTC day' : 'Unlimited'}</span>
+          <span>{t('appPages.cards.limit')}</span>
+          <span>{pack.oncePerUtcDay ? t('appPages.cards.oncePerUtcDay') : t('appPages.cards.unlimited')}</span>
         </div>
         {isOpenedToday && dailyResetCountdown && (
           <div className="border-2 border-main bg-c1 px-3 py-2 text-center">

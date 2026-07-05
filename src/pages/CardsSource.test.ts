@@ -80,9 +80,9 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /lg:grid-cols-\[240px_minmax\(0,1fr\)_320px\]/);
   assert.match(cardsSource, /SelectedPackHero/);
   assert.match(cardsSource, /PackInfoPanel/);
-  assert.match(cardsSource, /Potential Rewards/);
-  assert.match(cardsSource, /Recent Pulls/);
-  assert.match(cardsSource, /PLAY\. COLLECT\. DOMINATE\./);
+  assert.match(cardsSource, /appPages\.cards\.potentialRewards/);
+  assert.match(cardsSource, /appPages\.cards\.recentPulls/);
+  assert.match(cardsSource, /appPages\.cards\.packTip/);
   assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-3 sm:p-4 lg:p-6 gap-3 min-h-0/);
   assert.doesNotMatch(cardsSource, /<section className="overflow-hidden rounded-sm border-4 border-main bg-card shadow-\[8px_8px_0_var\(--color-shadow\)\]"/);
 });
@@ -93,8 +93,8 @@ test('cards page separates pack opening from gallery browsing with tabs', () => 
   assert.match(cardsSource, /activeTab/);
   assert.match(cardsSource, /openPacks/);
   assert.match(cardsSource, /gallery/);
-  assert.match(cardsSource, /Open Packs/);
-  assert.match(cardsSource, /Gallery/);
+  assert.match(cardsSource, /appPages\.cards\.openPacks/);
+  assert.match(cardsSource, /appPages\.cards\.gallery/);
   assert.match(cardsSource, /setActiveTab/);
 });
 
@@ -271,7 +271,7 @@ test('open pack tab uses a screenshot-style pack rail and selected pack dashboar
   assert.match(cardsSource, /packType=\{selectedPackType\}/);
   assert.match(cardsSource, /CARD_PACKS\[selectedPackType\]\.cardCount/);
   assert.match(cardsSource, /selectedPackType === 'daily' && dailyPackOpenedToday/);
-  assert.match(cardsSource, /pack\.priceCoins === 0 \? 'FREE' : pack\.priceCoins\.toLocaleString\(\)/);
+  assert.match(cardsSource, /pack\.priceCoins === 0 \? t\('appPages\.cards\.free'\)/);
   assert.match(cardsSource, /style=\{\{ width: `\$\{pack\.rarityWeights\[rarity\]\}%` \}\}/);
   assert.doesNotMatch(cardsSource, /grid grid-cols-1 lg:grid-cols-\[220px_minmax\(0,1fr\)\]/);
 });
@@ -297,20 +297,20 @@ test('gallery tab presents compact filters and owned or missing card browsing', 
   assert.doesNotMatch(cardsSource, /Total Cards/);
   assert.match(cardsSource, /showcaseSlotsUsed/);
   assert.match(cardsSource, /filteredCatalog\.length/);
-  assert.match(cardsSource, /Showcase/);
-  assert.match(cardsSource, /Search \+ Filter/);
-  assert.match(cardsSource, /No cards match your current filters\./);
+  assert.match(cardsSource, /appPages\.cards\.showcase/);
+  assert.match(cardsSource, /appPages\.cards\.searchFilter/);
+  assert.match(cardsSource, /appPages\.cards\.noCardsMatch/);
   assert.match(cardsSource, /ownershipFilter/);
   assert.match(cardsSource, /useState<'owned' | 'missing'>\('owned'\)/);
   assert.match(cardsSource, /card\.ownedCount > 0/);
   assert.match(cardsSource, /card\.ownedCount === 0/);
   assert.match(cardsSource, /\['owned', 'missing'\]/);
   assert.match(cardsSource, /setOwnershipFilter/);
-  assert.match(cardsSource, /Owned Cards/);
-  assert.match(cardsSource, /Missing Cards/);
+  assert.match(cardsSource, /appPages\.cards\.ownedCards/);
+  assert.match(cardsSource, /appPages\.cards\.missingCards/);
   assert.match(cardsSource, /rounded-sm px-3 py-2 text-xs font-black uppercase/);
   assert.match(cardsSource, /dimmed/);
-  assert.match(cardsSource, /LOCKED/);
+  assert.match(cardsSource, /appPages\.cards\.locked/);
   assert.match(cardsSource, /opacity-45 grayscale/);
   assert.match(cardsSource, /isMissing/);
   assert.match(cardsSource, /card \? 'bg-cover bg-center' : 'bg-muted'/);
@@ -366,6 +366,17 @@ test('revealed cards review is hidden by default behind a rounded toggle panel',
   assert.match(cardsSource, /setShowRevealedReview\(\(current\) => !current\)/);
   assert.match(cardsSource, /revealedCards\.length > 0 && showRevealedReview/);
   assert.match(cardsSource, /rounded-t-sm border-b-4 border-main bg-card/);
+});
+
+test('recent pulls wait until every reveal popup card is flipped', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /recentPullCards/);
+  assert.match(cardsSource, /setRecentPullCards\(\[\]\)/);
+  assert.match(cardsSource, /setRecentPullCards\(revealedCards\)/);
+  assert.match(cardsSource, /flippedRevealCardIds\.size === revealedCards\.length/);
+  assert.match(cardsSource, /recentPullCards\.length > 0/);
+  assert.match(cardsSource, /recentPullCards\.map\(\(ownedCard\) =>/);
 });
 
 test('reveal modal card flips use a 3d animated effect', () => {
