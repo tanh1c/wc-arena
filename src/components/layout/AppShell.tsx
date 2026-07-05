@@ -316,7 +316,7 @@ export default function AppShell({ children, themeControls, fullHeight = false }
   return (
     <div className={`${fullHeight ? 'h-[100dvh]' : 'min-h-screen'} bg-page flex font-sans relative overflow-hidden`}>
       <div className="absolute inset-x-0 top-[84px] h-[calc(100vh-116px)] z-0 pointer-events-none opacity-90 overflow-hidden flex justify-center">
-        <img src="https://s6.imgcdn.dev/Ybh5S0.webp" alt="" aria-hidden="true" className="w-full h-full object-cover object-top" />
+        <img src="https://s6.imgcdn.dev/Yq55Uh.webp" alt="" aria-hidden="true" className="w-full h-full object-cover object-top" />
       </div>
       <div className="flex-1 min-w-0 min-h-0 flex flex-col pb-[var(--mobile-scroll-clearance)] lg:pb-0 h-[100dvh] overflow-y-auto relative z-10 scroll-pb-[var(--mobile-scroll-clearance)] lg:scroll-pb-0" style={{ '--mobile-scroll-clearance': mobileScrollClearance } as React.CSSProperties}>
         <header className="flex items-center justify-between border-b-4 border-main px-4 md:px-6 py-4 bg-card z-30 sticky top-0 shrink-0 gap-4">
