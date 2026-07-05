@@ -2,12 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, BarChart2, ListChecks, Shield, Star, Trophy } from 'lucide-react';
+import commonCardBackground from '../../Common_card.png';
+import epicCardBackground from '../../Epic_card.png';
+import iconCardBackground from '../../Icon_card.png';
+import rareCardBackground from '../../Rare_card.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
 import RankBadge from '../components/ui/RankBadge';
 import StatusPill from '../components/ui/StatusPill';
 import StreakBadge from '../components/ui/StreakBadge';
 import UserAvatar from '../components/ui/UserAvatar';
+import { listProfileShowcase, type ShowcaseCard } from '../services/cards';
 import { getPublicUserPredictionHistory, type PublicPredictionHistory, type PublicPredictionHistoryRow } from '../services/publicPredictions';
 import { getPublicProfile, type PublicProfileRow } from '../services/profile';
 import { getErrorMessage } from '../services/serviceTypes';
@@ -22,6 +27,17 @@ type PublicProfileProps = {
 };
 
 type PublicProfileHeader = PublicProfileRow | NonNullable<PublicPredictionHistory['profile']>;
+
+const publicProfileCardBackgroundImages: Record<string, string> = {
+  Common: commonCardBackground,
+  Rare: rareCardBackground,
+  Epic: epicCardBackground,
+  Icon: iconCardBackground,
+};
+
+function getPublicProfileCardBackgroundImage(rarity: string) {
+  return publicProfileCardBackgroundImages[rarity] ?? publicProfileCardBackgroundImages.Common;
+}
 
 function formatDate(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -74,6 +90,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<PublicProfileHeader | null>(null);
   const [history, setHistory] = useState<PublicPredictionHistoryRow[]>([]);
+  const [showcaseCards, setShowcaseCards] = useState<ShowcaseCard[]>([]);
   const [teams, setTeams] = useState<Map<string, TeamRow>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +99,7 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
     if (!userId) {
       setProfile(null);
       setHistory([]);
+      setShowcaseCards([]);
       setError(t('ui.profileNotFound'));
       setLoading(false);
       return;
@@ -91,12 +109,13 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
     setLoading(true);
     setError(null);
 
-    Promise.all([getPublicProfile(userId), getPublicUserPredictionHistory(userId), getTeamMap()])
-      .then(([nextProfile, nextHistory, nextTeams]) => {
+    Promise.all([getPublicProfile(userId), getPublicUserPredictionHistory(userId), getTeamMap(), listProfileShowcase(userId)])
+      .then(([nextProfile, nextHistory, nextTeams, nextShowcaseCards]) => {
         if (!active) return;
         setProfile(nextProfile ?? nextHistory.profile);
         setHistory(nextHistory.predictions);
         setTeams(nextTeams);
+        setShowcaseCards(nextShowcaseCards);
       })
       .catch((nextError) => {
         if (!active) return;
@@ -216,6 +235,27 @@ export default function PublicProfile({ themeControls }: PublicProfileProps) {
               <div className="min-w-0"><div className="text-[9px] sm:text-xs uppercase font-black tracking-widest opacity-90 truncate">{t('publicProfile.rewardsBonus')}</div><div className="text-lg sm:text-3xl font-black leading-none flex items-center gap-1"><PointsCoin size="sm" />{formatPoints(rewardPoints)}</div></div>
             </div>
           </div>
+
+          <section className="mt-4 lg:mt-6 bg-card border-4 border-main p-4 shadow-[4px_4px_0_var(--color-shadow)]">
+            <h2 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.profileShowcase')}</h2>
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+              {[1, 2, 3].map((slot) => {
+                const showcaseCard = showcaseCards.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
+                return (
+                  <div key={slot} className={`min-h-32 border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${showcaseCard ? 'bg-cover bg-center' : 'bg-muted'}`} style={{ backgroundImage: showcaseCard ? `url(${getPublicProfileCardBackgroundImage(showcaseCard.rarity)})` : undefined }}>
+                    {showcaseCard ? (
+                      <>
+                        <img src={showcaseCard.image_url} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
+                        <p className="mt-2 truncate text-white">{showcaseCard.name}</p>
+                      </>
+                    ) : (
+                      <span>{t('appPages.cards.emptySlot', { slot })}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
           <div className="flex flex-col xl:flex-row flex-1 mt-4 lg:mt-6">
             <div className="flex-1 border-r-0 xl:border-r-4 border-main flex flex-col bg-muted min-w-0">

@@ -25,6 +25,12 @@ test('secondary header navigation keeps non-primary destinations discoverable', 
   ]);
 });
 
+test('cards navigation uses a collectible card icon', () => {
+  const cardsItem = appNavigationGroups.flatMap((group) => group.items).find((item) => item.to === '/cards');
+
+  assert.equal(cardsItem?.icon?.displayName ?? cardsItem?.icon?.name, 'Badge');
+});
+
 test('admin routes stay out of app navigation groups', () => {
   const paths = appNavigationGroups.flatMap((group) => group.items.map((item) => item.to));
 
