@@ -76,6 +76,13 @@ test('player cards render GIF only after upgrade unlock and expose a five-copy u
   assert.match(cardsSource, /upgradingGifCardId/);
   assert.match(cardsSource, /card\.gif_url && !card\.hasGifUpgrade && card\.baseOwnedCount >= 5/);
   assert.match(cardsSource, /handleUpgradeToGif\(card\.id\)/);
+  assert.match(cardsSource, /previewGifCard/);
+  assert.match(cardsSource, /onPreviewGif=\{card\.gif_url \? \(\) => setPreviewGifCard\(card\) : undefined\}/);
+  assert.match(cardsSource, /GIF Available/);
+  assert.match(cardsSource, /Math\.min\(baseOwnedCount \?\? 0, 5\)/);
+  assert.match(cardsSource, /baseOwnedCount=\{card\.baseOwnedCount\}/);
+  assert.match(cardsSource, /Preview GIF/);
+  assert.match(cardsSource, /getPlayerCardDisplayImageUrl\(previewGifCard, true\)/);
   assert.match(cardsSource, /getPlayerCardDisplayImageUrl\(card, useGif\)/);
   assert.match(cardsSource, /useGif=\{card\.hasGifUpgrade\}/);
   assert.match(cardsSource, /useGif=\{ownedCard\.is_gif_upgrade\}/);

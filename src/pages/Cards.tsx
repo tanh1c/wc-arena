@@ -165,6 +165,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [dailyResetCountdown, setDailyResetCountdown] = useState('');
   const [activeTab, setActiveTab] = useState<'openPacks' | 'gallery'>('openPacks');
   const [upgradingGifCardId, setUpgradingGifCardId] = useState<string | null>(null);
+  const [previewGifCard, setPreviewGifCard] = useState<CatalogCardWithOwnedCount | null>(null);
   const [error, setError] = useState('');
 
   const loadCards = async () => {
@@ -401,7 +402,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   {filteredCatalog.map((card) => {
                     const isMissing = card.ownedCount === 0;
                     const showcaseCard = card.gifOwnedCards[0] ?? card.ownedCards[0];
-                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} useGif={card.hasGifUpgrade} dimmed={isMissing} badge={card.hasGifUpgrade ? 'GIF' : isMissing ? t('appPages.cards.locked') : undefined} badgeClass={card.hasGifUpgrade ? 'bg-c3 text-main' : 'bg-muted text-muted-foreground'} onSetShowcase={showcaseCard ? (slot) => handleSetShowcase(slot, showcaseCard.id) : undefined} onUpgradeToGif={card.gif_url && !card.hasGifUpgrade && card.baseOwnedCount >= 5 ? () => handleUpgradeToGif(card.id) : undefined} upgradingGif={upgradingGifCardId === card.id} />;
+                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} useGif={card.hasGifUpgrade} baseOwnedCount={card.baseOwnedCount} dimmed={isMissing} badge={card.hasGifUpgrade ? 'GIF' : isMissing ? t('appPages.cards.locked') : undefined} badgeClass={card.hasGifUpgrade ? 'bg-c3 text-main' : 'bg-muted text-muted-foreground'} onSetShowcase={showcaseCard ? (slot) => handleSetShowcase(slot, showcaseCard.id) : undefined} onPreviewGif={card.gif_url ? () => setPreviewGifCard(card) : undefined} onUpgradeToGif={card.gif_url && !card.hasGifUpgrade && card.baseOwnedCount >= 5 ? () => handleUpgradeToGif(card.id) : undefined} upgradingGif={upgradingGifCardId === card.id} />;
                   })}
                 </div>
               ) : (
@@ -412,6 +413,25 @@ export default function Cards({ themeControls }: CardsProps) {
           </div>
         </section>
       </div>
+
+      {previewGifCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+          <section className="w-full max-w-md overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+            <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c3 p-3 text-main">
+              <div>
+                <p className="text-[10px] font-black uppercase opacity-80">GIF Available</p>
+                <h2 className="text-2xl font-black uppercase tracking-tight">{previewGifCard.name}</h2>
+              </div>
+              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setPreviewGifCard(null)}>
+                {t('ui.close')}
+              </button>
+            </div>
+            <div className="bg-cover bg-center p-4" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(previewGifCard.rarity)})` }}>
+              <img src={getPlayerCardDisplayImageUrl(previewGifCard, true)} alt={previewGifCard.name} className="mx-auto aspect-[3/4] w-full max-w-[260px] rounded-sm border-4 border-main bg-card object-contain shadow-[4px_4px_0_var(--color-shadow)]" />
+            </div>
+          </section>
+        </div>
+      )}
 
       {revealModalOpen && revealedCards.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
@@ -583,15 +603,17 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
   );
 }
 
-function CardTile({ card, ownedCount, useGif = false, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase, onUpgradeToGif, upgradingGif = false }: {
+function CardTile({ card, ownedCount, useGif = false, baseOwnedCount, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase, onPreviewGif, onUpgradeToGif, upgradingGif = false }: {
   key?: string;
   card: { name: string; position: string; team: string; nation_region: string; image_url: string; gif_url?: string | null; rarity: string };
   ownedCount: number;
   useGif?: boolean;
+  baseOwnedCount?: number;
   badge?: string;
   badgeClass?: string;
   dimmed?: boolean;
   onSetShowcase?: (slot: number) => void;
+  onPreviewGif?: () => void;
   onUpgradeToGif?: () => void;
   upgradingGif?: boolean;
 }) {
@@ -615,6 +637,13 @@ function CardTile({ card, ownedCount, useGif = false, badge, badgeClass = 'bg-c2
           <span className="truncate">{card.nation_region}</span>
         </p>
         {badge && <p className={`rounded-sm border-2 border-main px-2 py-1 text-center text-[11px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${badgeClass}`}>{badge}</p>}
+        {onPreviewGif && (
+          <div className="grid gap-1 rounded-sm border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
+            <span className="rounded-sm border-2 border-main bg-c3 px-2 py-1">GIF Available</span>
+            <span>{Math.min(baseOwnedCount ?? 0, 5)}/5 {(baseOwnedCount ?? 0) >= 5 ? 'ready' : 'copies'}</span>
+            <button type="button" className="rounded-sm border-2 border-main bg-card px-2 py-1 text-[10px] font-black uppercase text-main hover:bg-c1" onClick={onPreviewGif}>Preview GIF</button>
+          </div>
+        )}
         {onUpgradeToGif && (
           <button type="button" className="rounded-sm border-2 border-main bg-c3 px-2 py-2 text-[11px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-c1 disabled:opacity-60" disabled={upgradingGif} onClick={onUpgradeToGif}>
             {upgradingGif ? t('ui.savingEllipsis') : 'Upgrade GIF'}
