@@ -18,6 +18,7 @@ export type PlayerCard = {
   work_rate_def: string | null;
   added_on: string | null;
   image_url: string;
+  gif_url: string | null;
   rarity: CardRarity;
 };
 
@@ -65,6 +66,7 @@ export type AdminPlayerCardInput = {
   work_rate_def?: string | null;
   added_on?: string | null;
   image_url: string;
+  gif_url?: string | null;
   rarity: CardRarity;
 };
 
@@ -148,7 +150,8 @@ export function parsePlayerCardCsv(csv: string, rarity: CardRarity): AdminPlayer
       work_rate_att: emptyToNull(workRateAtt ?? ''),
       work_rate_def: emptyToNull(workRateDef ?? ''),
       added_on: normalizeCsvDate(read(row, 'Added on')),
-      image_url: read(row, 'Image URL'),
+      image_url: read(row, 'PNG URL'),
+      gif_url: emptyToNull(read(row, 'GIF URL')),
       rarity,
     };
   });
@@ -171,6 +174,7 @@ export function playerCardToAdminInput(card: PlayerCard): AdminPlayerCardInput {
     work_rate_def: card.work_rate_def,
     added_on: card.added_on,
     image_url: card.image_url,
+    gif_url: card.gif_url,
     rarity: card.rarity,
   };
 }

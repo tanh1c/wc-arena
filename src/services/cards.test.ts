@@ -16,8 +16,8 @@ test('cards service sends admin player card upserts and deletes through manage_c
 
 test('player card CSV parser maps Card_list rows into admin card inputs', () => {
   const csv = [
-    'Name,Position,Alternate Positions,TEAM,LEAGUE,NATION/REGION,Skill Moves,STRONG FOOT / WEAK FOOT,Height,Weight,Work Rate (ATT) / Work Rate (DEF),Added on,Image URL',
-    'Neymar Jr,LW,"CAM,ST",Brazil,International,Brazil,(5) ★★★★★,RIGHT / (5) ★★★★★,"5\'9"" (175 cm)",68 kg,High/Medium,7/3/2026,https://s6.imgcdn.dev/YqwFCS.png',
+    'Name,Position,Alternate Positions,TEAM,LEAGUE,NATION/REGION,Skill Moves,STRONG FOOT / WEAK FOOT,Height,Weight,Work Rate (ATT) / Work Rate (DEF),Added on,PNG URL,GIF URL',
+    'Neymar Jr,LW,"CAM,ST",Brazil,International,Brazil,(5) ★★★★★,RIGHT / (5) ★★★★★,"5\'9"" (175 cm)",68 kg,High/Medium,7/3/2026,https://s6.imgcdn.dev/YqwFCS.png,https://s6.imgcdn.dev/YqwFCS.gif',
   ].join('\n');
 
   assert.deepEqual(parsePlayerCardCsv(csv, 'Rare'), [{
@@ -35,6 +35,7 @@ test('player card CSV parser maps Card_list rows into admin card inputs', () => 
     work_rate_def: 'Medium',
     added_on: '2026-07-03',
     image_url: 'https://s6.imgcdn.dev/YqwFCS.png',
+    gif_url: 'https://s6.imgcdn.dev/YqwFCS.gif',
     rarity: 'Rare',
   }]);
 });

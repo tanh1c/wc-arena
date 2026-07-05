@@ -27,5 +27,6 @@ test('manage_cards validates admin card import boundary input', () => {
   assert.match(source, /cards\.length === 0/);
   assert.match(source, /normalizeRequiredString\(card\.name, 'name'\)/);
   assert.match(source, /normalizeRequiredString\(card\.image_url, 'image_url'\)/);
+  assert.match(source, /gif_url: normalizeOptionalString\(card\.gif_url\)/);
   assert.match(source, /cardRarities\.includes\(rarity\)/);
 });

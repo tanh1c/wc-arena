@@ -1374,6 +1374,7 @@ export type Database = {
           height: string | null
           id: string
           image_url: string
+          gif_url: string | null
           league: string
           name: string
           nation_region: string
@@ -1394,6 +1395,7 @@ export type Database = {
           height?: string | null
           id?: string
           image_url: string
+          gif_url?: string | null
           league: string
           name: string
           nation_region: string
@@ -1414,6 +1416,7 @@ export type Database = {
           height?: string | null
           id?: string
           image_url?: string
+          gif_url?: string | null
           league?: string
           name?: string
           nation_region?: string

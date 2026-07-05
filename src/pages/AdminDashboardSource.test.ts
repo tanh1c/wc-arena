@@ -28,6 +28,10 @@ test('admin dashboard exposes player-card CRUD and CSV import only after the adm
   assert.match(source, /cardCsvImport/);
   assert.match(source, /csvImportRarity/);
   assert.match(source, /Import CSV/);
+  assert.match(source, /PNG URL/);
+  assert.match(source, /gif_url/);
+  assert.match(source, /GIF URL/);
+  assert.doesNotMatch(source, /Image URL/);
   assert.match(source, /Save card/);
   assert.match(source, /New card/);
 });

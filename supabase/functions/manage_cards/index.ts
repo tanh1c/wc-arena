@@ -41,6 +41,7 @@ type AdminPlayerCardInput = {
   work_rate_def?: unknown;
   added_on?: unknown;
   image_url?: unknown;
+  gif_url?: unknown;
   rarity?: unknown;
 };
 
@@ -241,6 +242,7 @@ async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCar
       work_rate_def: normalizeOptionalString(card.work_rate_def),
       added_on: normalizeOptionalString(card.added_on),
       image_url: normalizeRequiredString(card.image_url, 'image_url'),
+      gif_url: normalizeOptionalString(card.gif_url),
       rarity,
     };
   });

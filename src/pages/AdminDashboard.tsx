@@ -41,7 +41,8 @@ const cardDraftFields: Array<{ key: CardDraftTextField; label: string; wide?: bo
   { key: 'work_rate_att', label: 'Work Rate ATT' },
   { key: 'work_rate_def', label: 'Work Rate DEF' },
   { key: 'added_on', label: 'Added On' },
-  { key: 'image_url', label: 'Image URL', wide: true },
+  { key: 'image_url', label: 'PNG URL', wide: true },
+  { key: 'gif_url', label: 'GIF URL', wide: true },
 ];
 
 function emptyPlayerCardDraft(): AdminPlayerCardInput {
@@ -52,6 +53,7 @@ function emptyPlayerCardDraft(): AdminPlayerCardInput {
     league: '',
     nation_region: '',
     image_url: '',
+    gif_url: '',
     rarity: 'Common',
   };
 }
@@ -492,7 +494,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 <select value={csvImportRarity} onChange={(event) => setCsvImportRarity(event.target.value as CardRarity)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase" aria-label="CSV rarity">
                   {cardRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
                 </select>
-                <textarea value={cardCsvImport} onChange={(event) => setCardCsvImport(event.target.value)} className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main" spellCheck={false} aria-label="Player card CSV" placeholder="Paste Card_list.txt CSV here" />
+                <textarea value={cardCsvImport} onChange={(event) => setCardCsvImport(event.target.value)} className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main" spellCheck={false} aria-label="Player card CSV" placeholder="Name,Position,Alternate Positions,TEAM,LEAGUE,NATION/REGION,Skill Moves,STRONG FOOT / WEAK FOOT,Height,Weight,Work Rate (ATT) / Work Rate (DEF),Added on,PNG URL,GIF URL" />
                 <button type="button" onClick={() => void importPlayerCardCsv()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Import CSV</button>
               </div>
             </div>
