@@ -209,7 +209,6 @@ export default function Cards({ themeControls }: CardsProps) {
     });
   }, [catalog, ownershipFilter, query, rarity]);
 
-  const uniqueOwned = catalog.filter((card) => card.ownedCount > 0).length;
   const showcaseSlotsUsed = showcase.length;
 
   const handleOpenPack = async (packType: PackType) => {
@@ -362,30 +361,6 @@ export default function Cards({ themeControls }: CardsProps) {
             </main>
           ) : (
             <main className="bg-muted min-w-0 flex flex-col">
-              <div className="border-b-4 border-main bg-c1 p-3 sm:p-4 text-main">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-stretch xl:justify-between">
-                  <div className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">COLLECTION VAULT</p>
-                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-main">{t('appPages.cards.collection')}</h2>
-                    <p className="text-sm font-bold text-muted-foreground">{t('appPages.cards.collectionProgress', { owned: uniqueOwned, total: catalog.length })}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-black uppercase">
-                    <div className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
-                      <p className="text-muted-foreground">Owned</p>
-                      <p className="text-2xl text-main">{uniqueOwned}</p>
-                    </div>
-                    <div className="rounded-sm border-4 border-main bg-c2 p-3 text-inv shadow-[4px_4px_0_var(--color-shadow)]">
-                      <p className="text-inv/80">Total Cards</p>
-                      <p className="text-2xl">{catalog.length}</p>
-                    </div>
-                    <div className="rounded-sm border-4 border-main bg-c3 p-3 text-main shadow-[4px_4px_0_var(--color-shadow)]">
-                      <p>Showcase</p>
-                      <p className="text-2xl">{showcaseSlotsUsed}/3</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <section className="border-b-4 border-main bg-card p-3 sm:p-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                   <div>
@@ -393,9 +368,9 @@ export default function Cards({ themeControls }: CardsProps) {
                     <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.showcase')}</h3>
                   </div>
                   <div className="flex flex-col gap-2 text-main sm:flex-row">
-                    <div className="flex rounded-sm border-2 border-main bg-card shadow-[2px_2px_0_var(--color-shadow)]">
+                    <div className="flex gap-2 rounded-sm border-2 border-main bg-card p-1 shadow-[2px_2px_0_var(--color-shadow)]">
                       {(['owned', 'missing'] as const).map((nextFilter) => (
-                        <button key={nextFilter} type="button" className={`px-3 py-2 text-xs font-black uppercase ${ownershipFilter === nextFilter ? 'bg-c2 text-inv' : 'bg-card text-main'}`} onClick={() => setOwnershipFilter(nextFilter)}>
+                        <button key={nextFilter} type="button" className={`rounded-sm px-3 py-2 text-xs font-black uppercase ${ownershipFilter === nextFilter ? 'bg-c2 text-inv' : 'bg-card text-main'}`} onClick={() => setOwnershipFilter(nextFilter)}>
                           {nextFilter === 'owned' ? 'Owned Cards' : 'Missing Cards'}
                         </button>
                       ))}
@@ -413,7 +388,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   {[1, 2, 3].map((slot) => {
                     const card = showcase.find((item) => item.slot_number === slot)?.user_player_cards.player_cards;
                     return (
-                      <div key={slot} className="flex min-h-28 items-center justify-center rounded-sm border-2 border-main bg-muted p-2 text-center text-[10px] font-black uppercase text-main">
+                      <div key={slot} className={`flex min-h-28 items-center justify-center rounded-sm border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${card ? 'bg-cover bg-center' : 'bg-muted'}`} style={{ backgroundImage: card ? `url(${getRarityCardBackgroundImage(card.rarity)})` : undefined }}>
                         {card ? <CardImage card={card} /> : <span>{t('appPages.cards.emptySlot', { slot })}</span>}
                       </div>
                     );

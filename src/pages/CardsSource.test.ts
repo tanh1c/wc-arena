@@ -21,7 +21,6 @@ test('cards page is routed from Play navigation and includes MVP card collection
 
   assert.match(cardsSource, /appPages\.cards\.dailyPack/);
   assert.match(cardsSource, /appPages\.cards\.premiumPack/);
-  assert.match(cardsSource, /appPages\.cards\.collection/);
   assert.match(cardsSource, /appPages\.cards\.showcase/);
   assert.match(cardsSource, /ui\.coinsShort/);
 
@@ -289,15 +288,15 @@ test('cards page uses squad-gallery style colorful chrome', () => {
   assert.match(cardsSource, /selectedPackType === packType \? 'bg-c2 text-inv'/);
 });
 
-test('gallery tab presents collection stats, filters, and empty states as a browsing dashboard', () => {
+test('gallery tab presents compact filters and owned or missing card browsing', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
-  assert.match(cardsSource, /COLLECTION VAULT/);
-  assert.match(cardsSource, /uniqueOwned/);
+  assert.doesNotMatch(cardsSource, /COLLECTION VAULT/);
+  assert.doesNotMatch(cardsSource, /collectionProgress/);
+  assert.doesNotMatch(cardsSource, /uniqueOwned/);
+  assert.doesNotMatch(cardsSource, /Total Cards/);
   assert.match(cardsSource, /showcaseSlotsUsed/);
   assert.match(cardsSource, /filteredCatalog\.length/);
-  assert.match(cardsSource, /Owned/);
-  assert.match(cardsSource, /Total Cards/);
   assert.match(cardsSource, /Showcase/);
   assert.match(cardsSource, /Search \+ Filter/);
   assert.match(cardsSource, /No cards match your current filters\./);
@@ -309,14 +308,16 @@ test('gallery tab presents collection stats, filters, and empty states as a brow
   assert.match(cardsSource, /setOwnershipFilter/);
   assert.match(cardsSource, /Owned Cards/);
   assert.match(cardsSource, /Missing Cards/);
+  assert.match(cardsSource, /rounded-sm px-3 py-2 text-xs font-black uppercase/);
   assert.match(cardsSource, /dimmed/);
   assert.match(cardsSource, /LOCKED/);
   assert.match(cardsSource, /opacity-45 grayscale/);
   assert.match(cardsSource, /isMissing/);
+  assert.match(cardsSource, /card \? 'bg-cover bg-center' : 'bg-muted'/);
+  assert.match(cardsSource, /backgroundImage: card \? `url\(\$\{getRarityCardBackgroundImage\(card\.rarity\)\}\)` : undefined/);
   assert.doesNotMatch(cardsSource, /\['owned', 'all', 'missing'\]/);
   assert.doesNotMatch(cardsSource, /ownershipFilter === 'all'/);
   assert.doesNotMatch(cardsSource, />All</);
-  assert.match(cardsSource, /border-4 border-main bg-c1/);
   assert.match(cardsSource, /rounded-sm border-2 border-main bg-card px-3 py-2/);
   assert.match(cardsSource, /rounded-sm border-4 border-main bg-card p-3/);
   assert.doesNotMatch(cardsSource, /<h2 className="text-2xl font-black uppercase tracking-tight">Gallery<\/h2>/);
