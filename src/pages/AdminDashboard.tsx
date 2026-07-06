@@ -551,9 +551,9 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   </select>
                 </label>
               </div>
-              <div className="overflow-x-auto">
+              <div className="max-h-[70dvh] overflow-auto">
                 <table className="w-full min-w-[760px] text-left text-xs font-bold">
-                  <thead className="bg-muted font-black uppercase">
+                  <thead className="sticky top-0 z-10 bg-muted font-black uppercase">
                     <tr>
                       <th className="border-b-4 border-r-2 border-main p-3">Card</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Position</th>
