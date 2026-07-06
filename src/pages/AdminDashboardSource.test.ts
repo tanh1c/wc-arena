@@ -55,3 +55,12 @@ test('admin player-card catalog exposes local search, rarity filter, and sort co
   assert.match(source, /No player cards match your search\./);
   assert.match(source, /visiblePlayerCards\.map/);
 });
+
+test('admin access check is stable across refreshed session objects for the same user', () => {
+  const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
+
+  assert.match(source, /const userId = user\?\.id \?\? null/);
+  assert.match(source, /getCurrentUserRole\(userId\)/);
+  assert.match(source, /\}, \[userId\]\)/);
+  assert.doesNotMatch(source, /\}, \[user\]\)/);
+});

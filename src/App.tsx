@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import LoadingScreen from './components/ui/LoadingScreen';
@@ -77,26 +77,38 @@ function getScrollStorageKey(pathname: string, search: string) {
   return `wc26.scroll.${pathname}${search}`;
 }
 
+function getScrollRoot() {
+  return document.querySelector<HTMLElement>('[data-app-scroll-root]');
+}
+
 function ScrollRestoration() {
   const location = useLocation();
   const scrollStorageKey = getScrollStorageKey(location.pathname, location.search);
+  const restoringScrollRef = useRef(false);
 
   useEffect(() => {
     if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
   }, []);
 
   useEffect(() => {
-    const saveScroll = () => sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+    const saveScroll = () => {
+      const scrollRoot = getScrollRoot();
+      const scrollY = scrollRoot ? scrollRoot.scrollTop : window.scrollY;
+      if (!restoringScrollRef.current) sessionStorage.setItem(scrollStorageKey, String(scrollY));
+    };
     const saveWhenHidden = () => {
       if (document.visibilityState === 'hidden') saveScroll();
     };
+    const scrollRoot = getScrollRoot();
 
+    scrollRoot?.addEventListener('scroll', saveScroll, { passive: true });
     window.addEventListener('scroll', saveScroll, { passive: true });
     window.addEventListener('pagehide', saveScroll);
     document.addEventListener('visibilitychange', saveWhenHidden);
 
     return () => {
       saveScroll();
+      scrollRoot?.removeEventListener('scroll', saveScroll);
       window.removeEventListener('scroll', saveScroll);
       window.removeEventListener('pagehide', saveScroll);
       document.removeEventListener('visibilitychange', saveWhenHidden);
@@ -107,8 +119,26 @@ function ScrollRestoration() {
     const savedScrollY = Number(sessionStorage.getItem(scrollStorageKey) ?? 0);
     if (!savedScrollY) return;
 
-    const timers = [0, 100, 400].map((delay) => window.setTimeout(() => window.scrollTo(0, savedScrollY), delay));
-    return () => timers.forEach(window.clearTimeout);
+    restoringScrollRef.current = true;
+    const restoreScroll = () => {
+      const scrollRoot = getScrollRoot();
+      if (scrollRoot) {
+        if (scrollRoot.scrollHeight >= savedScrollY + scrollRoot.clientHeight) scrollRoot.scrollTop = savedScrollY;
+        return;
+      }
+
+      if (document.documentElement.scrollHeight >= savedScrollY + window.innerHeight) window.scrollTo(0, savedScrollY);
+    };
+    const timers = [0, 100, 400, 1500, 3000].map((delay) => window.setTimeout(restoreScroll, delay));
+    const stopSavingTimer = window.setTimeout(() => {
+      restoringScrollRef.current = false;
+    }, 3200);
+
+    return () => {
+      timers.forEach(window.clearTimeout);
+      window.clearTimeout(stopSavingTimer);
+      restoringScrollRef.current = false;
+    };
   }, [scrollStorageKey]);
 
   return null;

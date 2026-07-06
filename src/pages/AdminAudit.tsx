@@ -37,6 +37,7 @@ function getSeverityClass(severity: string) {
 export default function AdminAudit({ themeControls }: AdminAuditProps) {
   const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [role, setRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogRow[]>([]);
@@ -46,7 +47,7 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setRole(null);
       setRoleLoading(false);
       return;
@@ -56,7 +57,7 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
     setRoleLoading(true);
     setError(null);
 
-    getCurrentUserRole(user.id)
+    getCurrentUserRole(userId)
       .then((nextRole) => {
         if (!active) return;
         setRole(nextRole);
@@ -72,7 +73,7 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     if (role !== 'admin') return;

@@ -82,6 +82,7 @@ function getMatchLabel(match: MatchRow, teams: Map<string, TeamRow>) {
 export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [role, setRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -145,7 +146,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   }
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setRole(null);
       setRoleLoading(false);
       return;
@@ -155,7 +156,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     setRoleLoading(true);
     setError(null);
 
-    getCurrentUserRole(user.id)
+    getCurrentUserRole(userId)
       .then((nextRole) => {
         if (!active) return;
         setRole(nextRole);
@@ -171,7 +172,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     if (role === 'admin') void loadAdminData();
