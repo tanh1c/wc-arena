@@ -39,6 +39,7 @@ type CardsProps = {
 };
 
 const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
+const gallerySorts = ['name', 'duplicates', 'mergeReady'] as const;
 const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
 
 const packArtwork: Record<PackType, { image: string; imageClass?: string }> = {
@@ -160,6 +161,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [query, setQuery] = useState('');
   const [rarity, setRarity] = useState<'all' | CardRarity>('all');
   const [ownershipFilter, setOwnershipFilter] = useState<'owned' | 'missing'>('owned');
+  const [gallerySort, setGallerySort] = useState<'name' | 'duplicates' | 'mergeReady'>('name');
   const [loading, setLoading] = useState(true);
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
   const [selectedPackType, setSelectedPackType] = useState<PackType>('daily');
@@ -210,13 +212,24 @@ export default function Cards({ themeControls }: CardsProps) {
 
   const filteredCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return catalog.filter((card) => {
+    const filtered = catalog.filter((card) => {
       const matchesRarity = rarity === 'all' || card.rarity === rarity;
       const matchesOwnership = ownershipFilter === 'owned' ? card.ownedCount > 0 : card.ownedCount === 0;
       const haystack = `${card.name} ${card.position} ${card.team} ${card.nation_region}`.toLowerCase();
       return matchesRarity && matchesOwnership && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
-  }, [catalog, ownershipFilter, query, rarity]);
+
+    return filtered.toSorted((a, b) => {
+      const nameOrder = a.name.localeCompare(b.name);
+      if (gallerySort === 'duplicates') return b.ownedCount - a.ownedCount || nameOrder;
+      if (gallerySort === 'mergeReady') {
+        const aReady = a.gif_url && !a.hasGifUpgrade && a.baseOwnedCount >= 5;
+        const bReady = b.gif_url && !b.hasGifUpgrade && b.baseOwnedCount >= 5;
+        return Number(bReady) - Number(aReady) || b.baseOwnedCount - a.baseOwnedCount || nameOrder;
+      }
+      return nameOrder;
+    });
+  }, [catalog, gallerySort, ownershipFilter, query, rarity]);
 
   const showcaseSlotsUsed = showcase.length;
 
@@ -387,6 +400,12 @@ export default function Cards({ themeControls }: CardsProps) {
                     <select className="rounded-sm border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase shadow-[2px_2px_0_var(--color-shadow)]" value={rarity} onChange={(event) => setRarity(event.target.value as 'all' | CardRarity)}>
                       {rarities.map((nextRarity) => <option key={nextRarity} value={nextRarity}>{nextRarity === 'all' ? t('appPages.cards.allRarities') : nextRarity}</option>)}
                     </select>
+                    <label className="flex items-center gap-2 rounded-sm border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase shadow-[2px_2px_0_var(--color-shadow)]">
+                      <span>{t('appPages.cards.sortBy')}</span>
+                      <select className="bg-transparent outline-none" value={gallerySort} onChange={(event) => setGallerySort(event.target.value as 'name' | 'duplicates' | 'mergeReady')}>
+                        {gallerySorts.map((nextSort) => <option key={nextSort} value={nextSort}>{nextSort === 'name' ? t('appPages.cards.sortName') : nextSort === 'duplicates' ? t('appPages.cards.sortDuplicates') : nextSort === 'mergeReady' ? t('appPages.cards.sortMergeReady') : nextSort}</option>)}
+                      </select>
+                    </label>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
