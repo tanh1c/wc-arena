@@ -73,6 +73,47 @@ function GoogleAnalytics() {
   return null;
 }
 
+function getScrollStorageKey(pathname: string, search: string) {
+  return `wc26.scroll.${pathname}${search}`;
+}
+
+function ScrollRestoration() {
+  const location = useLocation();
+  const scrollStorageKey = getScrollStorageKey(location.pathname, location.search);
+
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+  }, []);
+
+  useEffect(() => {
+    const saveScroll = () => sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+    const saveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') saveScroll();
+    };
+
+    window.addEventListener('scroll', saveScroll, { passive: true });
+    window.addEventListener('pagehide', saveScroll);
+    document.addEventListener('visibilitychange', saveWhenHidden);
+
+    return () => {
+      saveScroll();
+      window.removeEventListener('scroll', saveScroll);
+      window.removeEventListener('pagehide', saveScroll);
+      document.removeEventListener('visibilitychange', saveWhenHidden);
+    };
+  }, [scrollStorageKey]);
+
+  useEffect(() => {
+    const savedScrollY = Number(sessionStorage.getItem(scrollStorageKey) ?? 0);
+    if (!savedScrollY) return;
+
+    const timers = [0, 100, 400].map((delay) => window.setTimeout(() => window.scrollTo(0, savedScrollY), delay));
+    return () => timers.forEach(window.clearTimeout);
+  }, [scrollStorageKey]);
+
+  return null;
+}
+
 function pageToPath(page: string) {
   return page === 'landing' ? '/' : `/${page}`;
 }
@@ -122,6 +163,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <GoogleAnalytics />
+      <ScrollRestoration />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LegacyRoute Component={Landing} themeControls={themeControls} />} />
