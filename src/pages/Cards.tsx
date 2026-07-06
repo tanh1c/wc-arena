@@ -17,6 +17,7 @@ import { CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks'
 import type { ThemeControls } from '../App';
 import {
   getCurrentUserDailyPackOpenedToday,
+  getIconChasePityState,
   groupCatalogWithOwnership,
   listCurrentUserOwnedCards,
   listCurrentUserShowcase,
@@ -26,6 +27,7 @@ import {
   setShowcaseCard,
   upgradePlayerCardToGif,
   type CatalogCardWithOwnedCount,
+  type IconChasePityState,
   type OwnedPlayerCard,
   type ShowcaseCard,
 } from '../services/cards';
@@ -163,6 +165,7 @@ export default function Cards({ themeControls }: CardsProps) {
   const [selectedPackType, setSelectedPackType] = useState<PackType>('daily');
   const [dailyPackOpenedToday, setDailyPackOpenedToday] = useState(false);
   const [dailyResetCountdown, setDailyResetCountdown] = useState('');
+  const [iconChasePity, setIconChasePity] = useState<IconChasePityState | null>(null);
   const [activeTab, setActiveTab] = useState<'openPacks' | 'gallery'>('openPacks');
   const [upgradingGifCardId, setUpgradingGifCardId] = useState<string | null>(null);
   const [previewGifCard, setPreviewGifCard] = useState<CatalogCardWithOwnedCount | null>(null);
@@ -172,15 +175,17 @@ export default function Cards({ themeControls }: CardsProps) {
     setLoading(true);
     setError('');
     try {
-      const [cards, owned, currentShowcase, openedDailyToday] = await Promise.all([
+      const [cards, owned, currentShowcase, openedDailyToday, currentIconChasePity] = await Promise.all([
         listPlayerCards(),
         listCurrentUserOwnedCards(),
         listCurrentUserShowcase(),
         getCurrentUserDailyPackOpenedToday(),
+        getIconChasePityState(),
       ]);
       setCatalog(groupCatalogWithOwnership(cards, owned));
       setShowcase(currentShowcase);
       setDailyPackOpenedToday(openedDailyToday);
+      setIconChasePity(currentIconChasePity);
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
@@ -224,6 +229,7 @@ export default function Cards({ themeControls }: CardsProps) {
       setRecentPullCards([]);
       setFlippedRevealCardIds(new Set<string>());
       setRevealModalOpen(result.cards.length > 0);
+      if (result.iconChasePity) setIconChasePity(result.iconChasePity);
       if (packType === 'daily') setDailyPackOpenedToday(true);
       window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       await loadCards();
@@ -315,12 +321,14 @@ export default function Cards({ themeControls }: CardsProps) {
                   packType={selectedPackType}
                   openingPack={openingPack}
                   isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
+                  iconChasePity={selectedPackType === 'icon' ? iconChasePity : null}
                   onOpen={handleOpenPack}
                 />
                 <PackInfoPanel
                   packType={selectedPackType}
                   isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
                   dailyResetCountdown={selectedPackType === 'daily' ? dailyResetCountdown : ''}
+                  iconChasePity={selectedPackType === 'icon' ? iconChasePity : null}
                 />
               </div>
 
@@ -516,12 +524,13 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
   );
 }
 
-function SelectedPackHero({ title, description, packType, openingPack, isOpenedToday, onOpen }: {
+function SelectedPackHero({ title, description, packType, openingPack, isOpenedToday, iconChasePity, onOpen }: {
   title: string;
   description: string;
   packType: PackType;
   openingPack: PackType | null;
   isOpenedToday: boolean;
+  iconChasePity: IconChasePityState | null;
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
@@ -549,6 +558,7 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
             </div>
           </div>
           {isOpenedToday && <p className="mt-3 border-2 border-main bg-c4 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
+          {iconChasePity && <p className="mt-3 border-2 border-main bg-c3 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{iconChasePity.nextGuaranteed ? 'Icon guaranteed next Icon Chase pack' : `Icon pity: ${iconChasePity.iconMissCount}/${iconChasePity.threshold} — guaranteed in ${iconChasePity.packsUntilGuaranteed} Icon Chase packs`}</p>}
           <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-4 text-lg font-black uppercase text-main shadow-[5px_5px_0_var(--color-shadow)] transition-transform hover:-translate-y-1 disabled:translate-y-0 disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
             {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
           </button>
@@ -558,10 +568,11 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
   );
 }
 
-function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
+function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChasePity }: {
   packType: PackType;
   isOpenedToday: boolean;
   dailyResetCountdown: string;
+  iconChasePity: IconChasePityState | null;
 }) {
   const { t } = useTranslation();
   const pack = CARD_PACKS[packType];
@@ -580,6 +591,12 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown }: {
         {isOpenedToday && dailyResetCountdown && (
           <div className="border-2 border-main bg-c1 px-3 py-2 text-center">
             {t('appPages.cards.dailyPackResetIn', { time: dailyResetCountdown })}
+          </div>
+        )}
+        {iconChasePity && (
+          <div className="flex items-center justify-between gap-2 border-2 border-main bg-c3 px-3 py-2">
+            <span>Icon pity</span>
+            <span>{iconChasePity.iconMissCount}/{iconChasePity.threshold}</span>
           </div>
         )}
       </div>

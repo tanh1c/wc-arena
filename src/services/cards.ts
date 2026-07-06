@@ -59,10 +59,18 @@ export type ShowcaseCard = {
   user_player_cards: OwnedPlayerCard;
 };
 
+export type IconChasePityState = {
+  iconMissCount: number;
+  threshold: number;
+  packsUntilGuaranteed: number;
+  nextGuaranteed: boolean;
+};
+
 export type OpenCardPackResult = {
   cards: Array<OwnedPlayerCard & { duplicate: boolean }>;
   coins: number;
   openedOnUtc: string;
+  iconChasePity?: IconChasePityState;
 };
 
 export type AdminPlayerCardInput = {
@@ -245,6 +253,15 @@ export async function listCurrentUserShowcase() {
 
   if (error) throw error;
   return (data ?? []) as ShowcaseCard[];
+}
+
+export async function getIconChasePityState() {
+  const { data, error } = await supabase.functions.invoke<{ iconChasePity: IconChasePityState }>('manage_cards', {
+    body: { action: 'getIconChasePityState' },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data.iconChasePity;
 }
 
 export async function getCurrentUserDailyPackOpenedToday() {

@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CARD_PACKS, getUtcDay, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
+import { CARD_PACKS, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
 import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
@@ -18,6 +18,7 @@ type Body =
   | { action: 'openCardPack'; packType: PackType }
   | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
   | { action: 'upgradeCardToGif'; cardId: string }
+  | { action: 'getIconChasePityState' }
   | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'deletePlayerCard'; id: string };
@@ -91,6 +92,10 @@ Deno.serve(async (req) => {
       return jsonResponse(await openCardPack(supabase, user.id, body.packType));
     }
 
+    if (body.action === 'getIconChasePityState') {
+      return jsonResponse({ iconChasePity: await getIconChasePityState(supabase, user.id) });
+    }
+
     if (body.action === 'setShowcaseCard') {
       return jsonResponse(await setShowcaseCard(supabase, user.id, body.slotNumber, body.userPlayerCardId));
     }
@@ -136,33 +141,46 @@ async function openCardPack(supabase: SupabaseClient, userId: string, packType: 
   if (ownedError) throw ownedError;
 
   const ownedCardIdsBefore = new Set((ownedBefore ?? []).map((card: { card_id: string }) => card.card_id));
-  const awardedCards = await drawCards(supabase, pack.cardCount, pack.rarityWeights);
-  if (awardedCards.length !== pack.cardCount) throw new Error('Not enough cards are available for this pack.');
 
-  const { data: openedRows, error: openError } = await supabase.rpc('open_card_pack_transaction', {
-    p_user_id: userId,
-    p_pack_type: packType,
-    p_card_ids: awardedCards.map((card) => card.id),
-    p_price_coins: pack.priceCoins,
-    p_opened_on_utc: openedOnUtc,
-  });
-  if (openError) throw openError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const iconChasePity = packType === 'icon' ? await getIconChasePityState(supabase, userId) : null;
+    const awardedCards = await drawCards(supabase, pack.cardCount, pack.rarityWeights, { forceIcon: iconChasePity?.nextGuaranteed ?? false });
+    if (awardedCards.length !== pack.cardCount) throw new Error('Not enough cards are available for this pack.');
 
-  const rows = openedRows ?? [];
-  return {
-    cards: rows.map((row: { owned_card: { card_id: string } }) => ({
-      ...row.owned_card,
-      duplicate: ownedCardIdsBefore.has(row.owned_card.card_id),
-    })),
-    coins: rows[0]?.next_coins ?? currentCoins - pack.priceCoins,
-    openedOnUtc,
-  };
+    const { data: openedRows, error: openError } = await supabase.rpc('open_card_pack_transaction', {
+      p_user_id: userId,
+      p_pack_type: packType,
+      p_card_ids: awardedCards.map((card) => card.id),
+      p_price_coins: pack.priceCoins,
+      p_opened_on_utc: openedOnUtc,
+      p_expected_icon_miss_count: iconChasePity?.iconMissCount ?? null,
+    });
+    if (openError) {
+      if (String(openError.message).includes('PITY_STATE_CHANGED') && attempt === 0) continue;
+      throw openError;
+    }
+
+    const rows = openedRows ?? [];
+    const nextIconMissCount = rows[0]?.next_icon_miss_count;
+    return {
+      cards: rows.map((row: { owned_card: { card_id: string } }) => ({
+        ...row.owned_card,
+        duplicate: ownedCardIdsBefore.has(row.owned_card.card_id),
+      })),
+      coins: rows[0]?.next_coins ?? currentCoins - pack.priceCoins,
+      openedOnUtc,
+      ...(packType === 'icon' && typeof nextIconMissCount === 'number' ? { iconChasePity: formatIconChasePityState(nextIconMissCount) } : {}),
+    };
+  }
+
+  throw new Error('Card pack opening failed. Try again.');
 }
 
 async function drawCards(
   supabase: SupabaseClient,
   count: number,
   rarityWeights: Record<CardRarity, number>,
+  options: { forceIcon?: boolean } = {},
 ) {
   const [{ data, error }, { data: weightRows, error: weightsError }] = await Promise.all([
     supabase.from('player_cards').select('*'),
@@ -188,10 +206,13 @@ async function drawCards(
   const picked: PlayerCard[] = [];
 
   for (let index = 0; index < count; index += 1) {
-    const rarity = pickWeightedRarity(rarityWeights, availableRarities);
+    const rarity = options.forceIcon && index === 0 ? 'Icon' : pickWeightedRarity(rarityWeights, availableRarities);
     if (!rarity) break;
     const card = pickWeightedCard(cardsByRarity.get(rarity) ?? []);
-    if (!card) break;
+    if (!card) {
+      if (rarity === 'Icon') throw new Error('No Icon cards are available for Icon Chase pity.');
+      break;
+    }
     picked.push(card);
   }
 
@@ -239,6 +260,26 @@ async function upgradeCardToGif(supabase: SupabaseClient, userId: string, id: st
   });
   if (error) throw error;
   return { card: data?.[0]?.owned_card ?? null };
+}
+
+async function getIconChasePityState(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase
+    .from('icon_chase_pity_states')
+    .select('icon_miss_count')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return formatIconChasePityState(data?.icon_miss_count ?? 0);
+}
+
+function formatIconChasePityState(iconMissCount: number) {
+  return {
+    iconMissCount,
+    threshold: ICON_CHASE_PITY_PACK_THRESHOLD,
+    packsUntilGuaranteed: getIconChasePityPacksUntilGuaranteed(iconMissCount),
+    nextGuaranteed: isIconChasePityDue(iconMissCount),
+  };
 }
 
 async function listAdminPlayerCards(supabase: SupabaseClient) {

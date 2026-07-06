@@ -8,6 +8,8 @@ export type CardPackConfig = {
   rarityWeights: Record<CardRarity, number>;
 };
 
+export const ICON_CHASE_PITY_PACK_THRESHOLD = 10;
+
 export const CARD_PACKS: Record<PackType, CardPackConfig> = {
   daily: {
     cardCount: 1,
@@ -65,6 +67,14 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     },
   },
 };
+
+export function isIconChasePityDue(iconMissCount: number) {
+  return iconMissCount >= ICON_CHASE_PITY_PACK_THRESHOLD - 1;
+}
+
+export function getIconChasePityPacksUntilGuaranteed(iconMissCount: number) {
+  return Math.max(1, ICON_CHASE_PITY_PACK_THRESHOLD - iconMissCount);
+}
 
 export function pickWeightedRarity(
   weights: Record<CardRarity, number>,

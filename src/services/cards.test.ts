@@ -16,6 +16,10 @@ test('cards service sends admin player card upserts, deletes, admin listings, an
   assert.match(source, /body: \{ action: 'upsertPlayerCards', cards \}/);
   assert.match(source, /export async function deletePlayerCard\(id: string\)/);
   assert.match(source, /body: \{ action: 'deletePlayerCard', id \}/);
+  assert.match(source, /export type IconChasePityState/);
+  assert.match(source, /iconChasePity\?: IconChasePityState/);
+  assert.match(source, /export async function getIconChasePityState\(\)/);
+  assert.match(source, /body: \{ action: 'getIconChasePityState' \}/);
   assert.match(source, /export async function upgradePlayerCardToGif\(cardId: string\)/);
   assert.match(source, /body: \{ action: 'upgradeCardToGif', cardId \}/);
   assert.match(source, /getFunctionErrorMessage\(error\)/);

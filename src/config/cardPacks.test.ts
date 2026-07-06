@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CARD_PACKS, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
+import { CARD_PACKS, ICON_CHASE_PITY_PACK_THRESHOLD, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
 
 test('card pack config uses low icon-focused rarity rates', () => {
   assert.deepEqual(CARD_PACKS.daily.rarityWeights, { Common: 83, Rare: 15, Epic: 1.9, Icon: 0.1 });
@@ -28,6 +28,14 @@ test('card pack config includes five balanced gacha tiers', () => {
     assert.equal(pack.oncePerUtcDay, pack === CARD_PACKS.daily);
     assert.equal(Object.values(pack.rarityWeights).reduce((sum, weight) => sum + weight, 0), 100);
   }
+});
+
+test('Icon Chase pity is due on the tenth missed pack', () => {
+  assert.equal(ICON_CHASE_PITY_PACK_THRESHOLD, 10);
+  assert.equal(isIconChasePityDue(8), false);
+  assert.equal(isIconChasePityDue(9), true);
+  assert.equal(getIconChasePityPacksUntilGuaranteed(0), 10);
+  assert.equal(getIconChasePityPacksUntilGuaranteed(9), 1);
 });
 
 test('weighted card selection uses per-card drop weights', () => {

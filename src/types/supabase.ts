@@ -597,6 +597,24 @@ export type Database = {
           },
         ]
       }
+      icon_chase_pity_states: {
+        Row: {
+          icon_miss_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          icon_miss_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          icon_miss_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leaderboard_entries: {
         Row: {
           accuracy: number
@@ -2154,6 +2172,7 @@ export type Database = {
       open_card_pack_transaction: {
         Args: {
           p_card_ids: string[]
+          p_expected_icon_miss_count: number
           p_opened_on_utc: string
           p_pack_type: string
           p_price_coins: number
@@ -2161,6 +2180,7 @@ export type Database = {
         }
         Returns: {
           next_coins: number
+          next_icon_miss_count: number
           owned_card: Json
         }[]
       }

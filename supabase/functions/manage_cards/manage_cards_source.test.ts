@@ -43,6 +43,9 @@ test('openCardPack commits coin spend, awarded cards, and opening log through on
   assert.match(source, /p_card_ids: awardedCards\.map\(\(card\) => card\.id\)/);
   assert.match(source, /p_price_coins: pack\.priceCoins/);
   assert.match(source, /p_opened_on_utc: openedOnUtc/);
+  assert.match(source, /p_expected_icon_miss_count/);
+  assert.match(source, /PITY_STATE_CHANGED/);
+  assert.match(source, /forceIcon/);
   assert.doesNotMatch(source, /setUserCoins\(supabase, userId, nextCoins\)/);
   assert.doesNotMatch(source, /\.from\('user_player_cards'\)\s*\.insert\(awardedCards/);
   assert.doesNotMatch(source, /\.from\('card_pack_openings'\)\.insert/);
