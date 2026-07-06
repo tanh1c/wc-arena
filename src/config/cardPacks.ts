@@ -14,10 +14,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     priceCoins: 0,
     oncePerUtcDay: true,
     rarityWeights: {
-      Common: 75,
-      Rare: 20,
-      Epic: 4,
-      Icon: 1,
+      Common: 83,
+      Rare: 15,
+      Epic: 1.9,
+      Icon: 0.1,
     },
   },
   starter: {
@@ -25,10 +25,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     priceCoins: 20,
     oncePerUtcDay: false,
     rarityWeights: {
-      Common: 68,
-      Rare: 24,
-      Epic: 7,
-      Icon: 1,
+      Common: 76,
+      Rare: 20,
+      Epic: 3.75,
+      Icon: 0.25,
     },
   },
   premium: {
@@ -36,10 +36,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     priceCoins: 50,
     oncePerUtcDay: false,
     rarityWeights: {
-      Common: 60,
-      Rare: 30,
-      Epic: 8,
-      Icon: 2,
+      Common: 69,
+      Rare: 25,
+      Epic: 5.5,
+      Icon: 0.5,
     },
   },
   elite: {
@@ -47,10 +47,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     priceCoins: 100,
     oncePerUtcDay: false,
     rarityWeights: {
-      Common: 45,
-      Rare: 35,
-      Epic: 16,
-      Icon: 4,
+      Common: 57,
+      Rare: 31,
+      Epic: 10.5,
+      Icon: 1.5,
     },
   },
   icon: {
@@ -58,10 +58,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     priceCoins: 300,
     oncePerUtcDay: false,
     rarityWeights: {
-      Common: 25,
-      Rare: 35,
-      Epic: 28,
-      Icon: 12,
+      Common: 45,
+      Rare: 33,
+      Epic: 18,
+      Icon: 4,
     },
   },
 };

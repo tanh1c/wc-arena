@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CARD_PACKS, pickWeightedRarity, type CardRarity } from './cardPacks';
 
+test('card pack config uses low icon-focused rarity rates', () => {
+  assert.deepEqual(CARD_PACKS.daily.rarityWeights, { Common: 83, Rare: 15, Epic: 1.9, Icon: 0.1 });
+  assert.deepEqual(CARD_PACKS.starter.rarityWeights, { Common: 76, Rare: 20, Epic: 3.75, Icon: 0.25 });
+  assert.deepEqual(CARD_PACKS.premium.rarityWeights, { Common: 69, Rare: 25, Epic: 5.5, Icon: 0.5 });
+  assert.deepEqual(CARD_PACKS.elite.rarityWeights, { Common: 57, Rare: 31, Epic: 10.5, Icon: 1.5 });
+  assert.deepEqual(CARD_PACKS.icon.rarityWeights, { Common: 45, Rare: 33, Epic: 18, Icon: 4 });
+});
+
 test('card pack config includes five balanced gacha tiers', () => {
   assert.deepEqual(Object.keys(CARD_PACKS), ['daily', 'starter', 'premium', 'elite', 'icon']);
 
