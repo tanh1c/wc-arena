@@ -36,14 +36,18 @@ test('admin dashboard exposes player-card CRUD and CSV import only after the adm
   assert.match(source, /New card/);
 });
 
-test('admin player-card catalog exposes local search and sort controls', () => {
+test('admin player-card catalog exposes local search, rarity filter, and sort controls', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
   assert.match(source, /cardSearchQuery/);
   assert.match(source, /setCardSearchQuery/);
+  assert.match(source, /cardRarityFilter/);
+  assert.match(source, /setCardRarityFilter/);
   assert.match(source, /cardCatalogSort/);
   assert.match(source, /visiblePlayerCards/);
   assert.match(source, /Search cards/);
+  assert.match(source, /Rarity filter/);
+  assert.match(source, /cardRarities\.map\(\(rarity\) => <option key=\{rarity\} value=\{rarity\}>\{rarity\}<\/option>\)/);
   assert.match(source, /Sort by/);
   assert.match(source, /Name A-Z/);
   assert.match(source, /Team A-Z/);

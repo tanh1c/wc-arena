@@ -25,6 +25,7 @@ type ActionState = { loading?: boolean; error?: string; success?: string };
 
 type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity'>;
 type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
+type CardRarityFilter = 'all' | CardRarity;
 
 const cardRarities: CardRarity[] = ['Common', 'Rare', 'Epic', 'Icon'];
 const cardRarityRank = new Map(cardRarities.map((rarity, index) => [rarity, index]));
@@ -98,6 +99,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [cardDraft, setCardDraft] = useState<AdminPlayerCardInput>(emptyPlayerCardDraft());
   const [cardActionState, setCardActionState] = useState<ActionState>({});
   const [cardSearchQuery, setCardSearchQuery] = useState('');
+  const [cardRarityFilter, setCardRarityFilter] = useState<CardRarityFilter>('all');
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
   const [cardCsvImport, setCardCsvImport] = useState('');
   const [csvImportRarity, setCsvImportRarity] = useState<CardRarity>('Common');
@@ -299,6 +301,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const pendingRewards = rewardReviews.filter((reward) => reward.status === 'pending').length;
   const normalizedCardSearch = cardSearchQuery.trim().toLowerCase();
   const visiblePlayerCards = [...playerCards]
+    .filter((card) => cardRarityFilter === 'all' || card.rarity === cardRarityFilter)
     .filter((card) => !normalizedCardSearch || getCardSearchText(card).includes(normalizedCardSearch))
     .sort((left, right) => {
       if (cardCatalogSort === 'name-asc') return compareCardText(left.name, right.name);
@@ -524,10 +527,17 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
             <div className="min-w-0 flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Catalog ({visiblePlayerCards.length}/{playerCards.length})</div>
-              <div className="grid grid-cols-1 gap-3 border-b-4 border-main bg-card p-4 md:grid-cols-[1fr_220px]">
+              <div className="grid grid-cols-1 gap-3 border-b-4 border-main bg-card p-4 md:grid-cols-[1fr_180px_220px]">
                 <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
                   Search cards
                   <input value={cardSearchQuery} onChange={(event) => setCardSearchQuery(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" placeholder="Name, team, position, league..." />
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Rarity filter
+                  <select value={cardRarityFilter} onChange={(event) => setCardRarityFilter(event.target.value as CardRarityFilter)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                    <option value="all">All</option>
+                    {cardRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                  </select>
                 </label>
                 <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
                   Sort by
