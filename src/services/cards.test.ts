@@ -3,11 +3,16 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { getPlayerCardDisplayImageUrl, groupCatalogWithOwnership, parsePlayerCardCsv } from './cards';
 
-test('cards service sends admin player card upserts, deletes, and user GIF upgrades through manage_cards', () => {
+test('cards service sends admin player card upserts, deletes, admin listings, and user GIF upgrades through manage_cards', () => {
   const source = readFileSync('src/services/cards.ts', 'utf8');
 
+  assert.match(source, /export type AdminPlayerCard = PlayerCard & \{\s*drop_weight: number;\s*\}/);
   assert.match(source, /export type AdminPlayerCardInput/);
+  assert.match(source, /drop_weight\?: number \| string/);
+  assert.match(source, /export async function listAdminPlayerCards\(\)/);
+  assert.match(source, /body: \{ action: 'listAdminPlayerCards' \}/);
   assert.match(source, /export async function upsertPlayerCards\(cards: AdminPlayerCardInput\[\]\)/);
+  assert.match(source, /invoke<\{ cards: AdminPlayerCard\[\] \}>\('manage_cards'/);
   assert.match(source, /body: \{ action: 'upsertPlayerCards', cards \}/);
   assert.match(source, /export async function deletePlayerCard\(id: string\)/);
   assert.match(source, /body: \{ action: 'deletePlayerCard', id \}/);
@@ -63,6 +68,12 @@ test('catalog ownership grouping tracks base copies and GIF upgrades separately'
   }]);
 });
 
+test('playerCardToAdminInput carries admin drop weights', () => {
+  const source = readFileSync('src/services/cards.ts', 'utf8');
+
+  assert.match(source, /drop_weight: 'drop_weight' in card \? card\.drop_weight : 1/);
+});
+
 test('player card CSV parser maps Card_list rows into admin card inputs', () => {
   const csv = [
     'Name,Position,Alternate Positions,TEAM,LEAGUE,NATION/REGION,Skill Moves,STRONG FOOT / WEAK FOOT,Height,Weight,Work Rate (ATT) / Work Rate (DEF),Added on,PNG URL,GIF URL',
@@ -86,5 +97,6 @@ test('player card CSV parser maps Card_list rows into admin card inputs', () => 
     image_url: 'https://s6.imgcdn.dev/YqwFCS.png',
     gif_url: 'https://s6.imgcdn.dev/YqwFCS.gif',
     rarity: 'Rare',
+    drop_weight: 1,
   }]);
 });

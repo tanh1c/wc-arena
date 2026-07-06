@@ -6,11 +6,14 @@ test('manage_cards exposes admin-only player card upserts and deletes without re
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 
   assert.match(source, /requireAdminUser/);
+  assert.match(source, /action: 'listAdminPlayerCards'/);
   assert.match(source, /action: 'upsertPlayerCards'; cards: AdminPlayerCardInput\[\]/);
   assert.match(source, /action: 'deletePlayerCard'; id: string/);
+  assert.match(source, /body\.action === 'listAdminPlayerCards'/);
   assert.match(source, /body\.action === 'upsertPlayerCards'/);
   assert.match(source, /body\.action === 'deletePlayerCard'/);
   assert.match(source, /requireAdminUser\(req, corsHeaders\)/);
+  assert.match(source, /listAdminPlayerCards\(adminAuth\.supabase\)/);
   assert.match(source, /upsertPlayerCards\(adminAuth\.supabase, body\.cards\)/);
   assert.match(source, /deletePlayerCard\(adminAuth\.supabase, body\.id\)/);
   assert.match(source, /\.from\('player_cards'\)\.upsert/);
@@ -43,6 +46,17 @@ test('openCardPack commits coin spend, awarded cards, and opening log through on
   assert.doesNotMatch(source, /setUserCoins\(supabase, userId, nextCoins\)/);
   assert.doesNotMatch(source, /\.from\('user_player_cards'\)\s*\.insert\(awardedCards/);
   assert.doesNotMatch(source, /\.from\('card_pack_openings'\)\.insert/);
+});
+
+test('manage_cards uses protected per-card drop weights for admin edits and pack draws', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /player_card_drop_weights/);
+  assert.match(source, /normalizeDropWeight/);
+  assert.match(source, /drop_weight/);
+  assert.match(source, /pickWeightedCard/);
+  assert.match(source, /weightsByCardId\.get\(card\.id\) \?\? 1/);
+  assert.doesNotMatch(source, /Math\.floor\(Math\.random\(\) \* options\.length\)/);
 });
 
 test('manage_cards validates admin card import boundary input', () => {

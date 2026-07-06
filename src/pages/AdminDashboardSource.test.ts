@@ -21,7 +21,7 @@ test('admin dashboard exposes player-card CRUD and CSV import only after the adm
   assert.notEqual(panelIndex, -1);
   assert.notEqual(adminGateIndex, -1);
   assert.ok(adminGateIndex < panelIndex);
-  assert.match(source, /listPlayerCards/);
+  assert.match(source, /listAdminPlayerCards/);
   assert.match(source, /upsertPlayerCards/);
   assert.match(source, /deletePlayerCard/);
   assert.match(source, /parsePlayerCardCsv/);
@@ -34,6 +34,15 @@ test('admin dashboard exposes player-card CRUD and CSV import only after the adm
   assert.doesNotMatch(source, /Image URL/);
   assert.match(source, /Save card/);
   assert.match(source, /New card/);
+});
+
+test('admin player-card editor exposes per-card drop weight controls', () => {
+  const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
+
+  assert.match(source, /Drop Weight/);
+  assert.match(source, /drop_weight/);
+  assert.match(source, /inputMode="decimal"/);
+  assert.match(source, /listAdminPlayerCards/);
 });
 
 test('admin player-card catalog exposes local search, rarity filter, and sort controls', () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CARD_PACKS, pickWeightedRarity, type CardRarity } from './cardPacks';
+import { CARD_PACKS, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
 
 test('card pack config uses low icon-focused rarity rates', () => {
   assert.deepEqual(CARD_PACKS.daily.rarityWeights, { Common: 83, Rare: 15, Epic: 1.9, Icon: 0.1 });
@@ -28,6 +28,29 @@ test('card pack config includes five balanced gacha tiers', () => {
     assert.equal(pack.oncePerUtcDay, pack === CARD_PACKS.daily);
     assert.equal(Object.values(pack.rarityWeights).reduce((sum, weight) => sum + weight, 0), 100);
   }
+});
+
+test('weighted card selection uses per-card drop weights', () => {
+  const cards = [
+    { id: 'messi', drop_weight: 1 },
+    { id: 'other-icon', drop_weight: 9 },
+  ];
+
+  assert.equal(pickWeightedCard(cards, () => 0.05)?.id, 'messi');
+  assert.equal(pickWeightedCard(cards, () => 0.11)?.id, 'other-icon');
+});
+
+test('weighted card selection skips zero-weight cards', () => {
+  const cards = [
+    { id: 'disabled', drop_weight: 0 },
+    { id: 'enabled', drop_weight: 1 },
+  ];
+
+  assert.equal(pickWeightedCard(cards, () => 0)?.id, 'enabled');
+});
+
+test('weighted card selection returns null when all cards have zero weight', () => {
+  assert.equal(pickWeightedCard([{ id: 'disabled', drop_weight: 0 }], () => 0), null);
 });
 
 test('weighted rarity selection skips rarities unavailable in the catalog', () => {

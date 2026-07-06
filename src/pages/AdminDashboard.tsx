@@ -6,7 +6,7 @@ import AppShell from '../components/layout/AppShell';
 import type { CardRarity } from '../config/cardPacks';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { deletePlayerCard, listPlayerCards, parsePlayerCardCsv, playerCardToAdminInput, upsertPlayerCards, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, listAdminPlayerCards, parsePlayerCardCsv, playerCardToAdminInput, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -23,7 +23,7 @@ type AdminDashboardProps = {
 type ResultDrafts = Record<string, { homeScore: string; awayScore: string }>;
 type ActionState = { loading?: boolean; error?: string; success?: string };
 
-type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity'>;
+type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity' | 'drop_weight'>;
 type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
 type CardRarityFilter = 'all' | CardRarity;
 
@@ -58,6 +58,7 @@ function emptyPlayerCardDraft(): AdminPlayerCardInput {
     image_url: '',
     gif_url: '',
     rarity: 'Common',
+    drop_weight: 1,
   };
 }
 
@@ -96,7 +97,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [matchActionState, setMatchActionState] = useState<Record<string, ActionState>>({});
   const [recalcState, setRecalcState] = useState<ActionState>({});
   const [activeAdminTab, setActiveAdminTab] = useState<'matches' | 'cards'>('matches');
-  const [playerCards, setPlayerCards] = useState<PlayerCard[]>([]);
+  const [playerCards, setPlayerCards] = useState<AdminPlayerCard[]>([]);
   const [cardDraft, setCardDraft] = useState<AdminPlayerCardInput>(emptyPlayerCardDraft());
   const [cardActionState, setCardActionState] = useState<ActionState>({});
   const [cardSearchQuery, setCardSearchQuery] = useState('');
@@ -108,7 +109,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [error, setError] = useState<string | null>(null);
 
   async function loadPlayerCards() {
-    setPlayerCards(await listPlayerCards());
+    setPlayerCards(await listAdminPlayerCards());
   }
 
   async function loadAdminData() {
@@ -124,7 +125,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
         listUserTrustSignalsForAdmin(),
         listRewardReviewsForAdmin(),
         listRecentPredictionsForAdmin(),
-        listPlayerCards(),
+        listAdminPlayerCards(),
       ]);
       setMatches(nextMatches);
       setTeams(nextTeams);
@@ -511,6 +512,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                       {cardRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
                     </select>
                   </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Drop Weight
+                    <input value={cardDraft.drop_weight ?? 1} onChange={(event) => setCardDraft((current) => ({ ...current, drop_weight: event.target.value }))} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" inputMode="decimal" />
+                  </label>
                 </div>
                 <button type="button" onClick={() => void savePlayerCard()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save card</button>
                 {(cardActionState.error || cardActionState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${cardActionState.error ? 'bg-c5' : 'bg-c3'}`}>{cardActionState.error ?? cardActionState.success}</div>}
@@ -552,13 +557,14 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 </label>
               </div>
               <div className="max-h-[70dvh] overflow-auto">
-                <table className="w-full min-w-[760px] text-left text-xs font-bold">
+                <table className="w-full min-w-[860px] text-left text-xs font-bold">
                   <thead className="sticky top-0 z-10 bg-muted font-black uppercase">
                     <tr>
                       <th className="border-b-4 border-r-2 border-main p-3">Card</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Position</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Team</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Rarity</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Drop Weight</th>
                       <th className="border-b-4 border-main p-3">Actions</th>
                     </tr>
                   </thead>
@@ -577,6 +583,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         <td className="border-r-2 border-main p-3 uppercase">{card.position}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.team}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.rarity}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.drop_weight}</td>
                         <td className="p-3">
                           <div className="flex flex-wrap gap-2">
                             <button type="button" onClick={() => setCardDraft(playerCardToAdminInput(card))} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button>
@@ -585,7 +592,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         </td>
                       </tr>
                     ))}
-                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={5} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
+                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={6} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
                   </tbody>
                 </table>
               </div>

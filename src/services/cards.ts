@@ -28,6 +28,10 @@ export type PlayerCard = {
   rarity: CardRarity;
 };
 
+export type AdminPlayerCard = PlayerCard & {
+  drop_weight: number;
+};
+
 export type OwnedPlayerCard = {
   id: string;
   user_id: string;
@@ -79,6 +83,7 @@ export type AdminPlayerCardInput = {
   image_url: string;
   gif_url?: string | null;
   rarity: CardRarity;
+  drop_weight?: number | string;
 };
 
 function emptyToNull(value: string) {
@@ -164,11 +169,12 @@ export function parsePlayerCardCsv(csv: string, rarity: CardRarity): AdminPlayer
       image_url: read(row, 'PNG URL'),
       gif_url: emptyToNull(read(row, 'GIF URL')),
       rarity,
+      drop_weight: 1,
     };
   });
 }
 
-export function playerCardToAdminInput(card: PlayerCard): AdminPlayerCardInput {
+export function playerCardToAdminInput(card: PlayerCard | AdminPlayerCard): AdminPlayerCardInput {
   return {
     id: card.id,
     name: card.name,
@@ -187,7 +193,17 @@ export function playerCardToAdminInput(card: PlayerCard): AdminPlayerCardInput {
     image_url: card.image_url,
     gif_url: card.gif_url,
     rarity: card.rarity,
+    drop_weight: 'drop_weight' in card ? card.drop_weight : 1,
   };
+}
+
+export async function listAdminPlayerCards() {
+  const { data, error } = await supabase.functions.invoke<{ cards: AdminPlayerCard[] }>('manage_cards', {
+    body: { action: 'listAdminPlayerCards' },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data.cards;
 }
 
 export async function listPlayerCards() {
@@ -287,7 +303,7 @@ export async function upgradePlayerCardToGif(cardId: string) {
 }
 
 export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {
-  const { data, error } = await supabase.functions.invoke<{ cards: PlayerCard[] }>('manage_cards', {
+  const { data, error } = await supabase.functions.invoke<{ cards: AdminPlayerCard[] }>('manage_cards', {
     body: { action: 'upsertPlayerCards', cards },
   });
 

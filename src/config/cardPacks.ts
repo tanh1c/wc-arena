@@ -86,6 +86,20 @@ export function pickWeightedRarity(
   return entries.at(-1)?.[0] ?? null;
 }
 
+export function pickWeightedCard<T extends { drop_weight: number }>(cards: T[], random = Math.random) {
+  const entries = cards.filter((card) => card.drop_weight > 0);
+  const total = entries.reduce((sum, card) => sum + card.drop_weight, 0);
+  if (total <= 0) return null;
+
+  let roll = random() * total;
+  for (const card of entries) {
+    if (roll < card.drop_weight) return card;
+    roll -= card.drop_weight;
+  }
+
+  return entries.at(-1) ?? null;
+}
+
 export function getUtcDay(value = new Date()) {
   return value.toISOString().slice(0, 10);
 }

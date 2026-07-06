@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CARD_PACKS, getUtcDay, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
+import { CARD_PACKS, getUtcDay, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
 import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
@@ -18,12 +18,14 @@ type Body =
   | { action: 'openCardPack'; packType: PackType }
   | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
   | { action: 'upgradeCardToGif'; cardId: string }
+  | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'deletePlayerCard'; id: string };
 
 type PlayerCard = {
   id: string;
   rarity: CardRarity;
+  drop_weight: number;
 };
 
 type AdminPlayerCardInput = {
@@ -44,6 +46,7 @@ type AdminPlayerCardInput = {
   image_url?: unknown;
   gif_url?: unknown;
   rarity?: unknown;
+  drop_weight?: unknown;
 };
 
 const cardRarities = ['Common', 'Rare', 'Epic', 'Icon'] as const;
@@ -53,6 +56,12 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json() as Body;
+
+    if (body.action === 'listAdminPlayerCards') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await listAdminPlayerCards(adminAuth.supabase));
+    }
 
     if (body.action === 'upsertPlayerCards') {
       const adminAuth = await requireAdminUser(req, corsHeaders);
@@ -155,12 +164,21 @@ async function drawCards(
   count: number,
   rarityWeights: Record<CardRarity, number>,
 ) {
-  const { data, error } = await supabase.from('player_cards').select('*');
+  const [{ data, error }, { data: weightRows, error: weightsError }] = await Promise.all([
+    supabase.from('player_cards').select('*'),
+    supabase.from('player_card_drop_weights').select('card_id, drop_weight'),
+  ]);
   if (error) throw error;
+  if (weightsError) throw weightsError;
 
-  const cards = (data ?? []) as PlayerCard[];
+  const weightsByCardId = new Map((weightRows ?? []).map((row: { card_id: string; drop_weight: number }) => [row.card_id, Number(row.drop_weight)]));
+  const cards = ((data ?? []) as Array<Omit<PlayerCard, 'drop_weight'>>).map((card) => ({
+    ...card,
+    drop_weight: weightsByCardId.get(card.id) ?? 1,
+  }));
   const cardsByRarity = new Map<CardRarity, PlayerCard[]>();
   for (const card of cards) {
+    if (card.drop_weight <= 0) continue;
     const current = cardsByRarity.get(card.rarity) ?? [];
     current.push(card);
     cardsByRarity.set(card.rarity, current);
@@ -172,8 +190,9 @@ async function drawCards(
   for (let index = 0; index < count; index += 1) {
     const rarity = pickWeightedRarity(rarityWeights, availableRarities);
     if (!rarity) break;
-    const options = cardsByRarity.get(rarity) ?? [];
-    picked.push(options[Math.floor(Math.random() * options.length)]);
+    const card = pickWeightedCard(cardsByRarity.get(rarity) ?? []);
+    if (!card) break;
+    picked.push(card);
   }
 
   return picked;
@@ -222,12 +241,25 @@ async function upgradeCardToGif(supabase: SupabaseClient, userId: string, id: st
   return { card: data?.[0]?.owned_card ?? null };
 }
 
+async function listAdminPlayerCards(supabase: SupabaseClient) {
+  const [{ data: cards, error: cardsError }, { data: weights, error: weightsError }] = await Promise.all([
+    supabase.from('player_cards').select('*').order('rarity', { ascending: true }).order('name', { ascending: true }),
+    supabase.from('player_card_drop_weights').select('card_id, drop_weight'),
+  ]);
+  if (cardsError) throw cardsError;
+  if (weightsError) throw weightsError;
+
+  return { cards: mergeDropWeights(cards ?? [], weights ?? []) };
+}
+
 async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCardInput[]) {
   if (!Array.isArray(cards) || cards.length === 0) throw new Error('Cards must be a non-empty array.');
 
+  const weights: number[] = [];
   const rows = cards.map((card) => {
     const rarity = normalizeRequiredString(card.rarity, 'rarity') as CardRarity;
     if (!cardRarities.includes(rarity)) throw new Error('Card rarity must be Common, Rare, Epic, or Icon.');
+    weights.push(normalizeDropWeight(card.drop_weight));
 
     return {
       ...(card.id == null ? {} : { id: normalizeRequiredString(card.id, 'id') }),
@@ -252,7 +284,22 @@ async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCar
 
   const { data, error } = await supabase.from('player_cards').upsert(rows).select('*');
   if (error) throw error;
-  return { cards: data ?? [] };
+
+  const weightRows = (data ?? []).map((card: { id: string }, index: number) => ({ card_id: card.id, drop_weight: weights[index] ?? 1 }));
+  if (weightRows.length > 0) {
+    const { error: weightsError } = await supabase.from('player_card_drop_weights').upsert(weightRows);
+    if (weightsError) throw weightsError;
+  }
+
+  return { cards: mergeDropWeights(data ?? [], weightRows) };
+}
+
+function mergeDropWeights(cards: unknown[], weights: Array<{ card_id: string; drop_weight: number }>) {
+  const weightsByCardId = new Map(weights.map((row) => [row.card_id, Number(row.drop_weight)]));
+  return cards.map((card) => ({
+    ...(card as Record<string, unknown>),
+    drop_weight: weightsByCardId.get((card as { id: string }).id) ?? 1,
+  }));
 }
 
 async function deletePlayerCard(supabase: SupabaseClient, id: string) {
@@ -274,6 +321,13 @@ function normalizeOptionalString(value: unknown) {
   if (typeof value !== 'string') throw new Error('Optional card fields must be strings or null.');
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+function normalizeDropWeight(value: unknown) {
+  if (value == null || value === '') return 1;
+  const weight = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(weight) || weight < 0 || weight > 1000000) throw new Error('Card drop weight must be a number from 0 to 1000000.');
+  return weight;
 }
 
 async function getUserCoins(supabase: SupabaseClient, userId: string) {
