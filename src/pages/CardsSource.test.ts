@@ -269,15 +269,19 @@ test('open pack panels render expanded pack tiers with artwork and an opening ef
   assert.match(cssSource, /@keyframes wc-pack-opening/);
 });
 
-test('Icon Chase pack shows pity progress toward guaranteed Icon', () => {
+test('Icon Chase pack shows compact i18n pity progress only in the pack side panel', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
   assert.match(cardsSource, /getIconChasePityState/);
   assert.match(cardsSource, /iconChasePity/);
-  assert.match(cardsSource, /Icon guaranteed next Icon Chase pack/);
-  assert.match(cardsSource, /Icon pity:/);
-  assert.match(cardsSource, /packsUntilGuaranteed/);
-  assert.match(cardsSource, /nextGuaranteed/);
+  assert.match(cardsSource, /appPages\.cards\.iconPity/);
+  assert.doesNotMatch(cardsSource, /Icon guaranteed next Icon Chase pack/);
+  assert.doesNotMatch(cardsSource, /guaranteed in/);
+  assert.doesNotMatch(cardsSource, /packsUntilGuaranteed/);
+  assert.doesNotMatch(cardsSource, /nextGuaranteed/);
+  assert.match(resourcesSource, /iconPity: 'Icon pity'/);
+  assert.match(resourcesSource, /iconPity: 'Pity Icon'/);
 });
 
 test('card pack panels show rarity drop rates like a gacha game', () => {

@@ -321,7 +321,6 @@ export default function Cards({ themeControls }: CardsProps) {
                   packType={selectedPackType}
                   openingPack={openingPack}
                   isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
-                  iconChasePity={selectedPackType === 'icon' ? iconChasePity : null}
                   onOpen={handleOpenPack}
                 />
                 <PackInfoPanel
@@ -524,13 +523,12 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
   );
 }
 
-function SelectedPackHero({ title, description, packType, openingPack, isOpenedToday, iconChasePity, onOpen }: {
+function SelectedPackHero({ title, description, packType, openingPack, isOpenedToday, onOpen }: {
   title: string;
   description: string;
   packType: PackType;
   openingPack: PackType | null;
   isOpenedToday: boolean;
-  iconChasePity: IconChasePityState | null;
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
@@ -558,7 +556,6 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
             </div>
           </div>
           {isOpenedToday && <p className="mt-3 border-2 border-main bg-c4 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
-          {iconChasePity && <p className="mt-3 border-2 border-main bg-c3 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{iconChasePity.nextGuaranteed ? 'Icon guaranteed next Icon Chase pack' : `Icon pity: ${iconChasePity.iconMissCount}/${iconChasePity.threshold} — guaranteed in ${iconChasePity.packsUntilGuaranteed} Icon Chase packs`}</p>}
           <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-4 text-lg font-black uppercase text-main shadow-[5px_5px_0_var(--color-shadow)] transition-transform hover:-translate-y-1 disabled:translate-y-0 disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
             {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
           </button>
@@ -595,7 +592,7 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChase
         )}
         {iconChasePity && (
           <div className="flex items-center justify-between gap-2 border-2 border-main bg-c3 px-3 py-2">
-            <span>Icon pity</span>
+            <span>{t('appPages.cards.iconPity')}</span>
             <span>{iconChasePity.iconMissCount}/{iconChasePity.threshold}</span>
           </div>
         )}
