@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CARD_PACKS, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
+import { CARD_FORGE_RECIPES, CARD_PACKS, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
 import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
@@ -18,6 +18,7 @@ type Body =
   | { action: 'openCardPack'; packType: PackType }
   | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
   | { action: 'upgradeCardToGif'; cardId: string }
+  | { action: 'forgeCard'; cardId: string }
   | { action: 'getIconChasePityState' }
   | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
@@ -102,6 +103,10 @@ Deno.serve(async (req) => {
 
     if (body.action === 'upgradeCardToGif') {
       return jsonResponse(await upgradeCardToGif(supabase, user.id, body.cardId));
+    }
+
+    if (body.action === 'forgeCard') {
+      return jsonResponse(await forgeCard(supabase, user.id, body.cardId));
     }
 
     return jsonResponse({ error: 'Unknown card action.' }, 400);
@@ -260,6 +265,36 @@ async function upgradeCardToGif(supabase: SupabaseClient, userId: string, id: st
   });
   if (error) throw error;
   return { card: data?.[0]?.owned_card ?? null };
+}
+
+async function forgeCard(supabase: SupabaseClient, userId: string, id: string) {
+  const cardId = normalizeRequiredString(id, 'id');
+  const { data: sourceCard, error: sourceError } = await supabase
+    .from('player_cards')
+    .select('id, rarity')
+    .eq('id', cardId)
+    .maybeSingle();
+  if (sourceError) throw sourceError;
+  if (!sourceCard) throw new Error('Source card is not available.');
+  if (sourceCard.rarity === 'Icon') throw new Error('Icon cards cannot be forged.');
+
+  const recipe = CARD_FORGE_RECIPES[sourceCard.rarity as keyof typeof CARD_FORGE_RECIPES];
+  if (!recipe) throw new Error('Card rarity cannot be forged.');
+
+  const currentCoins = await getUserCoins(supabase, userId);
+  if (currentCoins < recipe.priceCoins) throw new Error(`Not enough Coins. Required: ${recipe.priceCoins}. Current: ${currentCoins}.`);
+
+  const awardedCards = await drawCards(supabase, 1, recipe.rarityWeights);
+  if (awardedCards.length !== 1) throw new Error('No cards are available for forge.');
+
+  const { data, error } = await supabase.rpc('forge_card_transaction', {
+    p_user_id: userId,
+    p_source_card_id: cardId,
+    p_result_card_id: awardedCards[0].id,
+    p_price_coins: recipe.priceCoins,
+  });
+  if (error) throw error;
+  return { card: data?.[0]?.owned_card ?? null, coins: data?.[0]?.next_coins ?? currentCoins - recipe.priceCoins };
 }
 
 async function getIconChasePityState(supabase: SupabaseClient, userId: string) {

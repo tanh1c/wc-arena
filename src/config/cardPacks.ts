@@ -9,6 +9,13 @@ export type CardPackConfig = {
 };
 
 export const ICON_CHASE_PITY_PACK_THRESHOLD = 10;
+export const CARD_FORGE_COPY_COUNT = 5;
+
+export const CARD_FORGE_RECIPES = {
+  Common: { priceCoins: 100, rarityWeights: { Common: 80, Rare: 19, Epic: 1, Icon: 0 } },
+  Rare: { priceCoins: 300, rarityWeights: { Common: 0, Rare: 82, Epic: 17, Icon: 1 } },
+  Epic: { priceCoins: 1000, rarityWeights: { Common: 0, Rare: 0, Epic: 90, Icon: 10 } },
+} satisfies Partial<Record<CardRarity, { priceCoins: number; rarityWeights: Record<CardRarity, number> }>>;
 
 export const CARD_PACKS: Record<PackType, CardPackConfig> = {
   daily: {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CARD_PACKS, ICON_CHASE_PITY_PACK_THRESHOLD, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, ICON_CHASE_PITY_PACK_THRESHOLD, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
 
 test('card pack config uses low icon-focused rarity rates', () => {
   assert.deepEqual(CARD_PACKS.daily.rarityWeights, { Common: 83, Rare: 15, Epic: 1.9, Icon: 0.1 });
@@ -36,6 +36,17 @@ test('Icon Chase pity is due on the tenth missed pack', () => {
   assert.equal(isIconChasePityDue(9), true);
   assert.equal(getIconChasePityPacksUntilGuaranteed(0), 10);
   assert.equal(getIconChasePityPacksUntilGuaranteed(9), 1);
+});
+
+test('card forge recipes sink five spare cards with conservative upgrade odds', () => {
+  assert.equal(CARD_FORGE_COPY_COUNT, 5);
+  assert.equal(CARD_FORGE_RECIPES.Common.priceCoins, 100);
+  assert.deepEqual(CARD_FORGE_RECIPES.Common.rarityWeights, { Common: 80, Rare: 19, Epic: 1, Icon: 0 });
+  assert.equal(CARD_FORGE_RECIPES.Rare.priceCoins, 300);
+  assert.deepEqual(CARD_FORGE_RECIPES.Rare.rarityWeights, { Common: 0, Rare: 82, Epic: 17, Icon: 1 });
+  assert.equal(CARD_FORGE_RECIPES.Epic.priceCoins, 1000);
+  assert.deepEqual(CARD_FORGE_RECIPES.Epic.rarityWeights, { Common: 0, Rare: 0, Epic: 90, Icon: 10 });
+  assert.equal('Icon' in CARD_FORGE_RECIPES, false);
 });
 
 test('weighted card selection uses per-card drop weights', () => {

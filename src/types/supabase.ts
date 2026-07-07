@@ -2056,6 +2056,18 @@ export type Database = {
         }[]
       }
       cleanup_old_operational_data: { Args: never; Returns: Json }
+      forge_card_transaction: {
+        Args: {
+          p_price_coins: number
+          p_result_card_id: string
+          p_source_card_id: string
+          p_user_id: string
+        }
+        Returns: {
+          next_coins: number
+          owned_card: Json
+        }[]
+      }
       get_match_prediction_outcome_summary: {
         Args: { target_match_id: string }
         Returns: {

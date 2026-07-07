@@ -34,6 +34,22 @@ test('manage_cards exposes authenticated card GIF upgrades through one RPC', () 
   assert.match(source, /requireAuthenticatedUser\(req, corsHeaders\)[\s\S]*body\.action === 'upgradeCardToGif'/);
 });
 
+test('manage_cards exposes authenticated card forge through one weighted RPC', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /CARD_FORGE_RECIPES/);
+  assert.match(source, /action: 'forgeCard'; cardId: string/);
+  assert.match(source, /body\.action === 'forgeCard'/);
+  assert.match(source, /forgeCard\(supabase, user\.id, body\.cardId\)/);
+  assert.match(source, /sourceCard\.rarity === 'Icon'/);
+  assert.match(source, /drawCards\(supabase, 1, recipe\.rarityWeights\)/);
+  assert.match(source, /forge_card_transaction/);
+  assert.match(source, /p_source_card_id: cardId/);
+  assert.match(source, /p_result_card_id: awardedCards\[0\]\.id/);
+  assert.match(source, /p_price_coins: recipe\.priceCoins/);
+  assert.match(source, /requireAuthenticatedUser\(req, corsHeaders\)[\s\S]*body\.action === 'forgeCard'/);
+});
+
 test('openCardPack commits coin spend, awarded cards, and opening log through one RPC', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 

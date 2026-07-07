@@ -6,7 +6,7 @@ export function getPlayerCardDisplayImageUrl(card: { image_url: string; gif_url?
   return useGif && card.gif_url ? card.gif_url : card.image_url;
 }
 
-export type CardSourceType = PackType | 'upgrade';
+export type CardSourceType = PackType | 'upgrade' | 'forge';
 
 export type PlayerCard = {
   id: string;
@@ -71,6 +71,11 @@ export type OpenCardPackResult = {
   coins: number;
   openedOnUtc: string;
   iconChasePity?: IconChasePityState;
+};
+
+export type ForgePlayerCardResult = {
+  card: OwnedPlayerCard & { duplicate: boolean };
+  coins: number;
 };
 
 export type AdminPlayerCardInput = {
@@ -317,6 +322,15 @@ export async function upgradePlayerCardToGif(cardId: string) {
 
   if (error) throw new Error(await getFunctionErrorMessage(error));
   return data.card;
+}
+
+export async function forgePlayerCard(cardId: string) {
+  const { data, error } = await supabase.functions.invoke<ForgePlayerCardResult>('manage_cards', {
+    body: { action: 'forgeCard', cardId },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data as ForgePlayerCardResult;
 }
 
 export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {
