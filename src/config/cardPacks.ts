@@ -1,5 +1,5 @@
 export type PackType = 'daily' | 'starter' | 'premium' | 'elite' | 'icon';
-export const CARD_RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Icon'] as const;
+export const CARD_RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Heroes', 'Icon', 'GOAT'] as const;
 export type CardRarity = (typeof CARD_RARITIES)[number];
 
 export type CardPackConfig = {
@@ -13,11 +13,13 @@ export const ICON_CHASE_PITY_PACK_THRESHOLD = 10;
 export const CARD_FORGE_COPY_COUNT = 5;
 
 export const CARD_FORGE_RECIPES = {
-  Common: { priceCoins: 100, rarityWeights: { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Icon: 0 } },
-  Uncommon: { priceCoins: 200, rarityWeights: { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Icon: 0 } },
-  Rare: { priceCoins: 300, rarityWeights: { Common: 0, Uncommon: 0, Rare: 75, Epic: 22, Legendary: 3, Icon: 0 } },
-  Epic: { priceCoins: 1000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 80, Legendary: 18, Icon: 2 } },
-  Legendary: { priceCoins: 2500, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 90, Icon: 10 } },
+  Common: { priceCoins: 100, rarityWeights: { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
+  Uncommon: { priceCoins: 200, rarityWeights: { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
+  Rare: { priceCoins: 300, rarityWeights: { Common: 0, Uncommon: 0, Rare: 75, Epic: 22, Legendary: 3, Heroes: 0, Icon: 0, GOAT: 0 } },
+  Epic: { priceCoins: 1000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 80, Legendary: 18, Heroes: 2, Icon: 0, GOAT: 0 } },
+  Legendary: { priceCoins: 2500, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 88, Heroes: 10, Icon: 2, GOAT: 0 } },
+  Heroes: { priceCoins: 5000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 90, Icon: 9, GOAT: 1 } },
+  Icon: { priceCoins: 10000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 0, Icon: 96, GOAT: 4 } },
 } satisfies Partial<Record<CardRarity, { priceCoins: number; rarityWeights: Record<CardRarity, number> }>>;
 
 export const CARD_PACKS: Record<PackType, CardPackConfig> = {
@@ -30,8 +32,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
       Uncommon: 30,
       Rare: 12,
       Epic: 2.5,
-      Legendary: 0.45,
-      Icon: 0.05,
+      Legendary: 0.4,
+      Heroes: 0.08,
+      Icon: 0.02,
+      GOAT: 0,
     },
   },
   starter: {
@@ -43,8 +47,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
       Uncommon: 34,
       Rare: 18,
       Epic: 5,
-      Legendary: 0.9,
-      Icon: 0.1,
+      Legendary: 0.8,
+      Heroes: 0.15,
+      Icon: 0.05,
+      GOAT: 0,
     },
   },
   premium: {
@@ -56,8 +62,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
       Uncommon: 32,
       Rare: 28,
       Epic: 12,
-      Legendary: 2.6,
-      Icon: 0.4,
+      Legendary: 2.4,
+      Heroes: 0.45,
+      Icon: 0.13,
+      GOAT: 0.02,
     },
   },
   elite: {
@@ -69,8 +77,10 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
       Uncommon: 18,
       Rare: 34,
       Epic: 30,
-      Legendary: 8.5,
-      Icon: 1.5,
+      Legendary: 8,
+      Heroes: 1.5,
+      Icon: 0.45,
+      GOAT: 0.05,
     },
   },
   icon: {
@@ -80,10 +90,12 @@ export const CARD_PACKS: Record<PackType, CardPackConfig> = {
     rarityWeights: {
       Common: 0,
       Uncommon: 0,
-      Rare: 35,
-      Epic: 45,
-      Legendary: 15,
-      Icon: 5,
+      Rare: 32,
+      Epic: 43,
+      Legendary: 17,
+      Heroes: 5,
+      Icon: 2.8,
+      GOAT: 0.2,
     },
   },
 };

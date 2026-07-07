@@ -515,9 +515,19 @@
     border-color: #f59e0b;
   }
 
+  .wc-card-frame-heroes {
+    border-color: #10b981;
+    animation: wc-card-heroes-glow 3s ease-in-out infinite;
+  }
+
   .wc-card-frame-icon {
     border-color: #d99a00;
     animation: wc-card-icon-shimmer 3s linear infinite;
+  }
+
+  .wc-card-frame-goat {
+    border-color: #fde68a;
+    animation: wc-card-goat-shimmer 3s linear infinite;
   }
 
   @keyframes wc-card-uncommon-glow {
@@ -535,8 +545,18 @@
     50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 18px #ffe600; }
   }
 
+  @keyframes wc-card-heroes-glow {
+    0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 8px #10b981; }
+    50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 18px #34d399; }
+  }
+
   @keyframes wc-card-icon-shimmer {
     0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 10px #d99a00; }
     50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 24px #fff0b8; }
+  }
+
+  @keyframes wc-card-goat-shimmer {
+    0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 12px #111827; }
+    50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 24px #fde68a; }
   }
 }

@@ -266,8 +266,8 @@ async function upgradeCardToGif(supabase: SupabaseClient, userId: string, id: st
 }
 
 async function forgeCard(supabase: SupabaseClient, userId: string, rarity: CardRarity, userPlayerCardIds: string[]) {
-  if (!CARD_RARITIES.includes(rarity)) throw new Error('Card rarity must be Common, Uncommon, Rare, Epic, Legendary, or Icon.');
-  if (rarity === 'Icon') throw new Error('Icon cards cannot be forged.');
+  if (!CARD_RARITIES.includes(rarity)) throw new Error('Card rarity must be Common, Uncommon, Rare, Epic, Legendary, Heroes, Icon, or GOAT.');
+  if (rarity === 'GOAT') throw new Error('GOAT cards cannot be forged.');
   const recipe = CARD_FORGE_RECIPES[rarity as keyof typeof CARD_FORGE_RECIPES];
   if (!recipe) throw new Error('Card rarity cannot be forged.');
 
@@ -329,7 +329,7 @@ async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCar
   const weights: number[] = [];
   const rows = cards.map((card) => {
     const rarity = normalizeRequiredString(card.rarity, 'rarity') as CardRarity;
-    if (!CARD_RARITIES.includes(rarity)) throw new Error('Card rarity must be Common, Uncommon, Rare, Epic, Legendary, or Icon.');
+    if (!CARD_RARITIES.includes(rarity)) throw new Error('Card rarity must be Common, Uncommon, Rare, Epic, Legendary, Heroes, Icon, or GOAT.');
     weights.push(normalizeDropWeight(card.drop_weight));
 
     return {

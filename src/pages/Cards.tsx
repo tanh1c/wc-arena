@@ -6,6 +6,8 @@ import commonCardBackground from '../../Common_card.png';
 import dailyPackImage from '../../Daily.png';
 import elitePackImage from '../../Elite.png';
 import epicCardBackground from '../../Epic_card.png';
+import goatCardBackground from '../../GOAT.png';
+import heroesCardBackground from '../../Heroes.png';
 import iconPackImage from '../../Icon.png';
 import iconCardBackground from '../../Icon_card.png';
 import legendaryCardBackground from '../../Legendary.png';
@@ -68,7 +70,9 @@ const rarityCardBackgroundImages: Record<string, string> = {
   Rare: rareCardBackground,
   Epic: epicCardBackground,
   Legendary: legendaryCardBackground,
+  Heroes: heroesCardBackground,
   Icon: iconCardBackground,
+  GOAT: goatCardBackground,
 };
 
 const rarityCardFrameClasses: Record<string, string> = {
@@ -77,7 +81,9 @@ const rarityCardFrameClasses: Record<string, string> = {
   Rare: 'wc-card-frame-rare',
   Epic: 'wc-card-frame-epic',
   Legendary: 'wc-card-frame-legendary',
+  Heroes: 'wc-card-frame-heroes',
   Icon: 'wc-card-frame-icon',
+  GOAT: 'wc-card-frame-goat',
 };
 
 const rarityBadgeClasses: Record<string, string> = {
@@ -86,7 +92,9 @@ const rarityBadgeClasses: Record<string, string> = {
   Rare: 'bg-[#00d4ff] text-main',
   Epic: 'bg-[#ff2bd6] text-white',
   Legendary: 'bg-[#f59e0b] text-main',
+  Heroes: 'bg-[#10b981] text-white',
   Icon: 'bg-[#fff0b8] text-main shadow-[0_0_12px_#fff0b8]',
+  GOAT: 'bg-[#111827] text-[#fde68a] shadow-[0_0_14px_#fde68a]',
 };
 
 const nationFlagCodes: Record<string, string> = {

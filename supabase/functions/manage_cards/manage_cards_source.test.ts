@@ -42,7 +42,8 @@ test('manage_cards exposes authenticated selected-card forge through one weighte
   assert.match(source, /body\.action === 'forgeCard'/);
   assert.match(source, /forgeCard\(supabase, user\.id, body\.rarity, body\.userPlayerCardIds\)/);
   assert.match(source, /CARD_RARITIES\.includes\(rarity\)/);
-  assert.match(source, /rarity === 'Icon'/);
+  assert.match(source, /rarity === 'GOAT'/);
+  assert.doesNotMatch(source, /async function forgeCard[\s\S]*rarity === 'Icon'[\s\S]*async function getIconChasePityState/);
   assert.match(source, /selectedIds\.length !== CARD_FORGE_COPY_COUNT/);
   assert.match(source, /new Set\(selectedIds\)/);
   assert.match(source, /drawCards\(supabase, 1, recipe\.rarityWeights\)/);

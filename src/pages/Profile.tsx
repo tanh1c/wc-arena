@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { Award, BarChart2, Shield, Star, Trophy, Users } from 'lucide-react';
 import commonCardBackground from '../../Common_card.png';
 import epicCardBackground from '../../Epic_card.png';
+import goatCardBackground from '../../GOAT.png';
+import heroesCardBackground from '../../Heroes.png';
 import iconCardBackground from '../../Icon_card.png';
 import legendaryCardBackground from '../../Legendary.png';
 import rareCardBackground from '../../Rare_card.png';
@@ -42,7 +44,9 @@ const profileCardBackgroundImages: Record<string, string> = {
   Rare: rareCardBackground,
   Epic: epicCardBackground,
   Legendary: legendaryCardBackground,
+  Heroes: heroesCardBackground,
   Icon: iconCardBackground,
+  GOAT: goatCardBackground,
 };
 
 function getProfileCardBackgroundImage(rarity: string) {

@@ -13,9 +13,13 @@ test('public profile renders card showcase near the player summary', () => {
   assert.match(publicProfileSource, /\.\.\/\.\.\/Rare_card\.png/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Epic_card\.png/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Legendary\.png/);
+  assert.match(publicProfileSource, /\.\.\/\.\.\/Heroes\.png/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Icon_card\.png/);
+  assert.match(publicProfileSource, /\.\.\/\.\.\/GOAT\.png/);
   assert.match(publicProfileSource, /Uncommon: uncommonCardBackground/);
   assert.match(publicProfileSource, /Legendary: legendaryCardBackground/);
+  assert.match(publicProfileSource, /Heroes: heroesCardBackground/);
+  assert.match(publicProfileSource, /GOAT: goatCardBackground/);
   assert.match(publicProfileSource, /publicProfileCardBackgroundImages/);
   assert.match(publicProfileSource, /getPublicProfileCardBackgroundImage/);
   assert.match(publicProfileSource, /showcaseCard \? 'bg-cover bg-center' : 'bg-muted'/);
