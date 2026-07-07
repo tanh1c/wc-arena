@@ -22,11 +22,13 @@ test('squad builder is routed, navigable, and wired to owned cards', () => {
   assert.match(pageSource, /getAssignedOwnedCardIds/);
   assert.match(pageSource, /appPages\.squadBuilder/);
   assert.match(pageSource, /PLAYER_PAGE_SIZE = 12/);
-  assert.match(pageSource, /type PlayerSort = 'position' \| 'name'/);
-  assert.match(pageSource, /POSITION_ORDER/);
+  assert.match(pageSource, /type PositionFilter = 'all' \| string/);
+  assert.match(pageSource, /POSITION_FILTERS/);
+  assert.match(pageSource, /positionFilter/);
+  assert.match(pageSource, /player_cards\.position !== positionFilter/);
+  assert.match(pageSource, /grid h-24 w-full grid-cols-\[64px_minmax\(0,1fr\)_44px\]/);
   assert.match(pageSource, /groupedOwnedCards/);
   assert.match(pageSource, /duplicateCount/);
-  assert.match(pageSource, /h-24/);
   assert.match(pageSource, /paginatedOwnedCards/);
   assert.match(pageSource, /max-h-\[520px\].*overflow-y-auto/);
   assert.match(pageSource, /aspect-\[9\/14\]/);
