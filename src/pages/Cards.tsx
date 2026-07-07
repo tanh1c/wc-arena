@@ -47,6 +47,7 @@ const rarities: Array<'all' | CardRarity> = ['all', ...CARD_RARITIES];
 const gallerySorts = ['name', 'duplicates', 'mergeReady'] as const;
 const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
 const forgeRarities = Object.keys(CARD_FORGE_RECIPES) as Array<keyof typeof CARD_FORGE_RECIPES>;
+const highRevealRarities = new Set<CardRarity>(['Legendary', 'Heroes', 'Icon', 'GOAT']);
 
 const packArtwork: Record<PackType, { image: string; imageClass?: string }> = {
   daily: { image: dailyPackImage },
@@ -191,6 +192,9 @@ export default function Cards({ themeControls }: CardsProps) {
   const [selectedForgeRarity, setSelectedForgeRarity] = useState<keyof typeof CARD_FORGE_RECIPES>('Common');
   const [selectedForgeOwnedCardIds, setSelectedForgeOwnedCardIds] = useState(new Set<string>());
   const [forgingRarity, setForgingRarity] = useState<CardRarity | null>(null);
+  const [skipRevealAnimation, setSkipRevealAnimation] = useState(false);
+  const [revealAnimationKind, setRevealAnimationKind] = useState<'pack' | 'forge' | null>(null);
+  const [forgeAnimationCards, setForgeAnimationCards] = useState<CatalogCardWithOwnedCount[]>([]);
   const [previewGifCard, setPreviewGifCard] = useState<CatalogCardWithOwnedCount | null>(null);
   const [error, setError] = useState('');
 
@@ -267,6 +271,8 @@ export default function Cards({ themeControls }: CardsProps) {
   const selectedForgeCards = useMemo(() => catalog.flatMap((card) => card.ownedCards
     .filter((ownedCard) => selectedForgeOwnedCardIds.has(ownedCard.id))
     .map((ownedCard) => ({ card, ownedCard }))), [catalog, selectedForgeOwnedCardIds]);
+  const hasHighRarityReveal = revealedCards.some((card) => highRevealRarities.has(card.player_cards.rarity));
+  const revealAnimationActive = hasHighRarityReveal && !skipRevealAnimation;
   const forgeIngredientGroups = useMemo(() => catalog
     .filter((card) => card.rarity === selectedForgeRarity)
     .map((card) => ({
@@ -292,6 +298,9 @@ export default function Cards({ themeControls }: CardsProps) {
       const result = await openCardPack(packType);
       setRevealedCards(result.cards);
       setRecentPullCards([]);
+      setSkipRevealAnimation(false);
+      setRevealAnimationKind(result.cards.some((card) => highRevealRarities.has(card.player_cards.rarity)) ? 'pack' : null);
+      setForgeAnimationCards([]);
       setFlippedRevealCardIds(new Set<string>());
       setRevealModalOpen(result.cards.length > 0);
       if (result.iconChasePity) setIconChasePity(result.iconChasePity);
@@ -342,6 +351,7 @@ export default function Cards({ themeControls }: CardsProps) {
   };
 
   const handleForgeCard = async () => {
+    const animationCards = selectedForgeCards.map(({ card }) => card);
     setForgingRarity(selectedForgeRarity);
     setError('');
     try {
@@ -349,6 +359,9 @@ export default function Cards({ themeControls }: CardsProps) {
       setSelectedForgeOwnedCardIds(new Set<string>());
       setRevealedCards([{ ...result.card, duplicate: true }]);
       setRecentPullCards([]);
+      setSkipRevealAnimation(false);
+      setRevealAnimationKind(highRevealRarities.has(result.card.player_cards.rarity) ? 'forge' : null);
+      setForgeAnimationCards(animationCards);
       setFlippedRevealCardIds(new Set<string>());
       setRevealModalOpen(true);
       window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
@@ -372,6 +385,9 @@ export default function Cards({ themeControls }: CardsProps) {
   const closeRevealModal = () => {
     setRecentPullCards(revealedCards);
     setRevealModalOpen(false);
+    setRevealAnimationKind(null);
+    setForgeAnimationCards([]);
+    setSkipRevealAnimation(false);
   };
 
   return (
@@ -643,22 +659,52 @@ export default function Cards({ themeControls }: CardsProps) {
       )}
 
       {revealModalOpen && revealedCards.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6 ${revealAnimationActive ? 'wc-reveal-cinematic' : ''} ${skipRevealAnimation ? 'wc-reveal-skip' : ''}`}>
           <section className="grid max-h-[92vh] w-full max-w-[1280px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
             <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
               <div>
                 <p className="text-[10px] font-black uppercase opacity-80">{revealedCards.some((card) => card.source_pack_type === 'forge') ? t('appPages.cards.forgeResultTitle') : t('appPages.cards.openPack')}</p>
                 <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.revealedCards')}</h2>
               </div>
-              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={closeRevealModal}>
-                {t('ui.close')}
-              </button>
+              <div className="flex items-center gap-2">
+                {hasHighRarityReveal && !skipRevealAnimation && (
+                  <button
+                    type="button"
+                    className="border-2 border-main bg-c1 px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]"
+                    onClick={() => {
+                      setSkipRevealAnimation(true);
+                      setFlippedRevealCardIds(new Set(revealedCards.map((card) => card.id)));
+                    }}
+                  >
+                    {t('appPages.cards.skipAnimation')}
+                  </button>
+                )}
+                <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={closeRevealModal}>
+                  {t('ui.close')}
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap justify-center min-h-0 gap-3 p-3">
+            <div className="relative flex flex-wrap justify-center min-h-0 gap-3 p-3">
+              {revealAnimationActive && revealAnimationKind === 'pack' && (
+                <div className="wc-pack-reveal-stage">
+                  <img src={packArtwork[selectedPackType].image} alt="" />
+                </div>
+              )}
+              {revealAnimationActive && revealAnimationKind === 'forge' && (
+                <div className="wc-forge-fusion-stage">
+                  {forgeAnimationCards.slice(0, CARD_FORGE_COPY_COUNT).map((card) => (
+                    <span key={card.id} className="wc-forge-fusion-card">
+                      <CardImage card={card} useGif={false} />
+                    </span>
+                  ))}
+                  <span className="wc-forge-fusion-core" />
+                </div>
+              )}
               {revealedCards.map((card) => {
                 const isFlipped = flippedRevealCardIds.has(card.id);
+                const revealRarityClass = revealAnimationActive && highRevealRarities.has(card.player_cards.rarity) ? `wc-reveal-card-${card.player_cards.rarity.toLowerCase()}` : '';
                 return (
-                  <button key={card.id} type="button" className={`wc-card-flip group w-full max-w-[190px] min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
+                  <button key={card.id} type="button" className={`wc-card-flip group w-full max-w-[190px] min-w-0 text-left ${isFlipped ? 'wc-card-flip-revealed' : ''} ${revealRarityClass}`} aria-label={`Reveal ${card.player_cards.name}`} onClick={() => toggleRevealCard(card.id)}>
                     <span className="wc-card-flip-inner relative mx-auto block w-full max-w-[190px] min-h-[400px]">
                       <span className="wc-card-flip-face absolute inset-0">
                         <img src={backCardImage} alt="" className="h-full w-full rounded-sm border-4 border-main object-cover shadow-[4px_4px_0_var(--color-shadow)]" />

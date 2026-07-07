@@ -559,6 +559,45 @@ test('opened card status badges use distinct readable colors', () => {
   assert.doesNotMatch(cardsSource, /bg-c2 px-2 py-1 text-center text-\[11px\] font-black uppercase text-main/);
 });
 
+test('Legendary plus reveals use cinematic pack and forge animations with skip', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const cssSource = readFileSync('src/index.css', 'utf8');
+  const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
+
+  assert.match(cardsSource, /highRevealRarities/);
+  assert.match(cardsSource, /new Set<CardRarity>\(\['Legendary', 'Heroes', 'Icon', 'GOAT'\]\)/);
+  assert.match(cardsSource, /hasHighRarityReveal/);
+  assert.match(cardsSource, /card\.player_cards\.rarity/);
+  assert.match(cardsSource, /skipRevealAnimation/);
+  assert.match(cardsSource, /setSkipRevealAnimation\(false\)/);
+  assert.match(cardsSource, /setSkipRevealAnimation\(true\)/);
+  assert.match(cardsSource, /setFlippedRevealCardIds\(new Set\(revealedCards\.map\(\(card\) => card\.id\)\)\)/);
+  assert.match(cardsSource, /revealAnimationKind/);
+  assert.match(cardsSource, /wc-pack-reveal-stage/);
+  assert.match(cardsSource, /forgeAnimationCards/);
+  assert.match(cardsSource, /wc-forge-fusion-stage/);
+  assert.match(cardsSource, /wc-reveal-card-\$\{card\.player_cards\.rarity\.toLowerCase\(\)\}/);
+  assert.match(cardsSource, /appPages\.cards\.skipAnimation/);
+
+  assert.match(cssSource, /\.wc-reveal-cinematic/);
+  assert.match(cssSource, /\.wc-reveal-skip/);
+  assert.match(cssSource, /\.wc-pack-reveal-stage/);
+  assert.match(cssSource, /\.wc-forge-fusion-stage/);
+  assert.match(cssSource, /\.wc-reveal-card-legendary/);
+  assert.match(cssSource, /\.wc-reveal-card-heroes/);
+  assert.match(cssSource, /\.wc-reveal-card-icon/);
+  assert.match(cssSource, /\.wc-reveal-card-goat/);
+  assert.match(cssSource, /@keyframes wc-pack-reveal-burst/);
+  assert.match(cssSource, /@keyframes wc-forge-fusion/);
+  assert.match(cssSource, /@keyframes wc-reveal-legendary/);
+  assert.match(cssSource, /@keyframes wc-reveal-heroes/);
+  assert.match(cssSource, /@keyframes wc-reveal-icon/);
+  assert.match(cssSource, /@keyframes wc-reveal-goat/);
+
+  assert.match(resourcesSource, /skipAnimation: 'Skip animation'/);
+  assert.match(resourcesSource, /skipAnimation: 'Bỏ qua animation'/);
+});
+
 test('reveal popup is compact and can show five cards per row without the inert open-pack placeholder', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
