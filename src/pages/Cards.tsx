@@ -256,6 +256,9 @@ export default function Cards({ themeControls }: CardsProps) {
     }
     return counts;
   }, [catalog, selectedForgeOwnedCardIds]);
+  const selectedForgeCards = useMemo(() => catalog.flatMap((card) => card.ownedCards
+    .filter((ownedCard) => selectedForgeOwnedCardIds.has(ownedCard.id))
+    .map((ownedCard) => ({ card, ownedCard }))), [catalog, selectedForgeOwnedCardIds]);
   const forgeIngredientGroups = useMemo(() => catalog
     .filter((card) => card.rarity === selectedForgeRarity)
     .map((card) => ({
@@ -448,52 +451,67 @@ export default function Cards({ themeControls }: CardsProps) {
               </div>
             </main>
             ) : activeTab === 'forge' ? (
-              <main className="bg-card min-w-0 grid gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <main className="bg-card min-w-0 grid gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <section className="grid gap-3">
-                  <div className="rounded-sm border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <div className="rounded-sm border-4 border-main bg-c2 p-3 text-inv shadow-[5px_5px_0_var(--color-shadow)]">
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                       <div>
-                        <p className="text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.forgeChooseRarity')}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {forgeRarities.map((nextRarity) => (
-                            <button key={nextRarity} type="button" className={`rounded-sm border-2 border-main px-3 py-2 text-xs font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${selectedForgeRarity === nextRarity ? getRarityBadgeClass(nextRarity) : 'bg-card text-main hover:bg-c1'}`} onClick={() => { setSelectedForgeRarity(nextRarity); setSelectedForgeOwnedCardIds(new Set<string>()); }}>
-                              {nextRarity}
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.forgeTab')}</p>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.forgeSelectedProgress', { selected: selectedForgeOwnedCardIds.size, required: CARD_FORGE_COPY_COUNT })}</h3>
                       </div>
-                      <div className="grid gap-2 text-xs font-black uppercase text-main sm:grid-cols-2 xl:min-w-80">
-                        <p className="rounded-sm border-2 border-main bg-c3 px-3 py-2">{t('appPages.cards.forgeSelectedProgress', { selected: selectedForgeOwnedCardIds.size, required: CARD_FORGE_COPY_COUNT })}</p>
-                        <p className="rounded-sm border-2 border-main bg-card px-3 py-2">{selectedForgeRecipe.priceCoins.toLocaleString()} {t('ui.coinsShort')}</p>
-                      </div>
+                      <p className="rounded-sm border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase text-main">{selectedForgeRecipe.priceCoins.toLocaleString()} {t('ui.coinsShort')}</p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-5 gap-2">
+                      {Array.from({ length: CARD_FORGE_COPY_COUNT }, (_, slotIndex) => {
+                        const selected = selectedForgeCards[slotIndex];
+                        return (
+                          <button key={slotIndex} type="button" className="min-h-24 rounded-sm border-2 border-main bg-card p-1 text-center text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={selected ? () => toggleForgeOwnedCard(selected.ownedCard.id) : undefined}>
+                            {selected ? <CardImage card={selected.card} useGif={false} /> : <span className="flex h-full items-center justify-center">Slot {slotIndex + 1}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-sm border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.forgeChooseRarity')}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {forgeRarities.map((nextRarity) => (
+                        <button key={nextRarity} type="button" className={`rounded-sm border-2 border-main px-3 py-2 text-xs font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${selectedForgeRarity === nextRarity ? getRarityBadgeClass(nextRarity) : 'bg-card text-main hover:bg-c1'}`} onClick={() => { setSelectedForgeRarity(nextRarity); setSelectedForgeOwnedCardIds(new Set<string>()); }}>
+                          {nextRarity}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   <div className="grid gap-2">
                     <h3 className="text-base font-black uppercase tracking-tight text-main">{t('appPages.cards.forgeSelectCards')}</h3>
-                    {forgeIngredientGroups.length > 0 ? forgeIngredientGroups.map(({ card, cards }) => (
-                      <article key={card.id} className="grid gap-3 rounded-sm border-4 border-main bg-card p-2 shadow-[3px_3px_0_var(--color-shadow)] sm:grid-cols-[92px_minmax(0,1fr)]">
-                        <div className="rounded-sm border-2 border-main bg-cover bg-center p-1" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(card.rarity)})` }}>
-                          <CardImage card={card} useGif={false} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <h4 className="truncate text-sm font-black uppercase text-main">{card.name}</h4>
-                              <p className="truncate text-[10px] font-black uppercase text-muted-foreground">{card.position} · {card.team} · x{card.baseOwnedCount}</p>
+                    {forgeIngredientGroups.length > 0 ? (
+                      <div className="grid gap-3 xl:grid-cols-3 sm:grid-cols-2">
+                        {forgeIngredientGroups.map(({ card, cards }) => (
+                          <article key={card.id} className="rounded-sm border-4 border-main bg-card p-2 shadow-[3px_3px_0_var(--color-shadow)]">
+                            <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-2">
+                              <div className="rounded-sm border-2 border-main bg-cover bg-center p-1" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(card.rarity)})` }}>
+                                <CardImage card={card} useGif={false} />
+                              </div>
+                              <div className="min-w-0">
+                                <span className={`inline-block rounded-sm border-2 border-main px-2 py-1 text-[9px] font-black uppercase ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
+                                <h4 className="mt-1 truncate text-sm font-black uppercase text-main">{card.name}</h4>
+                                <p className="truncate text-[10px] font-black uppercase text-muted-foreground">{card.position} · {card.nation_region}</p>
+                                <p className="mt-1 text-[10px] font-black uppercase text-main">x{card.baseOwnedCount}</p>
+                              </div>
                             </div>
-                            <span className={`shrink-0 rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {cards.map(({ ownedCard, isSelected, canSelect }, index) => (
-                              <button key={ownedCard.id} type="button" className={`rounded-sm border-2 border-main px-3 py-2 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-40 ${isSelected ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`} disabled={!canSelect} onClick={() => toggleForgeOwnedCard(ownedCard.id)}>
-                                {isSelected ? '✓' : canSelect ? `#${index + 1}` : 'Keep 1'}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </article>
-                    )) : (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {cards.map(({ ownedCard, isSelected, canSelect }, index) => (
+                                <button key={ownedCard.id} type="button" className={`rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-40 ${isSelected ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`} disabled={!canSelect} onClick={() => toggleForgeOwnedCard(ownedCard.id)}>
+                                  {isSelected ? '✓' : canSelect ? `#${index + 1}` : 'Keep 1'}
+                                </button>
+                              ))}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
                       <p className="rounded-sm border-4 border-main bg-card p-6 text-center text-sm font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">{t('appPages.cards.forgeNoEligibleCards')}</p>
                     )}
                   </div>
@@ -519,7 +537,15 @@ export default function Cards({ themeControls }: CardsProps) {
                       ))}
                     </div>
                   </div>
-                  <button type="button" className="mt-3 w-full rounded-sm border-4 border-main bg-c2 px-4 py-3 text-sm font-black uppercase text-inv shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c1 hover:text-main disabled:opacity-60" disabled={!canConfirmForge || forgingRarity !== null} onClick={handleForgeCard}>
+                  <div className="mt-3 rounded-sm border-2 border-main bg-muted p-2">
+                    <h3 className="mb-2 text-xs font-black uppercase text-main">{t('appPages.cards.forgeResultTitle')}</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(selectedForgeRecipe.rarityWeights).filter(([, chance]) => Number(chance) > 0).map(([nextRarity]) => (
+                        <span key={nextRarity} className={`rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(nextRarity)}`}>{nextRarity}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="button" className="mt-3 w-full rounded-sm border-4 border-main bg-c2 px-4 py-4 text-base font-black uppercase text-inv shadow-[4px_4px_0_var(--color-shadow)] hover:bg-c1 hover:text-main disabled:opacity-60" disabled={!canConfirmForge || forgingRarity !== null} onClick={handleForgeCard}>
                     {forgingRarity === selectedForgeRarity ? t('appPages.cards.forging') : t('appPages.cards.forgeConfirmSelected')}
                   </button>
                 </aside>

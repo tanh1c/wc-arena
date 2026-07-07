@@ -433,9 +433,16 @@ test('forge tab lets players manually select five eligible base cards', () => {
   assert.match(cardsSource, /appPages\.cards\.forgeSelectedCopiesCost/);
   assert.match(cardsSource, /appPages\.cards\.forgePreserveExactCopy/);
   assert.match(cardsSource, /appPages\.cards\.forgeConfirmSelected/);
+  assert.match(cardsSource, /selectedForgeCards/);
+  assert.match(cardsSource, /Array\.from\(\{ length: CARD_FORGE_COPY_COUNT \}/);
+  assert.match(cardsSource, /grid grid-cols-5 gap-2/);
+  assert.match(cardsSource, /forgeIngredientGroups\.length > 0 \? \(\s*<div className="grid gap-3 xl:grid-cols-3 sm:grid-cols-2"/);
   assert.match(cardsSource, /<CardImage card=\{card\} useGif=\{false\} \/>/);
   assert.match(cardsSource, /backgroundImage: `url\(\$\{getRarityCardBackgroundImage\(card\.rarity\)\}\)`/);
+  assert.match(cardsSource, /appPages\.cards\.forgeOddsTitle/);
+  assert.match(cardsSource, /appPages\.cards\.forgeResultTitle/);
   assert.doesNotMatch(cardsSource, /new Date\(ownedCard\.opened_at\)\.toLocaleDateString\(\)/);
+  assert.doesNotMatch(cardsSource, /flex items-start justify-between[\s\S]*?getRarityBadgeClass\(card\.rarity\)/);
   assert.match(resourcesSource, /forgeTab: 'Forge'/);
   assert.match(resourcesSource, /forgeTab: 'Đập thẻ'/);
   assert.doesNotMatch(cardsSource, /pendingForgeCard/);
