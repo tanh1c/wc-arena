@@ -453,8 +453,16 @@ test('forge tab lets players manually select five eligible base cards', () => {
   assert.match(cardsSource, /appPages\.cards\.forgeConfirmSelected/);
   assert.match(cardsSource, /selectedForgeCards/);
   assert.match(cardsSource, /Array\.from\(\{ length: CARD_FORGE_COPY_COUNT \}/);
-  assert.match(cardsSource, /grid grid-cols-5 gap-2/);
-  assert.match(cardsSource, /forgeIngredientGroups\.length > 0 \? \(\s*<div className="grid gap-3 xl:grid-cols-3 sm:grid-cols-2"/);
+  assert.match(cardsSource, /<main className="bg-card min-w-0 grid lg:grid-cols-\[minmax\(0,1fr\)_300px\]">/);
+  assert.match(cardsSource, /<section className="border-b-4 border-main bg-card lg:border-b-0 lg:border-r-4">/);
+  assert.match(cardsSource, /<div className="border-b-4 border-main bg-c2 p-3 text-inv">/);
+  assert.match(cardsSource, /grid grid-cols-5 border-t-4 border-main/);
+  assert.match(cardsSource, /<div className="border-b-4 border-main bg-muted p-3">/);
+  assert.match(cardsSource, /forgeIngredientGroups\.length > 0 \? \(\s*<div className="grid sm:grid-cols-2 xl:grid-cols-3"/);
+  assert.match(cardsSource, /<aside className="bg-card">/);
+  assert.doesNotMatch(cardsSource, /<main className="bg-card min-w-0 grid gap-3 p-3 sm:p-4 lg:grid-cols-\[minmax\(0,1fr\)_300px\]">/);
+  assert.doesNotMatch(cardsSource, /rounded-sm border-4 border-main bg-c2 p-3 text-inv shadow-\[5px_5px_0_var\(--color-shadow\)\]/);
+  assert.doesNotMatch(cardsSource, /rounded-sm border-4 border-main bg-muted p-3 shadow-\[4px_4px_0_var\(--color-shadow\)\]/);
   assert.match(cardsSource, /<CardImage card=\{card\} useGif=\{false\} \/>/);
   assert.match(cardsSource, /backgroundImage: `url\(\$\{getRarityCardBackgroundImage\(card\.rarity\)\}\)`/);
   assert.match(cardsSource, /appPages\.cards\.forgeOddsTitle/);
@@ -566,7 +574,7 @@ test('reveal popup is compact and can show five cards per row without the inert 
   assert.doesNotMatch(cardsSource, /h-\[94vh\]/);
   assert.doesNotMatch(cardsSource, /overflow-auto/);
   assert.doesNotMatch(cardsSource, /max-w-\[1600px\]/);
-  assert.doesNotMatch(cardsSource, /sm:grid-cols-2 xl:grid-cols-3/);
+  assert.doesNotMatch(cardsSource, /grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3/);
   assert.doesNotMatch(cardsSource, /max-w-\[220px\] min-h-\[360px\]/);
   assert.doesNotMatch(cardsSource, /max-w-\[320px\] min-h-\[520px\]/);
   assert.doesNotMatch(cardsSource, /m-3 sm:m-4 mt-0 border-4 border-main bg-card p-6 text-center font-black uppercase text-muted-foreground/);
