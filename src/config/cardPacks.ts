@@ -13,13 +13,13 @@ export const ICON_CHASE_PITY_PACK_THRESHOLD = 10;
 export const CARD_FORGE_COPY_COUNT = 5;
 
 export const CARD_FORGE_RECIPES = {
-  Common: { priceCoins: 100, rarityWeights: { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
-  Uncommon: { priceCoins: 200, rarityWeights: { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
-  Rare: { priceCoins: 300, rarityWeights: { Common: 0, Uncommon: 0, Rare: 75, Epic: 22, Legendary: 3, Heroes: 0, Icon: 0, GOAT: 0 } },
-  Epic: { priceCoins: 1000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 80, Legendary: 18, Heroes: 2, Icon: 0, GOAT: 0 } },
-  Legendary: { priceCoins: 2500, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 88, Heroes: 10, Icon: 2, GOAT: 0 } },
-  Heroes: { priceCoins: 5000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 90, Icon: 9, GOAT: 1 } },
-  Icon: { priceCoins: 10000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 0, Icon: 96, GOAT: 4 } },
+  Common: { priceCoins: 10, rarityWeights: { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
+  Uncommon: { priceCoins: 20, rarityWeights: { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
+  Rare: { priceCoins: 30, rarityWeights: { Common: 0, Uncommon: 0, Rare: 75, Epic: 22, Legendary: 3, Heroes: 0, Icon: 0, GOAT: 0 } },
+  Epic: { priceCoins: 100, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 80, Legendary: 18, Heroes: 2, Icon: 0, GOAT: 0 } },
+  Legendary: { priceCoins: 250, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 88, Heroes: 10, Icon: 2, GOAT: 0 } },
+  Heroes: { priceCoins: 500, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 90, Icon: 9, GOAT: 1 } },
+  Icon: { priceCoins: 1000, rarityWeights: { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 0, Icon: 96, GOAT: 4 } },
 } satisfies Partial<Record<CardRarity, { priceCoins: number; rarityWeights: Record<CardRarity, number> }>>;
 
 export const CARD_PACKS: Record<PackType, CardPackConfig> = {

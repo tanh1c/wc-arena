@@ -44,19 +44,19 @@ test('Icon Chase pity is due on the tenth missed pack', () => {
 
 test('card forge recipes sink five spare cards with eight-tier upgrade odds', () => {
   assert.equal(CARD_FORGE_COPY_COUNT, 5);
-  assert.equal(CARD_FORGE_RECIPES.Common.priceCoins, 100);
+  assert.equal(CARD_FORGE_RECIPES.Common.priceCoins, 10);
   assert.deepEqual(CARD_FORGE_RECIPES.Common.rarityWeights, { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 });
-  assert.equal(CARD_FORGE_RECIPES.Uncommon.priceCoins, 200);
+  assert.equal(CARD_FORGE_RECIPES.Uncommon.priceCoins, 20);
   assert.deepEqual(CARD_FORGE_RECIPES.Uncommon.rarityWeights, { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 });
-  assert.equal(CARD_FORGE_RECIPES.Rare.priceCoins, 300);
+  assert.equal(CARD_FORGE_RECIPES.Rare.priceCoins, 30);
   assert.deepEqual(CARD_FORGE_RECIPES.Rare.rarityWeights, { Common: 0, Uncommon: 0, Rare: 75, Epic: 22, Legendary: 3, Heroes: 0, Icon: 0, GOAT: 0 });
-  assert.equal(CARD_FORGE_RECIPES.Epic.priceCoins, 1000);
+  assert.equal(CARD_FORGE_RECIPES.Epic.priceCoins, 100);
   assert.deepEqual(CARD_FORGE_RECIPES.Epic.rarityWeights, { Common: 0, Uncommon: 0, Rare: 0, Epic: 80, Legendary: 18, Heroes: 2, Icon: 0, GOAT: 0 });
-  assert.equal(CARD_FORGE_RECIPES.Legendary.priceCoins, 2500);
+  assert.equal(CARD_FORGE_RECIPES.Legendary.priceCoins, 250);
   assert.deepEqual(CARD_FORGE_RECIPES.Legendary.rarityWeights, { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 88, Heroes: 10, Icon: 2, GOAT: 0 });
-  assert.equal(CARD_FORGE_RECIPES.Heroes.priceCoins, 5000);
+  assert.equal(CARD_FORGE_RECIPES.Heroes.priceCoins, 500);
   assert.deepEqual(CARD_FORGE_RECIPES.Heroes.rarityWeights, { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 90, Icon: 9, GOAT: 1 });
-  assert.equal(CARD_FORGE_RECIPES.Icon.priceCoins, 10000);
+  assert.equal(CARD_FORGE_RECIPES.Icon.priceCoins, 1000);
   assert.deepEqual(CARD_FORGE_RECIPES.Icon.rarityWeights, { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 0, Icon: 96, GOAT: 4 });
   assert.equal('GOAT' in CARD_FORGE_RECIPES, false);
 
