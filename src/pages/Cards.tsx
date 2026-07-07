@@ -44,6 +44,7 @@ type CardsProps = {
 const rarities: Array<'all' | CardRarity> = ['all', ...CARD_RARITIES];
 const gallerySorts = ['name', 'duplicates', 'mergeReady'] as const;
 const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
+const forgeRarities = Object.keys(CARD_FORGE_RECIPES) as Array<keyof typeof CARD_FORGE_RECIPES>;
 
 const packArtwork: Record<PackType, { image: string; imageClass?: string }> = {
   daily: { image: dailyPackImage },
@@ -84,7 +85,7 @@ const rarityBadgeClasses: Record<string, string> = {
   Uncommon: 'bg-[#a7f3d0] text-main',
   Rare: 'bg-[#00d4ff] text-main',
   Epic: 'bg-[#ff2bd6] text-white',
-  Legendary: 'bg-[#f59e0b] text-main shadow-[0_0_12px_#f59e0b]',
+  Legendary: 'bg-[#f59e0b] text-main',
   Icon: 'bg-[#fff0b8] text-main shadow-[0_0_12px_#fff0b8]',
 };
 
@@ -177,10 +178,11 @@ export default function Cards({ themeControls }: CardsProps) {
   const [dailyPackOpenedToday, setDailyPackOpenedToday] = useState(false);
   const [dailyResetCountdown, setDailyResetCountdown] = useState('');
   const [iconChasePity, setIconChasePity] = useState<IconChasePityState | null>(null);
-  const [activeTab, setActiveTab] = useState<'openPacks' | 'gallery'>('openPacks');
+  const [activeTab, setActiveTab] = useState<'openPacks' | 'forge' | 'gallery'>('openPacks');
   const [upgradingGifCardId, setUpgradingGifCardId] = useState<string | null>(null);
-  const [forgingCardId, setForgingCardId] = useState<string | null>(null);
-  const [pendingForgeCard, setPendingForgeCard] = useState<CatalogCardWithOwnedCount | null>(null);
+  const [selectedForgeRarity, setSelectedForgeRarity] = useState<keyof typeof CARD_FORGE_RECIPES>('Common');
+  const [selectedForgeOwnedCardIds, setSelectedForgeOwnedCardIds] = useState(new Set<string>());
+  const [forgingRarity, setForgingRarity] = useState<CardRarity | null>(null);
   const [previewGifCard, setPreviewGifCard] = useState<CatalogCardWithOwnedCount | null>(null);
   const [error, setError] = useState('');
 
@@ -243,7 +245,34 @@ export default function Cards({ themeControls }: CardsProps) {
   }, [catalog, gallerySort, ownershipFilter, query, rarity]);
 
   const showcaseSlotsUsed = showcase.length;
-  const pendingForgeRecipe = pendingForgeCard ? CARD_FORGE_RECIPES[pendingForgeCard.rarity as keyof typeof CARD_FORGE_RECIPES] : null;
+  const selectedForgeRecipe = CARD_FORGE_RECIPES[selectedForgeRarity];
+  const canConfirmForge = selectedForgeOwnedCardIds.size === CARD_FORGE_COPY_COUNT;
+  const showcasedOwnedCardIds = useMemo(() => new Set(showcase.map((item) => item.user_player_card_id)), [showcase]);
+  const selectedForgeCountsByCardId = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const card of catalog) {
+      const selectedCount = card.ownedCards.filter((ownedCard) => selectedForgeOwnedCardIds.has(ownedCard.id)).length;
+      if (selectedCount > 0) counts.set(card.id, selectedCount);
+    }
+    return counts;
+  }, [catalog, selectedForgeOwnedCardIds]);
+  const forgeIngredientGroups = useMemo(() => catalog
+    .filter((card) => card.rarity === selectedForgeRarity)
+    .map((card) => ({
+      card,
+      cards: card.ownedCards
+        .filter((ownedCard) => !ownedCard.is_gif_upgrade && !showcasedOwnedCardIds.has(ownedCard.id))
+        .map((ownedCard) => {
+          const isSelected = selectedForgeOwnedCardIds.has(ownedCard.id);
+          const selectedCount = selectedForgeCountsByCardId.get(card.id) ?? 0;
+          return {
+            ownedCard,
+            isSelected,
+            canSelect: isSelected || (selectedForgeOwnedCardIds.size < CARD_FORGE_COPY_COUNT && card.baseOwnedCount > selectedCount + 1),
+          };
+        }),
+    }))
+    .filter((group) => group.cards.length > 0), [catalog, selectedForgeOwnedCardIds, selectedForgeCountsByCardId, selectedForgeRarity, showcasedOwnedCardIds]);
 
   const handleOpenPack = async (packType: PackType) => {
     setOpeningPack(packType);
@@ -292,12 +321,21 @@ export default function Cards({ themeControls }: CardsProps) {
     }
   };
 
-  const handleForgeCard = async (cardId: string) => {
-    setForgingCardId(cardId);
+  const toggleForgeOwnedCard = (ownedCardId: string) => {
+    setSelectedForgeOwnedCardIds((current) => {
+      const next = new Set(current);
+      if (next.has(ownedCardId)) next.delete(ownedCardId);
+      else if (next.size < CARD_FORGE_COPY_COUNT) next.add(ownedCardId);
+      return next;
+    });
+  };
+
+  const handleForgeCard = async () => {
+    setForgingRarity(selectedForgeRarity);
     setError('');
     try {
-      const result = await forgePlayerCard(cardId);
-      setPendingForgeCard(null);
+      const result = await forgePlayerCard(selectedForgeRarity, Array.from(selectedForgeOwnedCardIds));
+      setSelectedForgeOwnedCardIds(new Set<string>());
       setRevealedCards([{ ...result.card, duplicate: true }]);
       setRecentPullCards([]);
       setFlippedRevealCardIds(new Set<string>());
@@ -307,7 +345,7 @@ export default function Cards({ themeControls }: CardsProps) {
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
-      setForgingCardId(null);
+      setForgingRarity(null);
     }
   };
 
@@ -336,16 +374,17 @@ export default function Cards({ themeControls }: CardsProps) {
 
         <section className="bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col shadow-[8px_8px_0_0_var(--color-shadow)] rounded-sm overflow-hidden">
           <div className="overflow-hidden">
-            <div className="grid grid-cols-2 border-b-4 border-main bg-card">
+            <div className="grid grid-cols-3 border-b-4 border-main bg-card">
               {[
                 ['openPacks', 'appPages.cards.openPacks'],
+                ['forge', 'appPages.cards.forgeTab'],
                 ['gallery', 'appPages.cards.gallery'],
               ].map(([tab, label]) => (
                 <button
                   key={tab}
                   type="button"
                   className={`border-r-4 border-main px-4 py-4 text-center font-black uppercase tracking-tight last:border-r-0 ${activeTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}
-                  onClick={() => setActiveTab(tab as 'openPacks' | 'gallery')}
+                  onClick={() => setActiveTab(tab as 'openPacks' | 'forge' | 'gallery')}
                 >
                   {t(label)}
                 </button>
@@ -408,6 +447,72 @@ export default function Cards({ themeControls }: CardsProps) {
                 </section>
               </div>
             </main>
+            ) : activeTab === 'forge' ? (
+              <main className="bg-card min-w-0 grid gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <section className="grid gap-3">
+                  <div className="rounded-sm border-4 border-main bg-muted p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.forgeChooseRarity')}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {forgeRarities.map((nextRarity) => (
+                        <button key={nextRarity} type="button" className={`rounded-sm border-2 border-main px-3 py-2 text-xs font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${selectedForgeRarity === nextRarity ? getRarityBadgeClass(nextRarity) : 'bg-card text-main'}`} onClick={() => { setSelectedForgeRarity(nextRarity); setSelectedForgeOwnedCardIds(new Set<string>()); }}>
+                          {nextRarity}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <h3 className="text-xl font-black uppercase tracking-tight text-main">{t('appPages.cards.forgeSelectCards')}</h3>
+                    {forgeIngredientGroups.length > 0 ? forgeIngredientGroups.map(({ card, cards }) => (
+                      <article key={card.id} className="rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <h4 className="truncate text-lg font-black uppercase text-main">{card.name}</h4>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground">{card.position} · {card.team} · x{card.baseOwnedCount}</p>
+                          </div>
+                          <span className={`shrink-0 rounded-sm border-2 border-main px-2 py-1 text-[10px] font-black uppercase ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                          {cards.map(({ ownedCard, isSelected, canSelect }) => (
+                            <button key={ownedCard.id} type="button" className={`rounded-sm border-2 border-main p-2 text-left text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-45 ${isSelected ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`} disabled={!canSelect} onClick={() => toggleForgeOwnedCard(ownedCard.id)}>
+                              <span className="block truncate">{new Date(ownedCard.opened_at).toLocaleDateString()}</span>
+                              <span className="block">{isSelected ? 'Selected' : canSelect ? 'Pick' : 'Keep 1'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </article>
+                    )) : (
+                      <p className="rounded-sm border-4 border-main bg-card p-6 text-center text-sm font-black uppercase text-muted-foreground shadow-[4px_4px_0_var(--color-shadow)]">{t('appPages.cards.forgeNoEligibleCards')}</p>
+                    )}
+                  </div>
+                </section>
+
+                <aside className="h-fit rounded-sm border-4 border-main bg-card p-3 shadow-[4px_4px_0_var(--color-shadow)]">
+                  <p className="rounded-sm border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.forgeSelectedProgress', { selected: selectedForgeOwnedCardIds.size, required: CARD_FORGE_COPY_COUNT })}</p>
+                  <p className="mt-3 text-sm font-black uppercase text-main">{t('appPages.cards.forgeSelectedCopiesCost', { count: CARD_FORGE_COPY_COUNT, coins: selectedForgeRecipe.priceCoins })}</p>
+                  <div className="mt-3 grid gap-2 text-xs font-black uppercase text-main">
+                    <p className="border-2 border-main bg-muted px-3 py-2">{t('appPages.cards.forgePreserveExactCopy')}</p>
+                    <p className="border-2 border-main bg-muted px-3 py-2">{t('appPages.cards.forgeSafeCards')}</p>
+                  </div>
+                  <div className="mt-4 rounded-sm border-2 border-main bg-muted p-2">
+                    <h3 className="mb-2 text-sm font-black uppercase text-main">{t('appPages.cards.forgeOddsTitle')}</h3>
+                    <div className="grid gap-2">
+                      {Object.entries(selectedForgeRecipe.rarityWeights).map(([nextRarity, chance]) => (
+                        <div key={nextRarity} className="grid grid-cols-[82px_minmax(0,1fr)_52px] items-center gap-2 text-[10px] font-black uppercase text-main">
+                          <span className={`rounded-sm border-2 border-main px-2 py-1 text-center ${getRarityBadgeClass(nextRarity)}`}>{nextRarity}</span>
+                          <span className="h-4 overflow-hidden rounded-sm border-2 border-main bg-card">
+                            <span className={`block h-full ${getRarityBadgeClass(nextRarity)}`} style={{ width: `${chance}%` }} />
+                          </span>
+                          <span>{t('appPages.cards.forgeChance', { chance })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="button" className="mt-4 w-full rounded-sm border-4 border-main bg-c2 px-4 py-3 text-sm font-black uppercase text-inv shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c1 hover:text-main disabled:opacity-60" disabled={!canConfirmForge || forgingRarity !== null} onClick={handleForgeCard}>
+                    {forgingRarity === selectedForgeRarity ? t('appPages.cards.forging') : t('appPages.cards.forgeConfirmSelected')}
+                  </button>
+                </aside>
+              </main>
             ) : (
               <main className="bg-card min-w-0 flex flex-col pt-4 sm:pt-5 lg:pt-6">
               <section className="border-b-4 border-main bg-card p-3 sm:p-4">
@@ -459,9 +564,7 @@ export default function Cards({ themeControls }: CardsProps) {
                   {filteredCatalog.map((card) => {
                     const isMissing = card.ownedCount === 0;
                     const showcaseCard = card.gifOwnedCards[0] ?? card.ownedCards[0];
-                    const forgeRecipe = CARD_FORGE_RECIPES[card.rarity as keyof typeof CARD_FORGE_RECIPES];
-                    const canForge = Boolean(forgeRecipe) && card.baseOwnedCount >= CARD_FORGE_COPY_COUNT + 1;
-                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} useGif={card.hasGifUpgrade} baseOwnedCount={card.baseOwnedCount} forgePriceCoins={forgeRecipe?.priceCoins} dimmed={isMissing} badge={card.hasGifUpgrade ? 'GIF' : isMissing ? t('appPages.cards.locked') : undefined} badgeClass={card.hasGifUpgrade ? 'bg-c3 text-main' : 'bg-muted text-muted-foreground'} onSetShowcase={showcaseCard ? (slot) => handleSetShowcase(slot, showcaseCard.id) : undefined} onPreviewGif={card.gif_url ? () => setPreviewGifCard(card) : undefined} onUpgradeToGif={card.gif_url && !card.hasGifUpgrade && card.baseOwnedCount >= 5 ? () => handleUpgradeToGif(card.id) : undefined} onForgeCard={canForge ? () => setPendingForgeCard(card) : undefined} upgradingGif={upgradingGifCardId === card.id} forging={forgingCardId === card.id} />;
+                    return <CardTile key={card.id} card={card} ownedCount={card.ownedCount} useGif={card.hasGifUpgrade} baseOwnedCount={card.baseOwnedCount} dimmed={isMissing} badge={card.hasGifUpgrade ? 'GIF' : isMissing ? t('appPages.cards.locked') : undefined} badgeClass={card.hasGifUpgrade ? 'bg-c3 text-main' : 'bg-muted text-muted-foreground'} onSetShowcase={showcaseCard ? (slot) => handleSetShowcase(slot, showcaseCard.id) : undefined} onPreviewGif={card.gif_url ? () => setPreviewGifCard(card) : undefined} onUpgradeToGif={card.gif_url && !card.hasGifUpgrade && card.baseOwnedCount >= 5 ? () => handleUpgradeToGif(card.id) : undefined} upgradingGif={upgradingGifCardId === card.id} />;
                   })}
                 </div>
               ) : (
@@ -472,59 +575,6 @@ export default function Cards({ themeControls }: CardsProps) {
           </div>
         </section>
       </div>
-
-      {pendingForgeCard && pendingForgeRecipe && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
-          <section className="w-full max-w-3xl overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
-            <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
-              <div>
-                <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.forgeSubtitle')}</p>
-                <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.forgeTitle')}</h2>
-              </div>
-              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setPendingForgeCard(null)}>
-                {t('ui.close')}
-              </button>
-            </div>
-            <div className="grid gap-3 p-3 md:grid-cols-[220px_minmax(0,1fr)]">
-              <div className="rounded-sm border-4 border-main bg-cover bg-center p-3" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(pendingForgeCard.rarity)})` }}>
-                <CardImage card={pendingForgeCard} useGif={pendingForgeCard.hasGifUpgrade} />
-                <p className={`mt-2 rounded-sm border-2 border-main px-2 py-1 text-center text-xs font-black uppercase ${getRarityBadgeClass(pendingForgeCard.rarity)}`}>{pendingForgeCard.rarity}</p>
-                <h3 className="mt-2 text-center text-lg font-black uppercase text-main">{pendingForgeCard.name}</h3>
-              </div>
-              <div className="grid gap-3 text-main">
-                <div className="grid gap-2 rounded-sm border-4 border-main bg-muted p-3 text-xs font-black uppercase shadow-[3px_3px_0_var(--color-shadow)]">
-                  <p>{t('appPages.cards.forgeCopiesCost', { count: CARD_FORGE_COPY_COUNT, coins: pendingForgeRecipe.priceCoins })}</p>
-                  <p>{t('appPages.cards.forgeProgress', { owned: pendingForgeCard.baseOwnedCount, required: CARD_FORGE_COPY_COUNT + 1 })}</p>
-                  <p>{t('appPages.cards.forgePreserveCopy')}</p>
-                  <p>{t('appPages.cards.forgeSafeCards')}</p>
-                </div>
-                <div className="rounded-sm border-4 border-main bg-card p-3 shadow-[3px_3px_0_var(--color-shadow)]">
-                  <h3 className="mb-2 text-sm font-black uppercase">{t('appPages.cards.forgeOddsTitle')}</h3>
-                  <div className="grid gap-2">
-                    {Object.entries(pendingForgeRecipe.rarityWeights).map(([nextRarity, chance]) => (
-                      <div key={nextRarity} className="grid grid-cols-[72px_minmax(0,1fr)_52px] items-center gap-2 text-[10px] font-black uppercase">
-                        <span className={`rounded-sm border-2 border-main px-2 py-1 text-center ${getRarityBadgeClass(nextRarity)}`}>{nextRarity}</span>
-                        <span className="h-4 overflow-hidden rounded-sm border-2 border-main bg-muted">
-                          <span className={`block h-full ${getRarityBadgeClass(nextRarity)}`} style={{ width: `${chance}%` }} />
-                        </span>
-                        <span>{t('appPages.cards.forgeChance', { chance })}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <button type="button" className="rounded-sm border-4 border-main bg-card px-4 py-3 text-sm font-black uppercase text-main shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c1" onClick={() => setPendingForgeCard(null)}>
-                    {t('appPages.cards.forgeCancel')}
-                  </button>
-                  <button type="button" className="rounded-sm border-4 border-main bg-c2 px-4 py-3 text-sm font-black uppercase text-inv shadow-[3px_3px_0_var(--color-shadow)] hover:bg-c1 hover:text-main disabled:opacity-60" disabled={forgingCardId === pendingForgeCard.id} onClick={() => handleForgeCard(pendingForgeCard.id)}>
-                    {forgingCardId === pendingForgeCard.id ? t('appPages.cards.forging') : t('appPages.cards.forgeConfirm')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
 
       {previewGifCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
@@ -722,22 +772,19 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChase
   );
 }
 
-function CardTile({ card, ownedCount, useGif = false, baseOwnedCount, forgePriceCoins, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase, onPreviewGif, onUpgradeToGif, onForgeCard, upgradingGif = false, forging = false }: {
+function CardTile({ card, ownedCount, useGif = false, baseOwnedCount, badge, badgeClass = 'bg-c2 text-inv', dimmed = false, onSetShowcase, onPreviewGif, onUpgradeToGif, upgradingGif = false }: {
   key?: string;
   card: { name: string; position: string; team: string; nation_region: string; image_url: string; gif_url?: string | null; rarity: string };
   ownedCount: number;
   useGif?: boolean;
   baseOwnedCount?: number;
-  forgePriceCoins?: number;
   badge?: string;
   badgeClass?: string;
   dimmed?: boolean;
   onSetShowcase?: (slot: number) => void;
   onPreviewGif?: () => void;
   onUpgradeToGif?: () => void;
-  onForgeCard?: () => void;
   upgradingGif?: boolean;
-  forging?: boolean;
 }) {
   const { t } = useTranslation();
   const Flag = getNationFlag(card.nation_region);
@@ -770,19 +817,6 @@ function CardTile({ card, ownedCount, useGif = false, baseOwnedCount, forgePrice
           <button type="button" className="rounded-sm border-2 border-main bg-c3 px-2 py-2 text-[11px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-c1 disabled:opacity-60" disabled={upgradingGif} onClick={onUpgradeToGif}>
             {upgradingGif ? t('ui.savingEllipsis') : 'Upgrade GIF'}
           </button>
-        )}
-        {forgePriceCoins !== undefined && (
-          <div className={`grid gap-2 rounded-sm border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${onForgeCard ? 'bg-c1' : 'bg-muted'}`}>
-            <span>{t('appPages.cards.forgeProgress', { owned: baseOwnedCount ?? 0, required: CARD_FORGE_COPY_COUNT + 1 })}</span>
-            <div className="h-3 overflow-hidden rounded-sm border-2 border-main bg-card">
-              <div className="h-full bg-c2" style={{ width: `${Math.min(100, ((baseOwnedCount ?? 0) / (CARD_FORGE_COPY_COUNT + 1)) * 100)}%` }} />
-            </div>
-            <span>{onForgeCard ? t('appPages.cards.forgeReady') : t('appPages.cards.forgeNeedsCopies', { count: CARD_FORGE_COPY_COUNT + 1 })}</span>
-            <span>{t('appPages.cards.forgeCost', { coins: forgePriceCoins })}</span>
-            <button type="button" className="rounded-sm border-2 border-main bg-c2 px-2 py-2 text-[11px] font-black uppercase text-inv shadow-[2px_2px_0_var(--color-shadow)] hover:bg-c1 hover:text-main disabled:opacity-60" disabled={!onForgeCard || forging} aria-label={t('appPages.cards.forgeCard')} onClick={onForgeCard}>
-              {forging ? t('appPages.cards.forging') : onForgeCard ? t('appPages.cards.forgeReadyCta') : t('appPages.cards.forgeLockedCta')}
-            </button>
-          </div>
         )}
         {onSetShowcase && (
           <div className="grid grid-cols-3 gap-1">

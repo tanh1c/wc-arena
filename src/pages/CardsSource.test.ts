@@ -104,7 +104,7 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /bg-card border-4 border-main p-3 sm:p-4 lg:p-6 flex flex-col shadow-\[8px_8px_0_0_var\(--color-shadow\)\] rounded-sm overflow-hidden/);
   assert.match(cardsSource, /<div className="overflow-hidden">/);
   assert.doesNotMatch(cardsSource, /<div className="overflow-hidden rounded-sm/);
-  assert.match(cardsSource, /grid grid-cols-2 border-b-4 border-main bg-card/);
+  assert.match(cardsSource, /grid grid-cols-3 border-b-4 border-main bg-card/);
   assert.match(cardsSource, /border-r-4 border-main px-4 py-4 text-center font-black uppercase tracking-tight last:border-r-0/);
   assert.match(cardsSource, /<main className="min-w-0 bg-card pt-4 sm:pt-5 lg:pt-6">/);
   assert.match(cardsSource, /<main className="bg-card min-w-0 flex flex-col pt-4 sm:pt-5 lg:pt-6">/);
@@ -116,7 +116,6 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2 overflow-x-auto lg:overflow-visible/);
   assert.match(cardsSource, /border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-\[radial-gradient/);
   assert.match(cardsSource, /<aside className="bg-card p-3">/);
-  assert.doesNotMatch(cardsSource, /rounded-sm border-4 border-main bg-card p-3 shadow-\[4px_4px_0_var\(--color-shadow\)\]/);
   assert.match(cardsSource, /grid border-t-4 border-main xl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1\.25fr\)\]/);
   assert.match(cardsSource, /xl:border-r-4/);
   assert.match(cardsSource, /SelectedPackHero/);
@@ -129,13 +128,14 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.doesNotMatch(cardsSource, /relative z-10 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 min-h-0/);
 });
 
-test('cards page separates pack opening from gallery browsing with tabs', () => {
+test('cards page separates pack opening, forge, and gallery browsing with tabs', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
   assert.match(cardsSource, /activeTab/);
-  assert.match(cardsSource, /openPacks/);
-  assert.match(cardsSource, /gallery/);
+  assert.match(cardsSource, /'openPacks' \| 'forge' \| 'gallery'/);
+  assert.match(cardsSource, /grid grid-cols-3 border-b-4 border-main bg-card/);
   assert.match(cardsSource, /appPages\.cards\.openPacks/);
+  assert.match(cardsSource, /appPages\.cards\.forgeTab/);
   assert.match(cardsSource, /appPages\.cards\.gallery/);
   assert.match(cardsSource, /setActiveTab/);
 });
@@ -185,7 +185,8 @@ test('card tiles use rarity-specific animated frame effects', () => {
   assert.match(cssSource, /@keyframes wc-card-uncommon-glow/);
   assert.match(cssSource, /@keyframes wc-card-rare-scan/);
   assert.match(cssSource, /@keyframes wc-card-epic-pulse/);
-  assert.match(cssSource, /@keyframes wc-card-legendary-aura/);
+  assert.doesNotMatch(cssSource, /wc-card-legendary-aura/);
+  assert.doesNotMatch(cssSource, /\.wc-card-frame-legendary \{[^}]*animation:/);
   assert.match(cssSource, /@keyframes wc-card-icon-shimmer/);
 });
 
@@ -197,7 +198,8 @@ test('card rarity badges use rarity colors and clipped rounded cards', () => {
   assert.match(cardsSource, /Uncommon: 'bg-\[#a7f3d0\] text-main/);
   assert.match(cardsSource, /Rare: 'bg-\[#00d4ff\] text-main/);
   assert.match(cardsSource, /Epic: 'bg-\[#ff2bd6\] text-white/);
-  assert.match(cardsSource, /Legendary: 'bg-\[#f59e0b\] text-main/);
+  assert.match(cardsSource, /Legendary: 'bg-\[#f59e0b\] text-main'/);
+  assert.doesNotMatch(cardsSource, /Legendary: 'bg-\[#f59e0b\] text-main shadow/);
   assert.match(cardsSource, /Icon: 'bg-\[#fff0b8\] text-main/);
   assert.match(cardsSource, /getRarityBadgeClass\(card\.rarity\)/);
   assert.match(cardsSource, /min-w-0 overflow-hidden/);
@@ -387,21 +389,12 @@ test('gallery tab presents compact filters and owned or missing card browsing', 
   assert.match(cardsSource, /\['owned', 'missing'\]/);
   assert.match(cardsSource, /setOwnershipFilter/);
   assert.match(cardsSource, /setGallerySort/);
-  assert.match(cardsSource, /forgePlayerCard/);
-  assert.match(cardsSource, /forgingCardId/);
-  assert.match(cardsSource, /CARD_FORGE_COPY_COUNT \+ 1/);
-  assert.match(cardsSource, /onForgeCard/);
   assert.match(cardsSource, /appPages\.cards\.ownedCards/);
   assert.match(cardsSource, /appPages\.cards\.missingCards/);
   assert.match(cardsSource, /appPages\.cards\.sortBy/);
   assert.match(cardsSource, /appPages\.cards\.sortName/);
   assert.match(cardsSource, /appPages\.cards\.sortDuplicates/);
   assert.match(cardsSource, /appPages\.cards\.sortMergeReady/);
-  assert.match(cardsSource, /appPages\.cards\.forgeCard/);
-  assert.match(cardsSource, /appPages\.cards\.forging/);
-  assert.match(cardsSource, /appPages\.cards\.forgeCost/);
-  assert.match(cardsSource, /appPages\.cards\.forgeReady/);
-  assert.match(cardsSource, /appPages\.cards\.forgeNeedsCopies/);
   assert.match(cardsSource, /appPages\.cards\.forgedCard/);
   assert.match(cardsSource, /rounded-sm px-3 py-2 text-xs font-black uppercase/);
   assert.match(cardsSource, /dimmed/);
@@ -418,31 +411,34 @@ test('gallery tab presents compact filters and owned or missing card browsing', 
   assert.doesNotMatch(cardsSource, /<h2 className="text-2xl font-black uppercase tracking-tight">Gallery<\/h2>/);
 });
 
-test('gallery card forge uses a confirmation modal with odds and copy progress', () => {
+test('forge tab lets players manually select five eligible base cards', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
-  assert.match(cardsSource, /pendingForgeCard/);
-  assert.match(cardsSource, /setPendingForgeCard\(card\)/);
-  assert.match(cardsSource, /handleForgeCard\(pendingForgeCard\.id\)/);
-  assert.match(cardsSource, /CARD_FORGE_RECIPES\[pendingForgeCard\.rarity as keyof typeof CARD_FORGE_RECIPES\]/);
-  assert.match(cardsSource, /Object\.entries\(pendingForgeRecipe\.rarityWeights\)/);
-  assert.match(cardsSource, /CARD_FORGE_COPY_COUNT \+ 1/);
-  assert.match(cardsSource, /appPages\.cards\.forgeTitle/);
-  assert.match(cardsSource, /appPages\.cards\.forgeSubtitle/);
-  assert.match(cardsSource, /appPages\.cards\.forgeCopiesCost/);
-  assert.match(cardsSource, /appPages\.cards\.forgePreserveCopy/);
-  assert.match(cardsSource, /appPages\.cards\.forgeSafeCards/);
-  assert.match(cardsSource, /appPages\.cards\.forgeOddsTitle/);
-  assert.match(cardsSource, /appPages\.cards\.forgeChance/);
-  assert.match(cardsSource, /appPages\.cards\.forgeConfirm/);
-  assert.match(cardsSource, /appPages\.cards\.forgeCancel/);
-  assert.match(cardsSource, /appPages\.cards\.forgeProgress/);
-  assert.match(cardsSource, /appPages\.cards\.forgeReadyCta/);
-  assert.match(cardsSource, /appPages\.cards\.forgeLockedCta/);
-  assert.match(cardsSource, /appPages\.cards\.forgeResultTitle/);
-  assert.match(resourcesSource, /forgeTitle: 'Card Forge'/);
-  assert.match(resourcesSource, /forgeTitle: 'Đập thẻ'/);
+  assert.match(cardsSource, /selectedForgeRarity/);
+  assert.match(cardsSource, /selectedForgeOwnedCardIds/);
+  assert.match(cardsSource, /setSelectedForgeOwnedCardIds/);
+  assert.match(cardsSource, /forgeRarities/);
+  assert.match(cardsSource, /CARD_FORGE_COPY_COUNT/);
+  assert.match(cardsSource, /selectedForgeOwnedCardIds\.size === CARD_FORGE_COPY_COUNT/);
+  assert.match(cardsSource, /forgePlayerCard\(selectedForgeRarity, Array\.from\(selectedForgeOwnedCardIds\)\)/);
+  assert.match(cardsSource, /Object\.entries\(selectedForgeRecipe\.rarityWeights\)/);
+  assert.match(cardsSource, /showcasedOwnedCardIds/);
+  assert.match(cardsSource, /is_gif_upgrade/);
+  assert.match(cardsSource, /appPages\.cards\.forgeTab/);
+  assert.match(cardsSource, /appPages\.cards\.forgeChooseRarity/);
+  assert.match(cardsSource, /appPages\.cards\.forgeSelectCards/);
+  assert.match(cardsSource, /appPages\.cards\.forgeSelectedProgress/);
+  assert.match(cardsSource, /appPages\.cards\.forgeNoEligibleCards/);
+  assert.match(cardsSource, /appPages\.cards\.forgeSelectedCopiesCost/);
+  assert.match(cardsSource, /appPages\.cards\.forgePreserveExactCopy/);
+  assert.match(cardsSource, /appPages\.cards\.forgeConfirmSelected/);
+  assert.match(resourcesSource, /forgeTab: 'Forge'/);
+  assert.match(resourcesSource, /forgeTab: 'Đập thẻ'/);
+  assert.doesNotMatch(cardsSource, /pendingForgeCard/);
+  assert.doesNotMatch(cardsSource, /setPendingForgeCard\(card\)/);
+  assert.doesNotMatch(cardsSource, /handleForgeCard\(pendingForgeCard\.id\)/);
+  assert.doesNotMatch(cardsSource, /onForgeCard=\{/);
 });
 
 test('daily pack already-opened state is shown inside the pack panel with UTC reset countdown', () => {

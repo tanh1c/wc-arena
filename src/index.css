@@ -513,7 +513,6 @@
 
   .wc-card-frame-legendary {
     border-color: #f59e0b;
-    animation: wc-card-legendary-aura 2.4s ease-in-out infinite;
   }
 
   .wc-card-frame-icon {
@@ -534,11 +533,6 @@
   @keyframes wc-card-epic-pulse {
     0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 0 #ff2bd6; }
     50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 18px #ffe600; }
-  }
-
-  @keyframes wc-card-legendary-aura {
-    0%, 100% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 12px #f59e0b; }
-    50% { box-shadow: 4px 4px 0 var(--color-shadow), 0 0 24px #fde68a; }
   }
 
   @keyframes wc-card-icon-shimmer {

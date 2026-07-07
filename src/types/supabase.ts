@@ -2060,7 +2060,8 @@ export type Database = {
         Args: {
           p_price_coins: number
           p_result_card_id: string
-          p_source_card_id: string
+          p_source_owned_card_ids: string[]
+          p_source_rarity: string
           p_user_id: string
         }
         Returns: {

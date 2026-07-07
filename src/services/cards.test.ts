@@ -24,8 +24,9 @@ test('cards service sends admin player card upserts, deletes, admin listings, an
   assert.match(source, /body: \{ action: 'upgradeCardToGif', cardId \}/);
   assert.match(source, /export type CardSourceType = PackType \| 'upgrade' \| 'forge'/);
   assert.match(source, /export type ForgePlayerCardResult/);
-  assert.match(source, /export async function forgePlayerCard\(cardId: string\)/);
-  assert.match(source, /body: \{ action: 'forgeCard', cardId \}/);
+  assert.match(source, /export async function forgePlayerCard\(rarity: CardRarity, userPlayerCardIds: string\[\]\)/);
+  assert.match(source, /body: \{ action: 'forgeCard', rarity, userPlayerCardIds \}/);
+  assert.doesNotMatch(source, /body: \{ action: 'forgeCard', cardId \}/);
   assert.match(source, /getFunctionErrorMessage\(error\)/);
 });
 

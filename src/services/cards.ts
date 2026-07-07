@@ -324,9 +324,9 @@ export async function upgradePlayerCardToGif(cardId: string) {
   return data.card;
 }
 
-export async function forgePlayerCard(cardId: string) {
+export async function forgePlayerCard(rarity: CardRarity, userPlayerCardIds: string[]) {
   const { data, error } = await supabase.functions.invoke<ForgePlayerCardResult>('manage_cards', {
-    body: { action: 'forgeCard', cardId },
+    body: { action: 'forgeCard', rarity, userPlayerCardIds },
   });
 
   if (error) throw new Error(await getFunctionErrorMessage(error));

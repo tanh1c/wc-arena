@@ -18,7 +18,7 @@ type Body =
   | { action: 'openCardPack'; packType: PackType }
   | { action: 'setShowcaseCard'; slotNumber: number; userPlayerCardId: string }
   | { action: 'upgradeCardToGif'; cardId: string }
-  | { action: 'forgeCard'; cardId: string }
+  | { action: 'forgeCard'; rarity: CardRarity; userPlayerCardIds: string[] }
   | { action: 'getIconChasePityState' }
   | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === 'forgeCard') {
-      return jsonResponse(await forgeCard(supabase, user.id, body.cardId));
+      return jsonResponse(await forgeCard(supabase, user.id, body.rarity, body.userPlayerCardIds));
     }
 
     return jsonResponse({ error: 'Unknown card action.' }, 400);
@@ -265,19 +265,15 @@ async function upgradeCardToGif(supabase: SupabaseClient, userId: string, id: st
   return { card: data?.[0]?.owned_card ?? null };
 }
 
-async function forgeCard(supabase: SupabaseClient, userId: string, id: string) {
-  const cardId = normalizeRequiredString(id, 'id');
-  const { data: sourceCard, error: sourceError } = await supabase
-    .from('player_cards')
-    .select('id, rarity')
-    .eq('id', cardId)
-    .maybeSingle();
-  if (sourceError) throw sourceError;
-  if (!sourceCard) throw new Error('Source card is not available.');
-  if (sourceCard.rarity === 'Icon') throw new Error('Icon cards cannot be forged.');
-
-  const recipe = CARD_FORGE_RECIPES[sourceCard.rarity as keyof typeof CARD_FORGE_RECIPES];
+async function forgeCard(supabase: SupabaseClient, userId: string, rarity: CardRarity, userPlayerCardIds: string[]) {
+  if (!CARD_RARITIES.includes(rarity)) throw new Error('Card rarity must be Common, Uncommon, Rare, Epic, Legendary, or Icon.');
+  if (rarity === 'Icon') throw new Error('Icon cards cannot be forged.');
+  const recipe = CARD_FORGE_RECIPES[rarity as keyof typeof CARD_FORGE_RECIPES];
   if (!recipe) throw new Error('Card rarity cannot be forged.');
+
+  const selectedIds = Array.isArray(userPlayerCardIds) ? userPlayerCardIds.map((id) => normalizeRequiredString(id, 'userPlayerCardId')) : [];
+  if (selectedIds.length !== CARD_FORGE_COPY_COUNT) throw new Error(`Select exactly ${CARD_FORGE_COPY_COUNT} cards to forge.`);
+  if (new Set(selectedIds).size !== selectedIds.length) throw new Error('Selected cards must be unique.');
 
   const currentCoins = await getUserCoins(supabase, userId);
   if (currentCoins < recipe.priceCoins) throw new Error(`Not enough Coins. Required: ${recipe.priceCoins}. Current: ${currentCoins}.`);
@@ -287,7 +283,8 @@ async function forgeCard(supabase: SupabaseClient, userId: string, id: string) {
 
   const { data, error } = await supabase.rpc('forge_card_transaction', {
     p_user_id: userId,
-    p_source_card_id: cardId,
+    p_source_rarity: rarity,
+    p_source_owned_card_ids: selectedIds,
     p_result_card_id: awardedCards[0].id,
     p_price_coins: recipe.priceCoins,
   });
