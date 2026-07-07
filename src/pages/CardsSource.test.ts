@@ -587,6 +587,10 @@ test('Legendary plus reveals use cinematic pack and forge animations with skip',
   assert.match(cssSource, /\.wc-reveal-card-heroes/);
   assert.match(cssSource, /\.wc-reveal-card-icon/);
   assert.match(cssSource, /\.wc-reveal-card-goat/);
+  assert.match(cssSource, /\.wc-reveal-card-legendary:not\(\.wc-card-flip-revealed\) \.wc-card-flip-inner/);
+  assert.match(cssSource, /\.wc-reveal-card-heroes:not\(\.wc-card-flip-revealed\) \.wc-card-flip-inner/);
+  assert.match(cssSource, /\.wc-reveal-card-icon:not\(\.wc-card-flip-revealed\) \.wc-card-flip-inner/);
+  assert.match(cssSource, /\.wc-reveal-card-goat:not\(\.wc-card-flip-revealed\) \.wc-card-flip-inner/);
   assert.match(cssSource, /@keyframes wc-pack-reveal-burst/);
   assert.match(cssSource, /@keyframes wc-forge-fusion/);
   assert.match(cssSource, /@keyframes wc-reveal-legendary/);

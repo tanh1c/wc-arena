@@ -550,10 +550,10 @@
     box-shadow: 0 0 40px #fff0b8, 6px 6px 0 var(--color-shadow);
   }
 
-  .wc-reveal-card-legendary .wc-card-flip-inner { animation: wc-reveal-legendary 1.6s ease-in-out infinite; }
-  .wc-reveal-card-heroes .wc-card-flip-inner { animation: wc-reveal-heroes 1.7s ease-in-out infinite; }
-  .wc-reveal-card-icon .wc-card-flip-inner { animation: wc-reveal-icon 1.8s linear infinite; }
-  .wc-reveal-card-goat .wc-card-flip-inner { animation: wc-reveal-goat 1.9s ease-in-out infinite; }
+  .wc-reveal-card-legendary:not(.wc-card-flip-revealed) .wc-card-flip-inner { animation: wc-reveal-legendary 1.6s ease-in-out infinite; }
+  .wc-reveal-card-heroes:not(.wc-card-flip-revealed) .wc-card-flip-inner { animation: wc-reveal-heroes 1.7s ease-in-out infinite; }
+  .wc-reveal-card-icon:not(.wc-card-flip-revealed) .wc-card-flip-inner { animation: wc-reveal-icon 1.8s linear infinite; }
+  .wc-reveal-card-goat:not(.wc-card-flip-revealed) .wc-card-flip-inner { animation: wc-reveal-goat 1.9s ease-in-out infinite; }
 
   @keyframes wc-pack-reveal-burst {
     0% { opacity: 1; transform: scale(0.82) rotate(-4deg); filter: brightness(0.8); }
