@@ -1276,6 +1276,9 @@ export const resources = {
           allRarities: 'All rarities',
           loading: 'Loading owned cards...',
           emptyState: 'No owned cards match this filter.',
+          previousPage: 'Prev',
+          nextPage: 'Next',
+          pageStatus: '{{page}}/{{total}}',
           rarityMix: 'Rarity mix',
         },
         cards: {
@@ -2707,6 +2710,9 @@ export const resources = {
           allRarities: 'Tất cả rarity',
           loading: 'Đang tải thẻ đã sở hữu...',
           emptyState: 'Không có thẻ nào khớp bộ lọc.',
+          previousPage: 'Trước',
+          nextPage: 'Sau',
+          pageStatus: '{{page}}/{{total}}',
           rarityMix: 'Tỉ lệ rarity',
         },
         cards: {

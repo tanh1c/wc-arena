@@ -15,6 +15,8 @@ type SquadBuilderProps = {
 
 type RarityFilter = CardRarity | 'all';
 
+const PLAYER_PAGE_SIZE = 12;
+
 const rarityBadgeClasses: Record<CardRarity, string> = {
   Common: 'bg-[#d8ff65] text-main',
   Uncommon: 'bg-[#a7f3d0] text-main',
@@ -60,6 +62,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
   const [selectedSlotId, setSelectedSlotId] = useState<string>('st');
   const [search, setSearch] = useState('');
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all');
+  const [playerPage, setPlayerPage] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -82,6 +85,10 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
     };
   }, []);
 
+  useEffect(() => {
+    setPlayerPage(0);
+  }, [rarityFilter, search]);
+
   const slots = getFormationSlots(formation);
   const ownedCardById = useMemo(() => new Map(ownedCards.map((card) => [card.id, card])), [ownedCards]);
   const assignedOwnedCardIds = getAssignedOwnedCardIds(assignments);
@@ -96,6 +103,9 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
       return `${card.player_cards.name} ${card.player_cards.team} ${card.player_cards.nation_region} ${card.player_cards.position}`.toLowerCase().includes(query);
     });
   }, [ownedCards, rarityFilter, search]);
+  const playerPageCount = Math.max(1, Math.ceil(filteredOwnedCards.length / PLAYER_PAGE_SIZE));
+  const safePlayerPage = Math.min(playerPage, playerPageCount - 1);
+  const paginatedOwnedCards = filteredOwnedCards.slice(safePlayerPage * PLAYER_PAGE_SIZE, (safePlayerPage + 1) * PLAYER_PAGE_SIZE);
 
   function placeCard(ownedCardId: string) {
     const targetSlotId = selectedSlotId || slots.find((slot) => !assignments[slot.id])?.id;
@@ -137,40 +147,43 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
               </div>
             </div>
 
-            <div className="relative min-h-[640px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,var(--color-c3),var(--color-c2)_38%,#083b2d_39%,#0b5d3b_100%)]">
-              <div className="absolute inset-4 border-4 border-white/80" />
-              <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white/70" />
-              <div className="absolute left-1/2 top-4 bottom-4 w-1 -translate-x-1/2 bg-white/60" />
-              {slots.map((slot) => {
-                const assignedCard = ownedCardById.get(assignments[slot.id]);
-                const selected = selectedSlotId === slot.id;
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => setSelectedSlotId(slot.id)}
-                    className={`absolute w-[88px] -translate-x-1/2 -translate-y-1/2 text-center transition-transform sm:w-[104px] ${selected ? 'z-20 scale-110' : 'z-10 hover:scale-105'}`}
-                    style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                  >
-                    {assignedCard ? (
-                      <span className="block overflow-hidden border-4 border-main bg-card shadow-[4px_4px_0_var(--color-shadow)]">
-                        <span className="flex h-24 items-end justify-center bg-muted sm:h-28">
-                          <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="max-h-full max-w-full object-contain" />
+            <div className="bg-[#0b5d3b] p-3 sm:p-5">
+              <div className="relative mx-auto aspect-[9/14] min-h-[620px] max-w-[560px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
+                <div className="absolute inset-4 border-4 border-white/75" />
+                <div className="absolute left-4 right-4 top-1/2 h-1 -translate-y-1/2 bg-white/60" />
+                <div className="absolute left-1/2 top-4 h-20 w-28 -translate-x-1/2 border-x-4 border-b-4 border-white/60" />
+                <div className="absolute bottom-4 left-1/2 h-20 w-28 -translate-x-1/2 border-x-4 border-t-4 border-white/60" />
+                {slots.map((slot) => {
+                  const assignedCard = ownedCardById.get(assignments[slot.id]);
+                  const selected = selectedSlotId === slot.id;
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      onClick={() => setSelectedSlotId(slot.id)}
+                      className={`absolute w-[76px] -translate-x-1/2 -translate-y-1/2 text-center transition-transform sm:w-[96px] ${selected ? 'z-20 scale-110' : 'z-10 hover:scale-105'}`}
+                      style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                    >
+                      {assignedCard ? (
+                        <span className="block overflow-hidden border-4 border-main bg-card shadow-[4px_4px_0_var(--color-shadow)]">
+                          <span className="flex h-20 items-end justify-center bg-muted sm:h-24">
+                            <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="max-h-full max-w-full object-contain" />
+                          </span>
+                          <span className="block border-t-2 border-main bg-card px-1 py-1 text-[9px] font-black uppercase leading-tight text-main sm:text-[10px]">
+                            <span className="block truncate">{assignedCard.player_cards.name}</span>
+                            <span className="text-subtle">{slot.label}</span>
+                          </span>
                         </span>
-                        <span className="block border-t-2 border-main bg-card px-1 py-1 text-[9px] font-black uppercase leading-tight text-main sm:text-[10px]">
-                          <span className="block truncate">{assignedCard.player_cards.name}</span>
-                          <span className="text-subtle">{slot.label}</span>
+                      ) : (
+                        <span className="block">
+                          <img src={emptySlotImage} alt="" className="mx-auto h-16 w-16 object-contain drop-shadow-[4px_4px_0_var(--color-shadow)] sm:h-20 sm:w-20" />
+                          <span className={`mt-1 inline-block border-2 border-main px-2 py-0.5 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${selected ? 'bg-c1 text-main' : 'bg-card text-main'}`}>{slot.label}</span>
                         </span>
-                      </span>
-                    ) : (
-                      <span className="block">
-                        <img src={emptySlotImage} alt="" className="mx-auto h-20 w-20 object-contain drop-shadow-[4px_4px_0_var(--color-shadow)] sm:h-24 sm:w-24" />
-                        <span className={`mt-1 inline-block border-2 border-main px-2 py-0.5 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${selected ? 'bg-c1 text-main' : 'bg-card text-main'}`}>{slot.label}</span>
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </main>
 
@@ -208,15 +221,28 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
               </select>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
-              {loading && <div className="border-2 border-main bg-card p-4 text-sm font-black uppercase text-main">{t('appPages.squadBuilder.loading')}</div>}
-              {error && <div className="border-2 border-main bg-c5 p-4 text-sm font-black uppercase text-main">{error}</div>}
-              {!loading && !error && filteredOwnedCards.length === 0 && <div className="border-2 border-main bg-card p-4 text-sm font-black uppercase text-main">{t('appPages.squadBuilder.emptyState')}</div>}
-              {!loading && !error && filteredOwnedCards.map((card) => (
-                <div key={card.id}>
-                  <PlayerMiniCard card={card} assigned={assignedOwnedCardIds.has(card.id)} onClick={() => placeCard(card.id)} />
+            <div className="min-h-0 flex-1 p-3">
+              <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
+                {loading && <div className="border-2 border-main bg-card p-4 text-sm font-black uppercase text-main">{t('appPages.squadBuilder.loading')}</div>}
+                {error && <div className="border-2 border-main bg-c5 p-4 text-sm font-black uppercase text-main">{error}</div>}
+                {!loading && !error && filteredOwnedCards.length === 0 && <div className="border-2 border-main bg-card p-4 text-sm font-black uppercase text-main">{t('appPages.squadBuilder.emptyState')}</div>}
+                {!loading && !error && paginatedOwnedCards.map((card) => (
+                  <div key={card.id}>
+                    <PlayerMiniCard card={card} assigned={assignedOwnedCardIds.has(card.id)} onClick={() => placeCard(card.id)} />
+                  </div>
+                ))}
+              </div>
+              {!loading && !error && filteredOwnedCards.length > PLAYER_PAGE_SIZE && (
+                <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs font-black uppercase text-main">
+                  <button type="button" onClick={() => setPlayerPage((page) => Math.max(0, page - 1))} disabled={safePlayerPage === 0} className="border-2 border-main bg-card px-2 py-2 shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-40">
+                    {t('appPages.squadBuilder.previousPage')}
+                  </button>
+                  <span className="whitespace-nowrap text-subtle">{t('appPages.squadBuilder.pageStatus', { page: safePlayerPage + 1, total: playerPageCount })}</span>
+                  <button type="button" onClick={() => setPlayerPage((page) => Math.min(playerPageCount - 1, page + 1))} disabled={safePlayerPage >= playerPageCount - 1} className="border-2 border-main bg-card px-2 py-2 shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-40">
+                    {t('appPages.squadBuilder.nextPage')}
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
 
             <div className="border-t-4 border-main bg-card p-3">

@@ -21,6 +21,12 @@ test('squad builder is routed, navigable, and wired to owned cards', () => {
   assert.match(pageSource, /assignCardToSlot/);
   assert.match(pageSource, /getAssignedOwnedCardIds/);
   assert.match(pageSource, /appPages\.squadBuilder/);
+  assert.match(pageSource, /PLAYER_PAGE_SIZE = 12/);
+  assert.match(pageSource, /paginatedOwnedCards/);
+  assert.match(pageSource, /max-h-\[520px\].*overflow-y-auto/);
+  assert.match(pageSource, /aspect-\[9\/14\]/);
+  assert.doesNotMatch(pageSource, /radial-gradient/);
+  assert.doesNotMatch(pageSource, /rounded-full border-4 border-white\/70/);
 
   assert.match(resourcesSource, /squadBuilder: 'Squad Builder'/);
   assert.match(resourcesSource, /squadBuilderShort: 'Squad'/);
