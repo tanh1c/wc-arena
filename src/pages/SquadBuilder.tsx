@@ -15,15 +15,21 @@ type SquadBuilderProps = {
 
 type RarityFilter = CardRarity | 'all';
 type PositionFilter = 'all' | string;
+type PlayerSort = 'position' | 'rarity';
 type PlayerCardPoolItem = OwnedPlayerCard & { duplicateCount: number; ownedCards: OwnedPlayerCard[] };
 
 const PLAYER_PAGE_SIZE = 12;
 const POSITION_ORDER = ['GK', 'LB', 'LWB', 'CB', 'RB', 'RWB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
+const RARITY_ORDER = [...CARD_RARITIES].reverse();
 const POSITION_FILTERS: PositionFilter[] = ['all', ...POSITION_ORDER];
 
 function getPositionRank(position: string) {
   const rank = POSITION_ORDER.indexOf(position);
   return rank === -1 ? POSITION_ORDER.length : rank;
+}
+
+function getRarityRank(rarity: CardRarity) {
+  return RARITY_ORDER.indexOf(rarity);
 }
 
 const rarityBadgeClasses: Record<CardRarity, string> = {
@@ -73,6 +79,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
   const [search, setSearch] = useState('');
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all');
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('all');
+  const [playerSort, setPlayerSort] = useState<PlayerSort>('position');
   const [playerPage, setPlayerPage] = useState(0);
 
   useEffect(() => {
@@ -98,7 +105,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
 
   useEffect(() => {
     setPlayerPage(0);
-  }, [positionFilter, rarityFilter, search]);
+  }, [playerSort, positionFilter, rarityFilter, search]);
 
   const slots = getFormationSlots(formation);
   const ownedCardById = useMemo(() => new Map(ownedCards.map((card) => [card.id, card])), [ownedCards]);
@@ -121,8 +128,11 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
         if (!query) return true;
         return `${card.player_cards.name} ${card.player_cards.team} ${card.player_cards.nation_region} ${card.player_cards.position}`.toLowerCase().includes(query);
       })
-      .sort((first, second) => (getPositionRank(first.player_cards.position) - getPositionRank(second.player_cards.position)) || first.player_cards.name.localeCompare(second.player_cards.name));
-  }, [groupedOwnedCards, positionFilter, rarityFilter, search]);
+      .sort((first, second) => {
+        if (playerSort === 'rarity') return (getRarityRank(first.player_cards.rarity) - getRarityRank(second.player_cards.rarity)) || first.player_cards.name.localeCompare(second.player_cards.name);
+        return (getPositionRank(first.player_cards.position) - getPositionRank(second.player_cards.position)) || first.player_cards.name.localeCompare(second.player_cards.name);
+      });
+  }, [groupedOwnedCards, playerSort, positionFilter, rarityFilter, search]);
   const playerPageCount = Math.max(1, Math.ceil(filteredOwnedCards.length / PLAYER_PAGE_SIZE));
   const safePlayerPage = Math.min(playerPage, playerPageCount - 1);
   const paginatedOwnedCards = filteredOwnedCards.slice(safePlayerPage * PLAYER_PAGE_SIZE, (safePlayerPage + 1) * PLAYER_PAGE_SIZE);
@@ -236,10 +246,16 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                 <Search size={16} strokeWidth={3} />
                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('appPages.squadBuilder.searchPlaceholder')} className="w-full bg-transparent text-xs font-black uppercase outline-none placeholder:text-subtle" />
               </label>
-              <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value as RarityFilter)} className="w-full border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none">
-                <option value="all">{t('appPages.squadBuilder.allRarities')}</option>
-                {CARD_RARITIES.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
-              </select>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value as RarityFilter)} className="w-full border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none">
+                  <option value="all">{t('appPages.squadBuilder.allRarities')}</option>
+                  {CARD_RARITIES.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                </select>
+                <div className="grid grid-cols-2 gap-1">
+                  <button type="button" onClick={() => setPlayerSort('position')} className={`border-2 border-main px-2 py-2 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${playerSort === 'position' ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}>{t('appPages.squadBuilder.sortPosition')}</button>
+                  <button type="button" onClick={() => setPlayerSort('rarity')} className={`border-2 border-main px-2 py-2 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${playerSort === 'rarity' ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}>{t('appPages.squadBuilder.sortRarity')}</button>
+                </div>
+              </div>
               <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
                 {POSITION_FILTERS.map((position) => (
                   <button key={position} type="button" onClick={() => setPositionFilter(position)} className={`shrink-0 border-2 border-main px-2 py-1 text-[10px] font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${positionFilter === position ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}>
