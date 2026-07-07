@@ -772,10 +772,36 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChase
   iconChasePity: IconChasePityState | null;
 }) {
   const { t } = useTranslation();
+  const [showDropRates, setShowDropRates] = useState(false);
   const pack = CARD_PACKS[packType];
   return (
     <aside className="bg-card p-3">
-      <p className="border-2 border-main bg-c4 px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.packStatus')}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="border-2 border-main bg-c4 px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.packStatus')}</p>
+        <div className="relative" onMouseEnter={() => setShowDropRates(true)} onMouseLeave={() => setShowDropRates(false)}>
+          <button type="button" aria-label={t('appPages.cards.dropRates')} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-main bg-c1 text-sm font-black text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-c2 hover:text-inv" onClick={() => setShowDropRates((current) => !current)}>
+            ?
+          </button>
+          {showDropRates && (
+            <div role="dialog" className="absolute right-0 top-10 z-30 w-72 rounded-sm border-4 border-main bg-card p-3 shadow-[6px_6px_0_var(--color-shadow)]">
+              <p className="mb-2 text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.dropRates')}</p>
+              <div className="grid gap-2">
+                {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
+                  <div key={rarity} className="grid gap-1">
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase text-main">
+                      <span className={`border-2 border-main px-2 py-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
+                      <span>{pack.rarityWeights[rarity]}%</span>
+                    </div>
+                    <div className="h-4 rounded-sm border-2 border-main bg-card overflow-hidden">
+                      <div className={`h-full rounded-sm ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarityWeights[rarity]}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       <div className="mt-3 grid gap-2 text-xs font-black uppercase text-main">
         <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
           <span>{t('appPages.cards.availability')}</span>
@@ -796,22 +822,6 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChase
             <span>{iconChasePity.iconMissCount}/{iconChasePity.threshold}</span>
           </div>
         )}
-      </div>
-      <div className="mt-4 border-2 border-main bg-muted p-2">
-        <p className="mb-2 text-[10px] font-black uppercase text-muted-foreground">{t('appPages.cards.dropRates')}</p>
-        <div className="grid gap-2">
-          {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
-            <div key={rarity} className="grid gap-1">
-              <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase text-main">
-                <span className={`border-2 border-main px-2 py-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
-                <span>{pack.rarityWeights[rarity]}%</span>
-              </div>
-              <div className="h-4 rounded-sm border-2 border-main bg-card overflow-hidden">
-                <div className={`h-full rounded-sm ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarityWeights[rarity]}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </aside>
   );

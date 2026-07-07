@@ -306,16 +306,24 @@ test('Icon Chase pack shows compact i18n pity progress only in the pack side pan
   assert.match(resourcesSource, /iconPity: 'Pity Icon'/);
 });
 
-test('card pack panels show rarity drop rates like a gacha game', () => {
+test('card pack panels hide rarity drop rates behind a gacha-style popup button', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
   assert.match(cardsSource, /CARD_RARITIES/);
   assert.match(cardsSource, /rarityWeights/);
   assert.match(cardsSource, /appPages\.cards\.dropRates/);
+  assert.match(cardsSource, /showDropRates/);
+  assert.match(cardsSource, /setShowDropRates/);
+  assert.match(cardsSource, /aria-label=\{t\('appPages\.cards\.dropRates'\)\}/);
+  assert.match(cardsSource, /onMouseEnter=\{\(\) => setShowDropRates\(true\)\}/);
+  assert.match(cardsSource, /onClick=\{\(\) => setShowDropRates\(\(current\) => !current\)\}/);
+  assert.match(cardsSource, /showDropRates &&/);
+  assert.match(cardsSource, /role="dialog"/);
   assert.match(cardsSource, /getRarityBadgeClass\(rarity\)/);
   assert.match(cardsSource, /h-4 rounded-sm border-2 border-main bg-card/);
   assert.match(cardsSource, /h-full rounded-sm \$\{getRarityBadgeClass\(rarity\)\}/);
+  assert.doesNotMatch(cardsSource, /<div className="mt-4 border-2 border-main bg-muted p-2">\s*<p className="mb-2 text-\[10px\] font-black uppercase text-muted-foreground">\{t\('appPages\.cards\.dropRates'\)\}<\/p>/);
   assert.match(resourcesSource, /starterPack: 'Starter Pack'/);
   assert.match(resourcesSource, /elitePack: 'Elite Pack'/);
   assert.match(resourcesSource, /iconPack: 'Icon Chase Pack'/);
