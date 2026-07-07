@@ -433,6 +433,9 @@ test('forge tab lets players manually select five eligible base cards', () => {
   assert.match(cardsSource, /appPages\.cards\.forgeSelectedCopiesCost/);
   assert.match(cardsSource, /appPages\.cards\.forgePreserveExactCopy/);
   assert.match(cardsSource, /appPages\.cards\.forgeConfirmSelected/);
+  assert.match(cardsSource, /<CardImage card=\{card\} useGif=\{false\} \/>/);
+  assert.match(cardsSource, /backgroundImage: `url\(\$\{getRarityCardBackgroundImage\(card\.rarity\)\}\)`/);
+  assert.doesNotMatch(cardsSource, /new Date\(ownedCard\.opened_at\)\.toLocaleDateString\(\)/);
   assert.match(resourcesSource, /forgeTab: 'Forge'/);
   assert.match(resourcesSource, /forgeTab: 'Đập thẻ'/);
   assert.doesNotMatch(cardsSource, /pendingForgeCard/);
