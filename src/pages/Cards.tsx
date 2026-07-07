@@ -667,6 +667,11 @@ export default function Cards({ themeControls }: CardsProps) {
                 <h2 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.revealedCards')}</h2>
               </div>
               <div className="flex items-center gap-2">
+                {flippedRevealCardIds.size < revealedCards.length && (
+                  <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setFlippedRevealCardIds(new Set(revealedCards.map((card) => card.id)))}>
+                    {t('appPages.cards.revealAll')}
+                  </button>
+                )}
                 {hasHighRarityReveal && !skipRevealAnimation && (
                   <button
                     type="button"

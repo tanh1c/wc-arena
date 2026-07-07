@@ -602,6 +602,17 @@ test('Legendary plus reveals use cinematic pack and forge animations with skip',
   assert.match(resourcesSource, /skipAnimation: 'Bỏ qua animation'/);
 });
 
+test('reveal modal includes a reveal all cards action', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
+
+  assert.match(cardsSource, /appPages\.cards\.revealAll/);
+  assert.match(cardsSource, /flippedRevealCardIds\.size < revealedCards\.length/);
+  assert.match(cardsSource, /setFlippedRevealCardIds\(new Set\(revealedCards\.map\(\(card\) => card\.id\)\)\)/);
+  assert.match(resourcesSource, /revealAll: 'Reveal all'/);
+  assert.match(resourcesSource, /revealAll: 'Lật tất cả'/);
+});
+
 test('reveal popup is compact and can show five cards per row without the inert open-pack placeholder', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
