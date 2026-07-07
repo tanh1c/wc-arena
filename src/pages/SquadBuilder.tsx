@@ -14,8 +14,16 @@ type SquadBuilderProps = {
 };
 
 type RarityFilter = CardRarity | 'all';
+type PlayerSort = 'position' | 'name';
+type PlayerCardPoolItem = OwnedPlayerCard & { duplicateCount: number; ownedCards: OwnedPlayerCard[] };
 
 const PLAYER_PAGE_SIZE = 12;
+const POSITION_ORDER = ['GK', 'LB', 'LWB', 'CB', 'RB', 'RWB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
+
+function getPositionRank(position: string) {
+  const rank = POSITION_ORDER.indexOf(position);
+  return rank === -1 ? POSITION_ORDER.length : rank;
+}
 
 const rarityBadgeClasses: Record<CardRarity, string> = {
   Common: 'bg-[#d8ff65] text-main',
@@ -28,16 +36,16 @@ const rarityBadgeClasses: Record<CardRarity, string> = {
   GOAT: 'bg-[#111827] text-[#fde68a]',
 };
 
-function PlayerMiniCard({ card, assigned, onClick }: { card: OwnedPlayerCard; assigned: boolean; onClick: () => void }) {
+function PlayerMiniCard({ card, assigned, onClick }: { card: PlayerCardPoolItem; assigned: boolean; onClick: () => void }) {
   const imageUrl = getPlayerCardDisplayImageUrl(card.player_cards, card.is_gif_upgrade);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`grid grid-cols-[64px_1fr] gap-2 border-2 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-all ${assigned ? 'bg-muted opacity-60' : 'bg-card hover:bg-c1 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'}`}
+      className={`grid h-24 grid-cols-[64px_1fr_auto] gap-2 border-2 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-all ${assigned ? 'bg-muted opacity-60' : 'bg-card hover:bg-c1 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'}`}
     >
-      <span className="flex h-20 items-end justify-center overflow-hidden border-2 border-main bg-muted">
+      <span className="flex h-full items-end justify-center overflow-hidden border-2 border-main bg-muted">
         <img src={imageUrl} alt={card.player_cards.name} loading="lazy" className="max-h-full max-w-full object-contain" />
       </span>
       <span className="min-w-0 self-center">
@@ -48,6 +56,7 @@ function PlayerMiniCard({ card, assigned, onClick }: { card: OwnedPlayerCard; as
         </span>
         <span className="mt-1 block truncate text-[10px] font-bold uppercase text-subtle">{card.player_cards.team}</span>
       </span>
+      {card.duplicateCount > 1 && <span className="self-start border-2 border-main bg-c3 px-1.5 py-0.5 text-[10px] font-black uppercase text-main">×{card.duplicateCount}</span>}
     </button>
   );
 }
@@ -62,6 +71,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
   const [selectedSlotId, setSelectedSlotId] = useState<string>('st');
   const [search, setSearch] = useState('');
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all');
+  const [playerSort, setPlayerSort] = useState<PlayerSort>('position');
   const [playerPage, setPlayerPage] = useState(0);
 
   useEffect(() => {
@@ -87,7 +97,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
 
   useEffect(() => {
     setPlayerPage(0);
-  }, [rarityFilter, search]);
+  }, [playerSort, rarityFilter, search]);
 
   const slots = getFormationSlots(formation);
   const ownedCardById = useMemo(() => new Map(ownedCards.map((card) => [card.id, card])), [ownedCards]);
@@ -95,20 +105,32 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
   const summary = getSquadSummary(assignments, ownedCards);
   const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) ?? slots[0];
 
+  const groupedOwnedCards = useMemo(() => {
+    const cardGroups = new Map<string, OwnedPlayerCard[]>();
+    ownedCards.forEach((card) => cardGroups.set(card.card_id, [...(cardGroups.get(card.card_id) ?? []), card]));
+    return [...cardGroups.values()].map((cards) => ({ ...cards[0], duplicateCount: cards.length, ownedCards: cards }));
+  }, [ownedCards]);
+
   const filteredOwnedCards = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return ownedCards.filter((card) => {
-      if (rarityFilter !== 'all' && card.player_cards.rarity !== rarityFilter) return false;
-      if (!query) return true;
-      return `${card.player_cards.name} ${card.player_cards.team} ${card.player_cards.nation_region} ${card.player_cards.position}`.toLowerCase().includes(query);
-    });
-  }, [ownedCards, rarityFilter, search]);
+    return groupedOwnedCards
+      .filter((card) => {
+        if (rarityFilter !== 'all' && card.player_cards.rarity !== rarityFilter) return false;
+        if (!query) return true;
+        return `${card.player_cards.name} ${card.player_cards.team} ${card.player_cards.nation_region} ${card.player_cards.position}`.toLowerCase().includes(query);
+      })
+      .sort((first, second) => {
+        if (playerSort === 'name') return first.player_cards.name.localeCompare(second.player_cards.name);
+        return (getPositionRank(first.player_cards.position) - getPositionRank(second.player_cards.position)) || first.player_cards.name.localeCompare(second.player_cards.name);
+      });
+  }, [groupedOwnedCards, playerSort, rarityFilter, search]);
   const playerPageCount = Math.max(1, Math.ceil(filteredOwnedCards.length / PLAYER_PAGE_SIZE));
   const safePlayerPage = Math.min(playerPage, playerPageCount - 1);
   const paginatedOwnedCards = filteredOwnedCards.slice(safePlayerPage * PLAYER_PAGE_SIZE, (safePlayerPage + 1) * PLAYER_PAGE_SIZE);
 
-  function placeCard(ownedCardId: string) {
+  function placeCard(card: PlayerCardPoolItem) {
     const targetSlotId = selectedSlotId || slots.find((slot) => !assignments[slot.id])?.id;
+    const ownedCardId = card.ownedCards.find((ownedCard) => !assignedOwnedCardIds.has(ownedCard.id))?.id ?? card.id;
     if (!targetSlotId) return;
     setAssignments((current) => assignCardToSlot(current, targetSlotId, ownedCardId));
     setSelectedSlotId(targetSlotId);
@@ -215,10 +237,16 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                 <Search size={16} strokeWidth={3} />
                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('appPages.squadBuilder.searchPlaceholder')} className="w-full bg-transparent text-xs font-black uppercase outline-none placeholder:text-subtle" />
               </label>
-              <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value as RarityFilter)} className="w-full border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none">
-                <option value="all">{t('appPages.squadBuilder.allRarities')}</option>
-                {CARD_RARITIES.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
-              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value as RarityFilter)} className="w-full border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none">
+                  <option value="all">{t('appPages.squadBuilder.allRarities')}</option>
+                  {CARD_RARITIES.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                </select>
+                <select value={playerSort} onChange={(event) => setPlayerSort(event.target.value as PlayerSort)} className="w-full border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] outline-none">
+                  <option value="position">{t('appPages.squadBuilder.sortByPosition')}</option>
+                  <option value="name">{t('appPages.squadBuilder.sortByName')}</option>
+                </select>
+              </div>
             </div>
 
             <div className="min-h-0 flex-1 p-3">
@@ -228,7 +256,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                 {!loading && !error && filteredOwnedCards.length === 0 && <div className="border-2 border-main bg-card p-4 text-sm font-black uppercase text-main">{t('appPages.squadBuilder.emptyState')}</div>}
                 {!loading && !error && paginatedOwnedCards.map((card) => (
                   <div key={card.id}>
-                    <PlayerMiniCard card={card} assigned={assignedOwnedCardIds.has(card.id)} onClick={() => placeCard(card.id)} />
+                    <PlayerMiniCard card={card} assigned={card.ownedCards.every((ownedCard) => assignedOwnedCardIds.has(ownedCard.id))} onClick={() => placeCard(card)} />
                   </div>
                 ))}
               </div>
