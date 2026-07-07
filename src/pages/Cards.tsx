@@ -459,7 +459,7 @@ export default function Cards({ themeControls }: CardsProps) {
               </div>
             </main>
             ) : activeTab === 'forge' ? (
-              <main className="bg-card min-w-0 grid lg:grid-cols-[minmax(0,1fr)_300px]">
+              <main className="bg-card min-w-0 grid pt-4 sm:pt-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:pt-6">
                 <section className="border-b-4 border-main bg-card lg:border-b-0 lg:border-r-4">
                   <div className="border-b-4 border-main bg-c2 p-3 text-inv">
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">

@@ -453,7 +453,7 @@ test('forge tab lets players manually select five eligible base cards', () => {
   assert.match(cardsSource, /appPages\.cards\.forgeConfirmSelected/);
   assert.match(cardsSource, /selectedForgeCards/);
   assert.match(cardsSource, /Array\.from\(\{ length: CARD_FORGE_COPY_COUNT \}/);
-  assert.match(cardsSource, /<main className="bg-card min-w-0 grid lg:grid-cols-\[minmax\(0,1fr\)_300px\]">/);
+  assert.match(cardsSource, /<main className="bg-card min-w-0 grid pt-4 sm:pt-5 lg:grid-cols-\[minmax\(0,1fr\)_300px\] lg:pt-6">/);
   assert.match(cardsSource, /<section className="border-b-4 border-main bg-card lg:border-b-0 lg:border-r-4">/);
   assert.match(cardsSource, /<div className="border-b-4 border-main bg-c2 p-3 text-inv">/);
   assert.match(cardsSource, /grid grid-cols-5 border-t-4 border-main/);
