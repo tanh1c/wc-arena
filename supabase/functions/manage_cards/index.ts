@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
 import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 

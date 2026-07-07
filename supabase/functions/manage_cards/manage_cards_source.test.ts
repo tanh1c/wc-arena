@@ -38,6 +38,7 @@ test('manage_cards exposes authenticated selected-card forge through one weighte
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 
   assert.match(source, /CARD_FORGE_RECIPES/);
+  assert.match(source, /import \{[^}]*CARD_FORGE_COPY_COUNT[^}]*\} from '..\/..\/..\/src\/config\/cardPacks\.ts'/);
   assert.match(source, /action: 'forgeCard'; rarity: CardRarity; userPlayerCardIds: string\[\]/);
   assert.match(source, /body\.action === 'forgeCard'/);
   assert.match(source, /forgeCard\(supabase, user\.id, body\.rarity, body\.userPlayerCardIds\)/);
