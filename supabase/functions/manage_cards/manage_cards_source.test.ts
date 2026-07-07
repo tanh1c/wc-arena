@@ -81,11 +81,12 @@ test('manage_cards uses protected per-card drop weights for admin edits and pack
 test('manage_cards validates admin card import boundary input', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 
-  assert.match(source, /const cardRarities = \['Common', 'Rare', 'Epic', 'Icon'\] as const/);
+  assert.match(source, /CARD_RARITIES/);
+  assert.doesNotMatch(source, /const cardRarities = \['Common', 'Rare', 'Epic', 'Icon'\] as const/);
   assert.match(source, /Array\.isArray\(cards\)/);
   assert.match(source, /cards\.length === 0/);
   assert.match(source, /normalizeRequiredString\(card\.name, 'name'\)/);
   assert.match(source, /normalizeRequiredString\(card\.image_url, 'image_url'\)/);
   assert.match(source, /gif_url: normalizeOptionalString\(card\.gif_url\)/);
-  assert.match(source, /cardRarities\.includes\(rarity\)/);
+  assert.match(source, /CARD_RARITIES\.includes\(rarity\)/);
 });

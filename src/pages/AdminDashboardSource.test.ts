@@ -48,6 +48,7 @@ test('admin player-card editor exposes per-card drop weight controls', () => {
 test('admin player-card catalog exposes local search, rarity filter, and sort controls', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
+  assert.match(source, /CARD_RARITIES/);
   assert.match(source, /cardSearchQuery/);
   assert.match(source, /setCardSearchQuery/);
   assert.match(source, /cardRarityFilter/);

@@ -144,13 +144,17 @@ test('card art panels use imported rarity background PNGs', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 
   assert.match(cardsSource, /\.\.\/\.\.\/Common_card\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Uncommon\.png/);
   assert.match(cardsSource, /\.\.\/\.\.\/Rare_card\.png/);
   assert.match(cardsSource, /\.\.\/\.\.\/Epic_card\.png/);
+  assert.match(cardsSource, /\.\.\/\.\.\/Legendary\.png/);
   assert.match(cardsSource, /\.\.\/\.\.\/Icon_card\.png/);
   assert.match(cardsSource, /rarityCardBackgroundImages/);
   assert.match(cardsSource, /Common: commonCardBackground/);
+  assert.match(cardsSource, /Uncommon: uncommonCardBackground/);
   assert.match(cardsSource, /Rare: rareCardBackground/);
   assert.match(cardsSource, /Epic: epicCardBackground/);
+  assert.match(cardsSource, /Legendary: legendaryCardBackground/);
   assert.match(cardsSource, /Icon: iconCardBackground/);
   assert.match(cardsSource, /getRarityCardBackgroundImage/);
   assert.match(cardsSource, /backgroundImage: `url\(\$\{getRarityCardBackgroundImage\(card\.rarity\)\}\)`/);
@@ -172,12 +176,16 @@ test('card tiles use rarity-specific animated frame effects', () => {
 
   assert.match(cardsSource, /getRarityCardFrameClass/);
   assert.match(cardsSource, /Common: 'wc-card-frame-common'/);
+  assert.match(cardsSource, /Uncommon: 'wc-card-frame-uncommon'/);
   assert.match(cardsSource, /Rare: 'wc-card-frame-rare'/);
   assert.match(cardsSource, /Epic: 'wc-card-frame-epic'/);
+  assert.match(cardsSource, /Legendary: 'wc-card-frame-legendary'/);
   assert.match(cardsSource, /Icon: 'wc-card-frame-icon'/);
   assert.match(cardsSource, /getRarityCardFrameClass\(card\.rarity\)/);
+  assert.match(cssSource, /@keyframes wc-card-uncommon-glow/);
   assert.match(cssSource, /@keyframes wc-card-rare-scan/);
   assert.match(cssSource, /@keyframes wc-card-epic-pulse/);
+  assert.match(cssSource, /@keyframes wc-card-legendary-aura/);
   assert.match(cssSource, /@keyframes wc-card-icon-shimmer/);
 });
 
@@ -186,8 +194,10 @@ test('card rarity badges use rarity colors and clipped rounded cards', () => {
 
   assert.match(cardsSource, /getRarityBadgeClass/);
   assert.match(cardsSource, /Common: 'bg-\[#d8ff65\] text-main/);
+  assert.match(cardsSource, /Uncommon: 'bg-\[#a7f3d0\] text-main/);
   assert.match(cardsSource, /Rare: 'bg-\[#00d4ff\] text-main/);
   assert.match(cardsSource, /Epic: 'bg-\[#ff2bd6\] text-white/);
+  assert.match(cardsSource, /Legendary: 'bg-\[#f59e0b\] text-main/);
   assert.match(cardsSource, /Icon: 'bg-\[#fff0b8\] text-main/);
   assert.match(cardsSource, /getRarityBadgeClass\(card\.rarity\)/);
   assert.match(cardsSource, /min-w-0 overflow-hidden/);
@@ -288,6 +298,7 @@ test('card pack panels show rarity drop rates like a gacha game', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const resourcesSource = readFileSync('src/i18n/resources.ts', 'utf8');
 
+  assert.match(cardsSource, /CARD_RARITIES/);
   assert.match(cardsSource, /rarityWeights/);
   assert.match(cardsSource, /appPages\.cards\.dropRates/);
   assert.match(cardsSource, /getRarityBadgeClass\(rarity\)/);

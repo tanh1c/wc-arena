@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, ICON_CHASE_PITY_PACK_THRESHOLD, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, ICON_CHASE_PITY_PACK_THRESHOLD, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
 
-test('card pack config uses low icon-focused rarity rates', () => {
-  assert.deepEqual(CARD_PACKS.daily.rarityWeights, { Common: 83, Rare: 15, Epic: 1.9, Icon: 0.1 });
-  assert.deepEqual(CARD_PACKS.starter.rarityWeights, { Common: 76, Rare: 20, Epic: 3.75, Icon: 0.25 });
-  assert.deepEqual(CARD_PACKS.premium.rarityWeights, { Common: 69, Rare: 25, Epic: 5.5, Icon: 0.5 });
-  assert.deepEqual(CARD_PACKS.elite.rarityWeights, { Common: 57, Rare: 31, Epic: 10.5, Icon: 1.5 });
-  assert.deepEqual(CARD_PACKS.icon.rarityWeights, { Common: 45, Rare: 33, Epic: 18, Icon: 4 });
+test('card rarity ladder uses six gacha tiers', () => {
+  assert.deepEqual(CARD_RARITIES, ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Icon']);
 });
 
-test('card pack config includes five balanced gacha tiers', () => {
+test('card pack config uses six-tier gacha rarity rates', () => {
+  assert.deepEqual(CARD_PACKS.daily.rarityWeights, { Common: 55, Uncommon: 30, Rare: 12, Epic: 2.5, Legendary: 0.45, Icon: 0.05 });
+  assert.deepEqual(CARD_PACKS.starter.rarityWeights, { Common: 42, Uncommon: 34, Rare: 18, Epic: 5, Legendary: 0.9, Icon: 0.1 });
+  assert.deepEqual(CARD_PACKS.premium.rarityWeights, { Common: 25, Uncommon: 32, Rare: 28, Epic: 12, Legendary: 2.6, Icon: 0.4 });
+  assert.deepEqual(CARD_PACKS.elite.rarityWeights, { Common: 8, Uncommon: 18, Rare: 34, Epic: 30, Legendary: 8.5, Icon: 1.5 });
+  assert.deepEqual(CARD_PACKS.icon.rarityWeights, { Common: 0, Uncommon: 0, Rare: 35, Epic: 45, Legendary: 15, Icon: 5 });
+});
+
+test('card pack config includes five pack types', () => {
   assert.deepEqual(Object.keys(CARD_PACKS), ['daily', 'starter', 'premium', 'elite', 'icon']);
 
   assert.equal(CARD_PACKS.daily.priceCoins, 0);
@@ -38,14 +42,18 @@ test('Icon Chase pity is due on the tenth missed pack', () => {
   assert.equal(getIconChasePityPacksUntilGuaranteed(9), 1);
 });
 
-test('card forge recipes sink five spare cards with conservative upgrade odds', () => {
+test('card forge recipes sink five spare cards with six-tier upgrade odds', () => {
   assert.equal(CARD_FORGE_COPY_COUNT, 5);
   assert.equal(CARD_FORGE_RECIPES.Common.priceCoins, 100);
-  assert.deepEqual(CARD_FORGE_RECIPES.Common.rarityWeights, { Common: 80, Rare: 19, Epic: 1, Icon: 0 });
+  assert.deepEqual(CARD_FORGE_RECIPES.Common.rarityWeights, { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Icon: 0 });
+  assert.equal(CARD_FORGE_RECIPES.Uncommon.priceCoins, 200);
+  assert.deepEqual(CARD_FORGE_RECIPES.Uncommon.rarityWeights, { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Icon: 0 });
   assert.equal(CARD_FORGE_RECIPES.Rare.priceCoins, 300);
-  assert.deepEqual(CARD_FORGE_RECIPES.Rare.rarityWeights, { Common: 0, Rare: 82, Epic: 17, Icon: 1 });
+  assert.deepEqual(CARD_FORGE_RECIPES.Rare.rarityWeights, { Common: 0, Uncommon: 0, Rare: 75, Epic: 22, Legendary: 3, Icon: 0 });
   assert.equal(CARD_FORGE_RECIPES.Epic.priceCoins, 1000);
-  assert.deepEqual(CARD_FORGE_RECIPES.Epic.rarityWeights, { Common: 0, Rare: 0, Epic: 90, Icon: 10 });
+  assert.deepEqual(CARD_FORGE_RECIPES.Epic.rarityWeights, { Common: 0, Uncommon: 0, Rare: 0, Epic: 80, Legendary: 18, Icon: 2 });
+  assert.equal(CARD_FORGE_RECIPES.Legendary.priceCoins, 2500);
+  assert.deepEqual(CARD_FORGE_RECIPES.Legendary.rarityWeights, { Common: 0, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 90, Icon: 10 });
   assert.equal('Icon' in CARD_FORGE_RECIPES, false);
 });
 
@@ -75,8 +83,10 @@ test('weighted card selection returns null when all cards have zero weight', () 
 test('weighted rarity selection skips rarities unavailable in the catalog', () => {
   const weights: Record<CardRarity, number> = {
     Common: 100,
+    Uncommon: 25,
     Rare: 10,
     Epic: 5,
+    Legendary: 2,
     Icon: 1,
   };
 
@@ -88,8 +98,10 @@ test('weighted rarity selection skips rarities unavailable in the catalog', () =
 test('weighted rarity selection returns null when no configured rarity is available', () => {
   const weights: Record<CardRarity, number> = {
     Common: 0,
+    Uncommon: 0,
     Rare: 0,
     Epic: 0,
+    Legendary: 0,
     Icon: 0,
   };
 

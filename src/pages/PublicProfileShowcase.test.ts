@@ -9,9 +9,13 @@ test('public profile renders card showcase near the player summary', () => {
   assert.match(publicProfileSource, /showcaseCards/);
   assert.match(publicProfileSource, /appPages\.cards\.profileShowcase/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Common_card\.png/);
+  assert.match(publicProfileSource, /\.\.\/\.\.\/Uncommon\.png/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Rare_card\.png/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Epic_card\.png/);
+  assert.match(publicProfileSource, /\.\.\/\.\.\/Legendary\.png/);
   assert.match(publicProfileSource, /\.\.\/\.\.\/Icon_card\.png/);
+  assert.match(publicProfileSource, /Uncommon: uncommonCardBackground/);
+  assert.match(publicProfileSource, /Legendary: legendaryCardBackground/);
   assert.match(publicProfileSource, /publicProfileCardBackgroundImages/);
   assert.match(publicProfileSource, /getPublicProfileCardBackgroundImage/);
   assert.match(publicProfileSource, /showcaseCard \? 'bg-cover bg-center' : 'bg-muted'/);

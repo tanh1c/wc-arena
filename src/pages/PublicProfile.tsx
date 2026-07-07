@@ -5,7 +5,9 @@ import { ArrowLeft, BarChart2, ListChecks, Shield, Star, Trophy } from 'lucide-r
 import commonCardBackground from '../../Common_card.png';
 import epicCardBackground from '../../Epic_card.png';
 import iconCardBackground from '../../Icon_card.png';
+import legendaryCardBackground from '../../Legendary.png';
 import rareCardBackground from '../../Rare_card.png';
+import uncommonCardBackground from '../../Uncommon.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
 import RankBadge from '../components/ui/RankBadge';
@@ -32,8 +34,10 @@ const publicHistoryPageSize = 10;
 
 const publicProfileCardBackgroundImages: Record<string, string> = {
   Common: commonCardBackground,
+  Uncommon: uncommonCardBackground,
   Rare: rareCardBackground,
   Epic: epicCardBackground,
+  Legendary: legendaryCardBackground,
   Icon: iconCardBackground,
 };
 

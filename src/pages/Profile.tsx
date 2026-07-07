@@ -5,7 +5,9 @@ import { Award, BarChart2, Shield, Star, Trophy, Users } from 'lucide-react';
 import commonCardBackground from '../../Common_card.png';
 import epicCardBackground from '../../Epic_card.png';
 import iconCardBackground from '../../Icon_card.png';
+import legendaryCardBackground from '../../Legendary.png';
 import rareCardBackground from '../../Rare_card.png';
+import uncommonCardBackground from '../../Uncommon.png';
 import AppShell from '../components/layout/AppShell';
 import AvatarPicker from '../components/AvatarPicker';
 import PointsCoin from '../components/ui/PointsCoin';
@@ -36,8 +38,10 @@ type ProfileProps = {
 
 const profileCardBackgroundImages: Record<string, string> = {
   Common: commonCardBackground,
+  Uncommon: uncommonCardBackground,
   Rare: rareCardBackground,
   Epic: epicCardBackground,
+  Legendary: legendaryCardBackground,
   Icon: iconCardBackground,
 };
 

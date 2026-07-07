@@ -8,12 +8,14 @@ import elitePackImage from '../../Elite.png';
 import epicCardBackground from '../../Epic_card.png';
 import iconPackImage from '../../Icon.png';
 import iconCardBackground from '../../Icon_card.png';
+import legendaryCardBackground from '../../Legendary.png';
 import premiumPackImage from '../../Premium.png';
 import rareCardBackground from '../../Rare_card.png';
+import uncommonCardBackground from '../../Uncommon.png';
 import starterPackImage from '../../Starter.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
-import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, type CardRarity, type PackType } from '../config/cardPacks';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, type CardRarity, type PackType } from '../config/cardPacks';
 import type { ThemeControls } from '../App';
 import {
   getCurrentUserDailyPackOpenedToday,
@@ -39,7 +41,7 @@ type CardsProps = {
   themeControls: ThemeControls;
 };
 
-const rarities: Array<'all' | CardRarity> = ['all', 'Common', 'Rare', 'Epic', 'Icon'];
+const rarities: Array<'all' | CardRarity> = ['all', ...CARD_RARITIES];
 const gallerySorts = ['name', 'duplicates', 'mergeReady'] as const;
 const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
 
@@ -61,22 +63,28 @@ const packTextKeys: Record<PackType, { title: string; description: string }> = {
 
 const rarityCardBackgroundImages: Record<string, string> = {
   Common: commonCardBackground,
+  Uncommon: uncommonCardBackground,
   Rare: rareCardBackground,
   Epic: epicCardBackground,
+  Legendary: legendaryCardBackground,
   Icon: iconCardBackground,
 };
 
 const rarityCardFrameClasses: Record<string, string> = {
   Common: 'wc-card-frame-common',
+  Uncommon: 'wc-card-frame-uncommon',
   Rare: 'wc-card-frame-rare',
   Epic: 'wc-card-frame-epic',
+  Legendary: 'wc-card-frame-legendary',
   Icon: 'wc-card-frame-icon',
 };
 
 const rarityBadgeClasses: Record<string, string> = {
   Common: 'bg-[#d8ff65] text-main',
+  Uncommon: 'bg-[#a7f3d0] text-main',
   Rare: 'bg-[#00d4ff] text-main',
   Epic: 'bg-[#ff2bd6] text-white',
+  Legendary: 'bg-[#f59e0b] text-main shadow-[0_0_12px_#f59e0b]',
   Icon: 'bg-[#fff0b8] text-main shadow-[0_0_12px_#fff0b8]',
 };
 

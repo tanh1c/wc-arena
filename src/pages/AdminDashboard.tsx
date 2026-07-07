@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
-import type { CardRarity } from '../config/cardPacks';
+import { CARD_RARITIES, type CardRarity } from '../config/cardPacks';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
 import { deletePlayerCard, listAdminPlayerCards, parsePlayerCardCsv, playerCardToAdminInput, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
@@ -27,7 +27,7 @@ type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity' | 'drop_w
 type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
 type CardRarityFilter = 'all' | CardRarity;
 
-const cardRarities: CardRarity[] = ['Common', 'Rare', 'Epic', 'Icon'];
+const cardRarities: CardRarity[] = [...CARD_RARITIES];
 const cardRarityRank = new Map(cardRarities.map((rarity, index) => [rarity, index]));
 const cardDraftFields: Array<{ key: CardDraftTextField; label: string; wide?: boolean }> = [
   { key: 'id', label: 'ID' },

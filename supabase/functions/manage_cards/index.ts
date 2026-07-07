@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CARD_FORGE_RECIPES, CARD_PACKS, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
+import { CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
 import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
@@ -50,8 +50,6 @@ type AdminPlayerCardInput = {
   rarity?: unknown;
   drop_weight?: unknown;
 };
-
-const cardRarities = ['Common', 'Rare', 'Epic', 'Icon'] as const;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -334,7 +332,7 @@ async function upsertPlayerCards(supabase: SupabaseClient, cards: AdminPlayerCar
   const weights: number[] = [];
   const rows = cards.map((card) => {
     const rarity = normalizeRequiredString(card.rarity, 'rarity') as CardRarity;
-    if (!cardRarities.includes(rarity)) throw new Error('Card rarity must be Common, Rare, Epic, or Icon.');
+    if (!CARD_RARITIES.includes(rarity)) throw new Error('Card rarity must be Common, Uncommon, Rare, Epic, Legendary, or Icon.');
     weights.push(normalizeDropWeight(card.drop_weight));
 
     return {
