@@ -31,6 +31,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const Rewards = lazy(() => import('./pages/Rewards'));
 const Statistics = lazy(() => import('./pages/Statistics'));
+const SquadBuilder = lazy(() => import('./pages/SquadBuilder'));
 const SquadGallery = lazy(() => import('./pages/SquadGallery'));
 
 export type ThemeControls = {
@@ -211,6 +212,7 @@ export default function App() {
           <Route path="/prize-pool" element={<Navigate to="/points-guide" replace />} />
           <Route path="/profile" element={<Profile themeControls={themeControls} />} />
           <Route path="/cards" element={<Cards themeControls={themeControls} />} />
+          <Route path="/squad-builder" element={<SquadBuilder themeControls={themeControls} />} />
           <Route path="/users/:userId" element={<PublicProfile themeControls={themeControls} />} />
           <Route path="/badges" element={<Badges themeControls={themeControls} />} />
           <Route path="/achievements" element={<Achievements themeControls={themeControls} />} />
