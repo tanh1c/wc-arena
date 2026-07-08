@@ -512,6 +512,14 @@ test('forge tab lets players manually select five eligible base cards', () => {
   assert.match(cardsSource, /appPages\.cards\.forgeSelectedCopiesCost/);
   assert.match(cardsSource, /appPages\.cards\.forgePreserveExactCopy/);
   assert.match(cardsSource, /appPages\.cards\.forgeConfirmSelected/);
+  assert.match(cardsSource, /appPages\.cards\.forgeAutoSelect/);
+  assert.match(cardsSource, /autoSelectableForgeOwnedCardIds/);
+  assert.match(cardsSource, /handleAutoSelectForgeFodder/);
+  assert.match(cardsSource, /setSelectedForgeOwnedCardIds\(new Set\(autoSelectableForgeOwnedCardIds\)\)/);
+  assert.match(cardsSource, /ownedCard\.is_gif_upgrade \|\| showcasedOwnedCardIds\.has\(ownedCard\.id\)/);
+  assert.match(cardsSource, /selectedForCard \+ 1/);
+  assert.match(cardsSource, /autoSelectableForgeOwnedCardIds\.length < CARD_FORGE_COPY_COUNT/);
+  assert.match(cardsSource, /onClick=\{handleAutoSelectForgeFodder\}/);
   assert.match(cardsSource, /selectedForgeCards/);
   assert.match(cardsSource, /Array\.from\(\{ length: CARD_FORGE_COPY_COUNT \}/);
   assert.match(cardsSource, /<main className="bg-card min-w-0 grid pt-4 sm:pt-5 lg:grid-cols-\[minmax\(0,1fr\)_300px\] lg:pt-6">/);

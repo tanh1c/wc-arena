@@ -278,6 +278,21 @@ export default function Cards({ themeControls }: CardsProps) {
   const selectedForgeCards = useMemo(() => catalog.flatMap((card) => card.ownedCards
     .filter((ownedCard) => selectedForgeOwnedCardIds.has(ownedCard.id))
     .map((ownedCard) => ({ card, ownedCard }))), [catalog, selectedForgeOwnedCardIds]);
+  const autoSelectableForgeOwnedCardIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const card of catalog.filter((nextCard) => nextCard.rarity === selectedForgeRarity)) {
+      let selectedForCard = 0;
+      for (const ownedCard of card.ownedCards) {
+        if (ids.length >= CARD_FORGE_COPY_COUNT) return ids;
+        if (ownedCard.is_gif_upgrade || showcasedOwnedCardIds.has(ownedCard.id)) continue;
+        if (card.baseOwnedCount > selectedForCard + 1) {
+          ids.push(ownedCard.id);
+          selectedForCard += 1;
+        }
+      }
+    }
+    return ids;
+  }, [catalog, selectedForgeRarity, showcasedOwnedCardIds]);
   const hasHighRarityReveal = revealedCards.some((card) => highRevealRarities.has(card.player_cards.rarity));
   const revealAnimationActive = hasHighRarityReveal && !skipRevealAnimation;
   const forgeIngredientGroups = useMemo(() => catalog
@@ -355,6 +370,10 @@ export default function Cards({ themeControls }: CardsProps) {
       else if (next.size < CARD_FORGE_COPY_COUNT) next.add(ownedCardId);
       return next;
     });
+  };
+
+  const handleAutoSelectForgeFodder = () => {
+    setSelectedForgeOwnedCardIds(new Set(autoSelectableForgeOwnedCardIds));
   };
 
   const handleForgeCard = async () => {
@@ -485,7 +504,12 @@ export default function Cards({ themeControls }: CardsProps) {
                         <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.forgeTab')}</p>
                         <h3 className="text-2xl font-black uppercase tracking-tight">{t('appPages.cards.forgeSelectedProgress', { selected: selectedForgeOwnedCardIds.size, required: CARD_FORGE_COPY_COUNT })}</h3>
                       </div>
-                      <p className="border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase text-main">{selectedForgeRecipe.priceCoins.toLocaleString()} {t('ui.coinsShort')}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className="border-2 border-main bg-c1 px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-card disabled:opacity-60" disabled={autoSelectableForgeOwnedCardIds.length < CARD_FORGE_COPY_COUNT} onClick={handleAutoSelectForgeFodder}>
+                          {t('appPages.cards.forgeAutoSelect')}
+                        </button>
+                        <p className="border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase text-main">{selectedForgeRecipe.priceCoins.toLocaleString()} {t('ui.coinsShort')}</p>
+                      </div>
                     </div>
                     <div className="mt-3 grid grid-cols-5 border-t-4 border-main bg-card">
                       {Array.from({ length: CARD_FORGE_COPY_COUNT }, (_, slotIndex) => {
