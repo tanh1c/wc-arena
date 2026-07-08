@@ -111,7 +111,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
   const ownedCardById = useMemo(() => new Map(ownedCards.map((card) => [card.id, card])), [ownedCards]);
   const assignedOwnedCardIds = getAssignedOwnedCardIds(assignments);
   const summary = getSquadSummary(assignments, ownedCards);
-  const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) ?? slots[0];
+  const selectedSlot = slots.find((slot) => slot.id === selectedSlotId);
 
   const groupedOwnedCards = useMemo(() => {
     const cardGroups = new Map<string, OwnedPlayerCard[]>();
@@ -179,7 +179,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
             </div>
 
             <div className="bg-[#0b5d3b] p-3 sm:p-5">
-              <div className="relative mx-auto aspect-[12/13] min-h-[620px] max-w-[820px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
+              <div onClick={() => setSelectedSlotId('')} className="relative mx-auto aspect-[12/13] min-h-[620px] max-w-[820px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
                 <div className="absolute inset-4 border-4 border-white/75" />
                 <div className="absolute left-4 right-4 top-1/2 h-1 -translate-y-1/2 bg-white/60" />
                 <div className="absolute left-1/2 top-4 h-20 w-28 -translate-x-1/2 border-x-4 border-b-4 border-white/60" />
@@ -191,7 +191,10 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                     <button
                       key={slot.id}
                       type="button"
-                      onClick={() => setSelectedSlotId(slot.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedSlotId(slot.id);
+                      }}
                       className={`absolute w-[96px] -translate-x-1/2 -translate-y-1/2 text-center transition-transform sm:w-[132px] ${selected ? 'z-20 scale-110' : 'z-10 hover:scale-105'}`}
                       style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                     >

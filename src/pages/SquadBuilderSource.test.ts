@@ -39,6 +39,9 @@ test('squad builder is routed, navigable, and wired to owned cards', () => {
   assert.match(pageSource, /min-h-\[620px\]/);
   assert.match(pageSource, /max-w-\[820px\]/);
   assert.match(pageSource, /w-\[96px\].*sm:w-\[132px\]/);
+  assert.match(pageSource, /onClick=\{\(\) => setSelectedSlotId\(''\)\}/);
+  assert.match(pageSource, /event\.stopPropagation\(\)/);
+  assert.match(pageSource, /const selectedSlot = slots\.find\(\(slot\) => slot\.id === selectedSlotId\);/);
   assert.match(pageSource, /h-32 w-32.*sm:h-40 sm:w-40/);
   assert.match(pageSource, /drop-shadow-\[4px_4px_0_rgba\(0,0,0,0\.35\)\]/);
   assert.doesNotMatch(pageSource, /radial-gradient/);
