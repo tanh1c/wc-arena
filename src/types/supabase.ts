@@ -248,6 +248,51 @@ export type Database = {
         }
         Relationships: []
       }
+      card_pack_catalog: {
+        Row: {
+          card_count: number
+          created_at: string
+          description: string
+          enabled: boolean
+          image_path: string
+          once_per_utc_day: boolean
+          pack_type: string
+          price_coins: number
+          rarity_weights: Json
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          card_count: number
+          created_at?: string
+          description: string
+          enabled?: boolean
+          image_path: string
+          once_per_utc_day?: boolean
+          pack_type: string
+          price_coins?: number
+          rarity_weights: Json
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          card_count?: number
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          image_path?: string
+          once_per_utc_day?: boolean
+          pack_type?: string
+          price_coins?: number
+          rarity_weights?: Json
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_login_rewards: {
         Row: {
           created_at: string

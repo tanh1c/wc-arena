@@ -6,11 +6,13 @@ test('admin dashboard renders tabbed admin sections with match management as def
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
   assert.match(source, /activeAdminTab, setActiveAdminTab/);
-  assert.match(source, /useState<'matches' \| 'cards'>\('matches'\)/);
+  assert.match(source, /useState<'matches' \| 'cards' \| 'packs'>\('matches'\)/);
   assert.match(source, /Match Management/);
   assert.match(source, /Player Cards/);
+  assert.match(source, /Card Packs/);
   assert.match(source, /activeAdminTab === 'matches'/);
   assert.match(source, /activeAdminTab === 'cards'/);
+  assert.match(source, /activeAdminTab === 'packs'/);
 });
 
 test('admin dashboard exposes player-card CRUD and CSV import only after the admin gate', () => {
@@ -66,6 +68,24 @@ test('admin player-card catalog exposes local search, rarity filter, and sort co
   assert.match(source, /max-h-\[70dvh\] overflow-auto/);
   assert.match(source, /<thead className="sticky top-0 z-10 bg-muted font-black uppercase">/);
   assert.match(source, /visiblePlayerCards\.map/);
+});
+
+test('admin dashboard exposes pack catalog editing with repo image selection', () => {
+  const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
+
+  assert.match(source, /PACK_IMAGE_OPTIONS/);
+  assert.match(source, /listCardPackCatalog/);
+  assert.match(source, /upsertCardPackCatalog/);
+  assert.match(source, /emptyPackDraft/);
+  assert.match(source, /Card Packs/);
+  assert.match(source, /Pack type/);
+  assert.match(source, /Card count/);
+  assert.match(source, /Price Coins/);
+  assert.match(source, /Image/);
+  assert.match(source, /Pack preview/);
+  assert.match(source, /Save pack/);
+  assert.match(source, /packDraft\.image_path/);
+  assert.match(source, /PACK_IMAGE_OPTIONS\.map/);
 });
 
 test('admin access check is stable across refreshed session objects for the same user', () => {

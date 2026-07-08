@@ -20,6 +20,8 @@ type Body =
   | { action: 'upgradeCardToGif'; cardId: string }
   | { action: 'forgeCard'; rarity: CardRarity; userPlayerCardIds: string[] }
   | { action: 'getIconChasePityState' }
+  | { action: 'listCardPackCatalog' }
+  | { action: 'upsertCardPackCatalog'; pack: CardPackCatalogInput }
   | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'deletePlayerCard'; id: string };
@@ -29,6 +31,21 @@ type PlayerCard = {
   rarity: CardRarity;
   drop_weight: number;
 };
+
+type CardPackCatalogRow = {
+  pack_type: string;
+  title: string;
+  description: string;
+  image_path: string;
+  card_count: number;
+  price_coins: number;
+  once_per_utc_day: boolean;
+  rarity_weights: Record<CardRarity, number>;
+  enabled: boolean;
+  sort_order: number;
+};
+
+type CardPackCatalogInput = Record<string, unknown>;
 
 type AdminPlayerCardInput = {
   id?: unknown;
@@ -75,6 +92,18 @@ Deno.serve(async (req) => {
       return jsonResponse(await deletePlayerCard(adminAuth.supabase, body.id));
     }
 
+    if (body.action === 'listCardPackCatalog') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await listCardPackCatalog(adminAuth.supabase));
+    }
+
+    if (body.action === 'upsertCardPackCatalog') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await upsertCardPackCatalog(adminAuth.supabase, body.pack));
+    }
+
     const auth = await requireAuthenticatedUser(req, corsHeaders);
     if (auth instanceof Response) return auth;
     const { supabase, user } = auth;
@@ -116,12 +145,12 @@ Deno.serve(async (req) => {
 });
 
 async function openCardPack(supabase: SupabaseClient, userId: string, packType: PackType) {
-  const pack = CARD_PACKS[packType];
-  if (!pack) throw new Error('Unknown pack type.');
+  const pack = await getPackConfig(supabase, packType);
+  if (!pack?.enabled) throw new Error('Unknown pack type.');
 
   const openedOnUtc = getUtcDay();
 
-  if (pack.oncePerUtcDay) {
+  if (pack.once_per_utc_day) {
     const { data: existing, error } = await supabase
       .from('card_pack_openings')
       .select('id')
@@ -135,7 +164,7 @@ async function openCardPack(supabase: SupabaseClient, userId: string, packType: 
   }
 
   const currentCoins = await getUserCoins(supabase, userId);
-  if (currentCoins < pack.priceCoins) throw new Error(`Not enough Coins. Required: ${pack.priceCoins}. Current: ${currentCoins}.`);
+  if (currentCoins < pack.price_coins) throw new Error(`Not enough Coins. Required: ${pack.price_coins}. Current: ${currentCoins}.`);
 
   const { data: ownedBefore, error: ownedError } = await supabase
     .from('user_player_cards')
@@ -147,14 +176,14 @@ async function openCardPack(supabase: SupabaseClient, userId: string, packType: 
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const iconChasePity = packType === 'icon' ? await getIconChasePityState(supabase, userId) : null;
-    const awardedCards = await drawCards(supabase, pack.cardCount, pack.rarityWeights, { forceIcon: iconChasePity?.nextGuaranteed ?? false });
-    if (awardedCards.length !== pack.cardCount) throw new Error('Not enough cards are available for this pack.');
+    const awardedCards = await drawCards(supabase, pack.card_count, pack.rarity_weights, { forceIcon: iconChasePity?.nextGuaranteed ?? false });
+    if (awardedCards.length !== pack.card_count) throw new Error('Not enough cards are available for this pack.');
 
     const { data: openedRows, error: openError } = await supabase.rpc('open_card_pack_transaction', {
       p_user_id: userId,
       p_pack_type: packType,
       p_card_ids: awardedCards.map((card) => card.id),
-      p_price_coins: pack.priceCoins,
+      p_price_coins: pack.price_coins,
       p_opened_on_utc: openedOnUtc,
       p_expected_icon_miss_count: iconChasePity?.iconMissCount ?? null,
     });
@@ -170,13 +199,84 @@ async function openCardPack(supabase: SupabaseClient, userId: string, packType: 
         ...row.owned_card,
         duplicate: ownedCardIdsBefore.has(row.owned_card.card_id),
       })),
-      coins: rows[0]?.next_coins ?? currentCoins - pack.priceCoins,
+      coins: rows[0]?.next_coins ?? currentCoins - pack.price_coins,
       openedOnUtc,
       ...(packType === 'icon' && typeof nextIconMissCount === 'number' ? { iconChasePity: formatIconChasePityState(nextIconMissCount) } : {}),
     };
   }
 
   throw new Error('Card pack opening failed. Try again.');
+}
+
+async function getPackConfig(supabase: SupabaseClient, packType: PackType): Promise<CardPackCatalogRow | null> {
+  const { data, error } = await supabase
+    .from('card_pack_catalog')
+    .select('*')
+    .eq('pack_type', packType)
+    .maybeSingle();
+
+  if (!error && data) return data as CardPackCatalogRow;
+
+  const fallback = CARD_PACKS[packType];
+  if (!fallback) return null;
+  return {
+    pack_type: packType,
+    title: packType,
+    description: '',
+    image_path: `${packType}.png`,
+    card_count: fallback.cardCount,
+    price_coins: fallback.priceCoins,
+    once_per_utc_day: fallback.oncePerUtcDay,
+    rarity_weights: fallback.rarityWeights,
+    enabled: true,
+    sort_order: 0,
+  };
+}
+
+async function listCardPackCatalog(supabase: SupabaseClient) {
+  const { data, error } = await supabase.from('card_pack_catalog').select('*').order('sort_order', { ascending: true });
+  if (error) throw error;
+  return { packs: data ?? [] };
+}
+
+async function upsertCardPackCatalog(supabase: SupabaseClient, pack: CardPackCatalogInput) {
+  const row = normalizePackCatalogInput(pack);
+  const { data, error } = await supabase.from('card_pack_catalog').upsert(row).select('*').order('sort_order', { ascending: true });
+  if (error) throw error;
+  return { packs: data ?? [] };
+}
+
+function normalizePackCatalogInput(pack: CardPackCatalogInput) {
+  return {
+    pack_type: normalizeRequiredString(pack.pack_type, 'pack_type'),
+    title: normalizeRequiredString(pack.title, 'title'),
+    description: normalizeRequiredString(pack.description, 'description'),
+    image_path: normalizeRequiredString(pack.image_path, 'image_path'),
+    card_count: normalizeInteger(pack.card_count, 'card_count', 1, 20),
+    price_coins: normalizeInteger(pack.price_coins, 'price_coins', 0, 1000000),
+    once_per_utc_day: Boolean(pack.once_per_utc_day),
+    rarity_weights: normalizeRarityWeights(pack.rarity_weights),
+    enabled: pack.enabled !== false,
+    sort_order: normalizeInteger(pack.sort_order, 'sort_order', -1000000, 1000000),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function normalizeRarityWeights(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Pack rarity_weights are required.');
+  return Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, normalizeWeight((value as Record<string, unknown>)[rarity])]));
+}
+
+function normalizeInteger(value: unknown, field: string, min: number, max: number) {
+  const number = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(number) || number < min || number > max) throw new Error(`Pack ${field} must be an integer from ${min} to ${max}.`);
+  return number;
+}
+
+function normalizeWeight(value: unknown) {
+  const weight = value == null || value === '' ? 0 : typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(weight) || weight < 0 || weight > 1000000) throw new Error('Pack rarity weights must be numbers from 0 to 1000000.');
+  return weight;
 }
 
 async function drawCards(

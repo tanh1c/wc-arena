@@ -2,6 +2,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+test('cards page loads pack catalog metadata from the backend with local image options', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const servicesSource = readFileSync('src/services/cards.ts', 'utf8');
+
+  assert.match(cardsSource, /listCardPackCatalog/);
+  assert.match(cardsSource, /packCatalog, setPackCatalog/);
+  assert.match(cardsSource, /getPackImageOption/);
+  assert.match(cardsSource, /visiblePackCatalog/);
+  assert.match(cardsSource, /PackRail selectedPackType=\{selectedPackType\} setSelectedPackType=\{setSelectedPackType\} packs=\{visiblePackCatalog\}/);
+  assert.match(cardsSource, /SelectedPackHero[\s\S]*pack=\{selectedPack\}/);
+  assert.match(servicesSource, /export type CardPackCatalog/);
+  assert.match(servicesSource, /export async function listCardPackCatalog/);
+  assert.match(servicesSource, /export async function upsertCardPackCatalog/);
+});
+
 test('cards page is routed from Play navigation and includes MVP card collection copy', () => {
   const appSource = readFileSync('src/App.tsx', 'utf8');
   const navigationSource = readFileSync('src/config/navigation.ts', 'utf8');
@@ -19,8 +34,8 @@ test('cards page is routed from Play navigation and includes MVP card collection
   );
   assert.doesNotMatch(headerNavigationBlock, /to: '\/cards'/);
 
-  assert.match(cardsSource, /appPages\.cards\.dailyPack/);
-  assert.match(cardsSource, /appPages\.cards\.premiumPack/);
+  assert.match(cardsSource, /listCardPackCatalog/);
+  assert.match(cardsSource, /visiblePackCatalog/);
   assert.match(cardsSource, /appPages\.cards\.showcase/);
   assert.match(cardsSource, /ui\.coinsShort/);
 
@@ -282,25 +297,22 @@ test('cards page card boxes and metadata chips are rounded consistently', () => 
   assert.match(cardsSource, /rounded-sm border-2 border-main bg-card px-1 py-1/);
 });
 
-test('open pack panels render expanded pack tiers with artwork and an opening effect', () => {
+test('open pack panels render catalog pack tiers with repo artwork and an opening effect', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const packImagesSource = readFileSync('src/config/packImages.ts', 'utf8');
   const cssSource = readFileSync('src/index.css', 'utf8');
 
-  assert.match(cardsSource, /\.\.\/\.\.\/Daily\.png/);
-  assert.match(cardsSource, /\.\.\/\.\.\/Starter\.png/);
-  assert.match(cardsSource, /\.\.\/\.\.\/Premium\.png/);
-  assert.match(cardsSource, /\.\.\/\.\.\/Elite\.png/);
-  assert.match(cardsSource, /\.\.\/\.\.\/Icon\.png/);
-  assert.match(cardsSource, /starter: \{ image: starterPackImage, imageClass: 'scale-\[1\.10\]' \}/);
-  assert.match(cardsSource, /elite: \{ image: elitePackImage \}/);
-  assert.match(cardsSource, /icon: \{ image: iconPackImage \}/);
-  assert.match(cardsSource, /packTypes/);
-  assert.match(cardsSource, /starter/);
-  assert.match(cardsSource, /elite/);
-  assert.match(cardsSource, /icon/);
-  assert.match(cardsSource, /pack\.image/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/Daily\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/Starter\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/Premium\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/Elite\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/Icon\.png/);
+  assert.match(packImagesSource, /path: 'Starter\.png'[\s\S]*image: starterPackImage[\s\S]*imageClass: 'scale-\[1\.10\]'/);
+  assert.match(cardsSource, /getPackImageOption\(pack\.image_path\)/);
+  assert.match(cardsSource, /visiblePackCatalog/);
+  assert.match(cardsSource, /packs\.map\(\(pack\) =>/);
   assert.match(cardsSource, /wc-pack-opening/);
-  assert.match(cardsSource, /openingPack === packType/);
+  assert.match(cardsSource, /openingPack === pack\.pack_type/);
   assert.match(cssSource, /@keyframes wc-pack-opening/);
 });
 
@@ -354,9 +366,10 @@ test('pack artwork renders in a compact mobile Daily-standard display box', () =
 
 test('starter pack artwork gets a specific zoom to match Daily scale', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const packImagesSource = readFileSync('src/config/packImages.ts', 'utf8');
 
-  assert.match(cardsSource, /imageClass: 'scale-\[1\.10\]'/);
-  assert.match(cardsSource, /pack\.imageClass/);
+  assert.match(packImagesSource, /imageClass: 'scale-\[1\.10\]'/);
+  assert.match(cardsSource, /artwork\.imageClass/);
 });
 
 test('open pack tab uses a screenshot-style pack rail and selected pack dashboard', () => {
@@ -365,16 +378,15 @@ test('open pack tab uses a screenshot-style pack rail and selected pack dashboar
   assert.match(cardsSource, /selectedPackType/);
   assert.match(cardsSource, /setSelectedPackType/);
   assert.match(cardsSource, /useState<PackType>\('daily'\)/);
-  assert.match(cardsSource, /packTypes\.map\(\(packType\) =>/);
-  assert.match(cardsSource, /const pack = CARD_PACKS\[packType\]/);
-  assert.match(cardsSource, /const artwork = packArtwork\[packType\]/);
+  assert.match(cardsSource, /visiblePackCatalog/);
+  assert.match(cardsSource, /packs\.map\(\(pack\) =>/);
+  assert.match(cardsSource, /const artwork = getPackImageOption\(pack\.image_path\)/);
   assert.match(cardsSource, /src=\{artwork\.image\}/);
-  assert.match(cardsSource, /onClick=\{\(\) => setSelectedPackType\(packType\)\}/);
-  assert.match(cardsSource, /packType=\{selectedPackType\}/);
-  assert.match(cardsSource, /CARD_PACKS\[selectedPackType\]\.cardCount/);
-  assert.match(cardsSource, /selectedPackType === 'daily' && dailyPackOpenedToday/);
-  assert.match(cardsSource, /pack\.priceCoins === 0 \? t\('appPages\.cards\.free'\)/);
-  assert.match(cardsSource, /style=\{\{ width: `\$\{pack\.rarityWeights\[rarity\]\}%` \}\}/);
+  assert.match(cardsSource, /onClick=\{\(\) => setSelectedPackType\(pack\.pack_type\)\}/);
+  assert.match(cardsSource, /pack=\{selectedPack\}/);
+  assert.match(cardsSource, /selectedPack\.pack_type === 'daily' && dailyPackOpenedToday/);
+  assert.match(cardsSource, /pack\.price_coins === 0 \? t\('appPages\.cards\.free'\)/);
+  assert.match(cardsSource, /style=\{\{ width: `\$\{pack\.rarity_weights\[rarity\]\}%` \}\}/);
   assert.match(cardsSource, /overflow-x-auto lg:overflow-visible/);
   assert.match(cardsSource, /grid auto-cols-\[minmax\(210px,72vw\)\] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row/);
   assert.match(cardsSource, /relative min-h-\[420px\] sm:min-h-\[520px\]/);
@@ -393,7 +405,7 @@ test('cards page uses squad-gallery style colorful chrome', () => {
   assert.match(cardsSource, /bg-c3 text-main/);
   assert.match(cardsSource, /bg-c4 text-main/);
   assert.match(cardsSource, /activeTab === tab \? 'bg-c2 text-inv'/);
-  assert.match(cardsSource, /selectedPackType === packType \? 'bg-c2 text-inv'/);
+  assert.match(cardsSource, /selectedPackType === pack\.pack_type \? 'bg-c2 text-inv'/);
 });
 
 test('gallery tab presents compact filters and owned or missing card browsing', () => {

@@ -3,21 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import backCardImage from '../../Backcard.png';
 import commonCardBackground from '../../Common_card.png';
-import dailyPackImage from '../../Daily.png';
-import elitePackImage from '../../Elite.png';
 import epicCardBackground from '../../Epic_card.png';
 import goatCardBackground from '../../GOAT.png';
 import heroesCardBackground from '../../Heroes.png';
-import iconPackImage from '../../Icon.png';
 import iconCardBackground from '../../Icon_card.png';
 import legendaryCardBackground from '../../Legendary.png';
-import premiumPackImage from '../../Premium.png';
 import rareCardBackground from '../../Rare_card.png';
 import uncommonCardBackground from '../../Uncommon.png';
-import starterPackImage from '../../Starter.png';
 import AppShell from '../components/layout/AppShell';
 import PointsCoin from '../components/ui/PointsCoin';
-import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, type CardRarity, type PackType } from '../config/cardPacks';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_RARITIES, type CardRarity, type PackType } from '../config/cardPacks';
+import { getPackImageOption } from '../config/packImages';
 import type { ThemeControls } from '../App';
 import {
   getCurrentUserDailyPackOpenedToday,
@@ -26,12 +22,14 @@ import {
   listCurrentUserOwnedCards,
   listCurrentUserShowcase,
   listPlayerCards,
+  listCardPackCatalog,
   getPlayerCardDisplayImageUrl,
   forgePlayerCard,
   openCardPack,
   setShowcaseCard,
   upgradePlayerCardToGif,
   type CatalogCardWithOwnedCount,
+  type CardPackCatalog,
   type IconChasePityState,
   type OwnedPlayerCard,
   type ShowcaseCard,
@@ -45,25 +43,8 @@ type CardsProps = {
 
 const rarities: Array<'all' | CardRarity> = ['all', ...CARD_RARITIES];
 const gallerySorts = ['name', 'duplicates', 'mergeReady'] as const;
-const packTypes: PackType[] = ['daily', 'starter', 'premium', 'elite', 'icon'];
 const forgeRarities = Object.keys(CARD_FORGE_RECIPES) as Array<keyof typeof CARD_FORGE_RECIPES>;
 const highRevealRarities = new Set<CardRarity>(['Legendary', 'Heroes', 'Icon', 'GOAT']);
-
-const packArtwork: Record<PackType, { image: string; imageClass?: string }> = {
-  daily: { image: dailyPackImage },
-  starter: { image: starterPackImage, imageClass: 'scale-[1.10]' },
-  premium: { image: premiumPackImage },
-  elite: { image: elitePackImage },
-  icon: { image: iconPackImage },
-};
-
-const packTextKeys: Record<PackType, { title: string; description: string }> = {
-  daily: { title: 'appPages.cards.dailyPack', description: 'appPages.cards.dailyPackDescription' },
-  starter: { title: 'appPages.cards.starterPack', description: 'appPages.cards.starterPackDescription' },
-  premium: { title: 'appPages.cards.premiumPack', description: 'appPages.cards.premiumPackDescription' },
-  elite: { title: 'appPages.cards.elitePack', description: 'appPages.cards.elitePackDescription' },
-  icon: { title: 'appPages.cards.iconPack', description: 'appPages.cards.iconPackDescription' },
-};
 
 const rarityCardBackgroundImages: Record<string, string> = {
   Common: commonCardBackground,
@@ -172,6 +153,7 @@ function formatUtcResetCountdown(value = new Date()) {
 export default function Cards({ themeControls }: CardsProps) {
   const { t } = useTranslation();
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
+  const [packCatalog, setPackCatalog] = useState<CardPackCatalog[]>([]);
   const [showcase, setShowcase] = useState<ShowcaseCard[]>([]);
   const [revealedCards, setRevealedCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
   const [recentPullCards, setRecentPullCards] = useState<Array<OwnedPlayerCard & { duplicate: boolean }>>([]);
@@ -202,14 +184,16 @@ export default function Cards({ themeControls }: CardsProps) {
     setLoading(true);
     setError('');
     try {
-      const [cards, owned, currentShowcase, openedDailyToday, currentIconChasePity] = await Promise.all([
+      const [cards, packs, owned, currentShowcase, openedDailyToday, currentIconChasePity] = await Promise.all([
         listPlayerCards(),
+        listCardPackCatalog(),
         listCurrentUserOwnedCards(),
         listCurrentUserShowcase(),
         getCurrentUserDailyPackOpenedToday(),
         getIconChasePityState(),
       ]);
       setCatalog(groupCatalogWithOwnership(cards, owned));
+      setPackCatalog(packs);
       setShowcase(currentShowcase);
       setDailyPackOpenedToday(openedDailyToday);
       setIconChasePity(currentIconChasePity);
@@ -257,6 +241,8 @@ export default function Cards({ themeControls }: CardsProps) {
   }, [catalog, gallerySort, ownershipFilter, query, rarity]);
 
   const showcaseSlotsUsed = showcase.length;
+  const visiblePackCatalog = useMemo(() => packCatalog.filter((pack) => pack.enabled), [packCatalog]);
+  const selectedPack = visiblePackCatalog.find((pack) => pack.pack_type === selectedPackType) ?? visiblePackCatalog[0];
   const selectedForgeRecipe = CARD_FORGE_RECIPES[selectedForgeRarity];
   const canConfirmForge = selectedForgeOwnedCardIds.size === CARD_FORGE_COPY_COUNT;
   const showcasedOwnedCardIds = useMemo(() => new Set(showcase.map((item) => item.user_player_card_id)), [showcase]);
@@ -421,24 +407,19 @@ export default function Cards({ themeControls }: CardsProps) {
             {activeTab === 'openPacks' ? (
               <main className="min-w-0 bg-card pt-4 sm:pt-5 lg:pt-6">
               <div className="grid lg:grid-cols-[240px_minmax(0,1fr)_320px]">
-                <PackRail selectedPackType={selectedPackType} setSelectedPackType={setSelectedPackType} />
-                <SelectedPackHero
-                  title={t(packTextKeys[selectedPackType].title)}
-                  description={t(packTextKeys[selectedPackType].description, {
-                    count: CARD_PACKS[selectedPackType].cardCount,
-                    coins: CARD_PACKS[selectedPackType].priceCoins,
-                  })}
-                  packType={selectedPackType}
+                <PackRail selectedPackType={selectedPackType} setSelectedPackType={setSelectedPackType} packs={visiblePackCatalog} />
+                {selectedPack && <SelectedPackHero
+                  pack={selectedPack}
                   openingPack={openingPack}
-                  isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
+                  isOpenedToday={selectedPack.pack_type === 'daily' && dailyPackOpenedToday}
                   onOpen={handleOpenPack}
-                />
-                <PackInfoPanel
-                  packType={selectedPackType}
-                  isOpenedToday={selectedPackType === 'daily' && dailyPackOpenedToday}
-                  dailyResetCountdown={selectedPackType === 'daily' ? dailyResetCountdown : ''}
-                  iconChasePity={selectedPackType === 'icon' ? iconChasePity : null}
-                />
+                />}
+                {selectedPack && <PackInfoPanel
+                  pack={selectedPack}
+                  isOpenedToday={selectedPack.pack_type === 'daily' && dailyPackOpenedToday}
+                  dailyResetCountdown={selectedPack.pack_type === 'daily' ? dailyResetCountdown : ''}
+                  iconChasePity={selectedPack.pack_type === 'icon' ? iconChasePity : null}
+                />}
               </div>
 
               <div className="grid border-t-4 border-main xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
@@ -692,7 +673,7 @@ export default function Cards({ themeControls }: CardsProps) {
             <div className="relative flex flex-wrap justify-center min-h-0 gap-3 p-3">
               {revealAnimationActive && revealAnimationKind === 'pack' && (
                 <div className="wc-pack-reveal-stage">
-                  <img src={packArtwork[selectedPackType].image} alt="" />
+                  {selectedPack && <img src={getPackImageOption(selectedPack.image_path).image} alt="" />}
                 </div>
               )}
               {revealAnimationActive && revealAnimationKind === 'forge' && (
@@ -738,34 +719,34 @@ function StatCell({ label, value, className }: { label: string; value: string; c
   );
 }
 
-function PackRail({ selectedPackType, setSelectedPackType }: {
+function PackRail({ selectedPackType, setSelectedPackType, packs }: {
   selectedPackType: PackType;
   setSelectedPackType: (packType: PackType) => void;
+  packs: CardPackCatalog[];
 }) {
   const { t } = useTranslation();
   return (
     <aside className="border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2 overflow-x-auto lg:overflow-visible">
       <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">{t('appPages.cards.choosePack')}</p>
       <div className="grid auto-cols-[minmax(210px,72vw)] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row">
-        {packTypes.map((packType) => {
-          const pack = CARD_PACKS[packType];
-          const artwork = packArtwork[packType];
+        {packs.map((pack) => {
+          const artwork = getPackImageOption(pack.image_path);
           return (
             <button
-              key={packType}
+              key={pack.pack_type}
               type="button"
-              className={`grid grid-cols-[54px_minmax(0,1fr)] items-center gap-2 rounded-sm border-4 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === packType ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`}
-              onClick={() => setSelectedPackType(packType)}
+              className={`grid grid-cols-[54px_minmax(0,1fr)] items-center gap-2 rounded-sm border-4 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === pack.pack_type ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`}
+              onClick={() => setSelectedPackType(pack.pack_type)}
             >
               <span className="flex h-16 items-center justify-center border-2 border-main bg-card p-1">
                 <img src={artwork.image} alt="" className={`max-h-full max-w-full object-contain ${artwork.imageClass ?? ''}`} />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-black uppercase">{t(packTextKeys[packType].title)}</span>
-                <span className="mt-1 block text-[10px] font-black uppercase opacity-80">{pack.cardCount} {t('appPages.cards.cards')}</span>
+                <span className="block truncate text-sm font-black uppercase">{pack.title}</span>
+                <span className="mt-1 block text-[10px] font-black uppercase opacity-80">{pack.card_count} {t('appPages.cards.cards')}</span>
                 <span className="mt-1 inline-flex items-center gap-1 border-2 border-main bg-card px-2 py-0.5 text-[10px] font-black uppercase text-main">
-                  {pack.priceCoins === 0 ? t('appPages.cards.free') : `${pack.priceCoins.toLocaleString()} ${t('ui.coinsShort')}`}
-                  {pack.priceCoins > 0 && <PointsCoin size="sm" />}
+                  {pack.price_coins === 0 ? t('appPages.cards.free') : `${pack.price_coins.toLocaleString()} ${t('ui.coinsShort')}`}
+                  {pack.price_coins > 0 && <PointsCoin size="sm" />}
                 </span>
               </span>
             </button>
@@ -776,40 +757,38 @@ function PackRail({ selectedPackType, setSelectedPackType }: {
   );
 }
 
-function SelectedPackHero({ title, description, packType, openingPack, isOpenedToday, onOpen }: {
-  title: string;
-  description: string;
-  packType: PackType;
+function SelectedPackHero({ pack, openingPack, isOpenedToday, onOpen }: {
+  pack: CardPackCatalog;
   openingPack: PackType | null;
   isOpenedToday: boolean;
   onOpen: (packType: PackType) => void;
 }) {
   const { t } = useTranslation();
-  const pack = { ...CARD_PACKS[packType], ...packArtwork[packType] };
-  const isOpening = openingPack === packType;
+  const artwork = getPackImageOption(pack.image_path);
+  const isOpening = openingPack === pack.pack_type;
   return (
     <section className="relative min-h-[420px] sm:min-h-[520px] overflow-hidden border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-[radial-gradient(circle_at_50%_0%,rgba(228,255,0,0.28),transparent_32%),linear-gradient(135deg,#07111f_0%,#0d47ff_48%,#02040a_100%)] p-3 sm:p-4 text-inv">
       <div className="absolute inset-x-0 bottom-0 h-32 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.14)_0_2px,transparent_2px_34px)] opacity-70" />
       <div className="relative z-10 grid h-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] lg:items-center">
         <div className="flex h-48 sm:h-72 items-center justify-center rounded-sm border-4 border-main bg-black/30 p-3 sm:p-4 shadow-[4px_4px_0_var(--color-shadow)]">
-          <img src={pack.image} alt={title} className={`max-h-full max-w-full object-contain drop-shadow-[10px_10px_0_rgba(0,0,0,0.55)] ${pack.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'transition-transform hover:-translate-y-2 hover:rotate-1'}`} />
+          <img src={artwork.image} alt={pack.title} className={`max-h-full max-w-full object-contain drop-shadow-[10px_10px_0_rgba(0,0,0,0.55)] ${artwork.imageClass ?? ''} ${isOpening ? 'wc-pack-opening' : 'transition-transform hover:-translate-y-2 hover:rotate-1'}`} />
         </div>
         <div className="min-w-0">
           <p className="mb-2 inline-flex border-2 border-main bg-c3 px-2 py-1 text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.featuredPack')}</p>
-          <h2 className="text-4xl font-black uppercase leading-none tracking-tighter sm:text-5xl">{title}</h2>
-          <p className="mt-3 max-w-xl text-sm font-bold text-white/85">{description}</p>
+          <h2 className="text-4xl font-black uppercase leading-none tracking-tighter sm:text-5xl">{pack.title}</h2>
+          <p className="mt-3 max-w-xl text-sm font-bold text-white/85">{pack.description}</p>
           <div className="mt-4 grid grid-cols-2 gap-2 text-main">
             <div className="border-2 border-main bg-c1 p-2 shadow-[2px_2px_0_var(--color-shadow)]">
               <p className="text-[10px] font-black uppercase opacity-70">{t('appPages.cards.cardsLabel')}</p>
-              <p className="text-2xl font-black">{pack.cardCount}</p>
+              <p className="text-2xl font-black">{pack.card_count}</p>
             </div>
             <div className="border-2 border-main bg-card p-2 shadow-[2px_2px_0_var(--color-shadow)]">
               <p className="text-[10px] font-black uppercase opacity-70">{t('appPages.cards.price')}</p>
-              <p className="flex items-center gap-1 text-2xl font-black">{pack.priceCoins === 0 ? t('appPages.cards.free') : pack.priceCoins.toLocaleString()} {pack.priceCoins > 0 && <PointsCoin size="sm" />}</p>
+              <p className="flex items-center gap-1 text-2xl font-black">{pack.price_coins === 0 ? t('appPages.cards.free') : pack.price_coins.toLocaleString()} {pack.price_coins > 0 && <PointsCoin size="sm" />}</p>
             </div>
           </div>
           {isOpenedToday && <p className="mt-3 border-2 border-main bg-c4 px-3 py-2 text-center text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">{t('appPages.cards.dailyPackOpenedToday')}</p>}
-          <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-4 text-lg font-black uppercase text-main shadow-[5px_5px_0_var(--color-shadow)] transition-transform hover:-translate-y-1 disabled:translate-y-0 disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(packType)}>
+          <button type="button" className="mt-4 w-full border-4 border-main bg-c1 px-4 py-4 text-lg font-black uppercase text-main shadow-[5px_5px_0_var(--color-shadow)] transition-transform hover:-translate-y-1 disabled:translate-y-0 disabled:opacity-60" disabled={openingPack !== null || isOpenedToday} onClick={() => onOpen(pack.pack_type)}>
             {isOpening ? t('appPages.cards.opening') : isOpenedToday ? t('appPages.cards.dailyPackOpenedToday') : t('appPages.cards.openPack')}
           </button>
         </div>
@@ -818,15 +797,14 @@ function SelectedPackHero({ title, description, packType, openingPack, isOpenedT
   );
 }
 
-function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChasePity }: {
-  packType: PackType;
+function PackInfoPanel({ pack, isOpenedToday, dailyResetCountdown, iconChasePity }: {
+  pack: CardPackCatalog;
   isOpenedToday: boolean;
   dailyResetCountdown: string;
   iconChasePity: IconChasePityState | null;
 }) {
   const { t } = useTranslation();
   const [showDropRates, setShowDropRates] = useState(false);
-  const pack = CARD_PACKS[packType];
   return (
     <aside className="bg-card p-3">
       <div className="flex items-center justify-between gap-2">
@@ -843,10 +821,10 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChase
                   <div key={rarity} className="grid gap-1">
                     <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase text-main">
                       <span className={`border-2 border-main px-2 py-1 ${getRarityBadgeClass(rarity)}`}>{rarity}</span>
-                      <span>{pack.rarityWeights[rarity]}%</span>
+                      <span>{pack.rarity_weights[rarity]}%</span>
                     </div>
                     <div className="h-4 rounded-sm border-2 border-main bg-card overflow-hidden">
-                      <div className={`h-full rounded-sm ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarityWeights[rarity]}%` }} />
+                      <div className={`h-full rounded-sm ${getRarityBadgeClass(rarity)}`} style={{ width: `${pack.rarity_weights[rarity]}%` }} />
                     </div>
                   </div>
                 ))}
@@ -862,7 +840,7 @@ function PackInfoPanel({ packType, isOpenedToday, dailyResetCountdown, iconChase
         </div>
         <div className="flex items-center justify-between gap-2 border-2 border-main bg-muted px-3 py-2">
           <span>{t('appPages.cards.limit')}</span>
-          <span>{pack.oncePerUtcDay ? t('appPages.cards.oncePerUtcDay') : t('appPages.cards.unlimited')}</span>
+          <span>{pack.once_per_utc_day ? t('appPages.cards.oncePerUtcDay') : t('appPages.cards.unlimited')}</span>
         </div>
         {isOpenedToday && dailyResetCountdown && (
           <div className="border-2 border-main bg-c1 px-3 py-2 text-center">

@@ -2,6 +2,22 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
+test('manage_cards exposes admin-managed pack catalog actions', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /action: 'listCardPackCatalog'/);
+  assert.match(source, /action: 'upsertCardPackCatalog'; pack: CardPackCatalogInput/);
+  assert.match(source, /body\.action === 'listCardPackCatalog'/);
+  assert.match(source, /body\.action === 'upsertCardPackCatalog'/);
+  assert.match(source, /listCardPackCatalog\(adminAuth\.supabase\)/);
+  assert.match(source, /upsertCardPackCatalog\(adminAuth\.supabase, body\.pack\)/);
+  assert.match(source, /getPackConfig\(supabase, packType\)/);
+  assert.match(source, /drawCards\(supabase, pack\.card_count, pack\.rarity_weights/);
+  assert.match(source, /pack\.price_coins/);
+  assert.match(source, /pack\.once_per_utc_day/);
+  assert.match(source, /\.from\('card_pack_catalog'\)\.upsert/);
+});
+
 test('manage_cards exposes admin-only player card upserts and deletes without removing user actions', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 
@@ -65,7 +81,7 @@ test('openCardPack commits coin spend, awarded cards, and opening log through on
   assert.match(source, /p_user_id: userId/);
   assert.match(source, /p_pack_type: packType/);
   assert.match(source, /p_card_ids: awardedCards\.map\(\(card\) => card\.id\)/);
-  assert.match(source, /p_price_coins: pack\.priceCoins/);
+  assert.match(source, /p_price_coins: pack\.price_coins/);
   assert.match(source, /p_opened_on_utc: openedOnUtc/);
   assert.match(source, /p_expected_icon_miss_count/);
   assert.match(source, /PITY_STATE_CHANGED/);

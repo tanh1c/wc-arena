@@ -1,4 +1,4 @@
-export type PackType = 'daily' | 'starter' | 'premium' | 'elite' | 'icon';
+export type PackType = string;
 export const CARD_RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Heroes', 'Icon', 'GOAT'] as const;
 export type CardRarity = (typeof CARD_RARITIES)[number];
 

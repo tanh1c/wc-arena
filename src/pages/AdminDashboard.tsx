@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
 import { CARD_RARITIES, type CardRarity } from '../config/cardPacks';
+import { PACK_IMAGE_OPTIONS } from '../config/packImages';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { deletePlayerCard, listAdminPlayerCards, parsePlayerCardCsv, playerCardToAdminInput, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, playerCardToAdminInput, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -62,6 +63,21 @@ function emptyPlayerCardDraft(): AdminPlayerCardInput {
   };
 }
 
+function emptyPackDraft(): CardPackCatalogInput {
+  return {
+    pack_type: '',
+    title: '',
+    description: '',
+    image_path: PACK_IMAGE_OPTIONS[0].path,
+    card_count: 1,
+    price_coins: 0,
+    once_per_utc_day: false,
+    rarity_weights: Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, 0])) as Record<CardRarity, number>,
+    enabled: true,
+    sort_order: 0,
+  };
+}
+
 function compareCardText(left: string | null | undefined, right: string | null | undefined) {
   return (left ?? '').localeCompare(right ?? '', undefined, { sensitivity: 'base' });
 }
@@ -96,10 +112,13 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [resultDrafts, setResultDrafts] = useState<ResultDrafts>({});
   const [matchActionState, setMatchActionState] = useState<Record<string, ActionState>>({});
   const [recalcState, setRecalcState] = useState<ActionState>({});
-  const [activeAdminTab, setActiveAdminTab] = useState<'matches' | 'cards'>('matches');
+  const [activeAdminTab, setActiveAdminTab] = useState<'matches' | 'cards' | 'packs'>('matches');
   const [playerCards, setPlayerCards] = useState<AdminPlayerCard[]>([]);
   const [cardDraft, setCardDraft] = useState<AdminPlayerCardInput>(emptyPlayerCardDraft());
   const [cardActionState, setCardActionState] = useState<ActionState>({});
+  const [packCatalog, setPackCatalog] = useState<CardPackCatalog[]>([]);
+  const [packDraft, setPackDraft] = useState<CardPackCatalogInput>(emptyPackDraft());
+  const [packActionState, setPackActionState] = useState<ActionState>({});
   const [cardSearchQuery, setCardSearchQuery] = useState('');
   const [cardRarityFilter, setCardRarityFilter] = useState<CardRarityFilter>('all');
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
@@ -112,12 +131,16 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     setPlayerCards(await listAdminPlayerCards());
   }
 
+  async function loadPackCatalog() {
+    setPackCatalog(await listCardPackCatalog());
+  }
+
   async function loadAdminData() {
     setLoading(true);
     setError(null);
 
     try {
-      const [nextMatches, nextTeams, nextLeaderboard, nextAuditLogs, nextSignals, nextRewardReviews, nextRecentPredictions, nextPlayerCards] = await Promise.all([
+      const [nextMatches, nextTeams, nextLeaderboard, nextAuditLogs, nextSignals, nextRewardReviews, nextRecentPredictions, nextPlayerCards, nextPacks] = await Promise.all([
         listMatches(),
         getTeamMap(),
         listGlobalLeaderboard(),
@@ -126,6 +149,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
         listRewardReviewsForAdmin(),
         listRecentPredictionsForAdmin(),
         listAdminPlayerCards(),
+        listCardPackCatalog(),
       ]);
       setMatches(nextMatches);
       setTeams(nextTeams);
@@ -135,6 +159,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       setRewardReviews(nextRewardReviews);
       setRecentPredictions(nextRecentPredictions);
       setPlayerCards(nextPlayerCards);
+      setPackCatalog(nextPacks);
       setResultDrafts(Object.fromEntries(nextMatches.map((match) => [match.id, {
         homeScore: match.home_score?.toString() ?? '',
         awayScore: match.away_score?.toString() ?? '',
@@ -256,6 +281,26 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     }
   }
 
+  async function savePack() {
+    setPackActionState({ loading: true });
+
+    try {
+      const savedPacks = await upsertCardPackCatalog(packDraft);
+      await loadPackCatalog();
+      setPackDraft(savedPacks.find((pack) => pack.pack_type === packDraft.pack_type) ?? savedPacks[0] ?? emptyPackDraft());
+      setPackActionState({ success: `Saved ${packDraft.title || packDraft.pack_type || 'pack'}.` });
+    } catch (nextError) {
+      setPackActionState({ error: getErrorMessage(nextError) });
+    }
+  }
+
+  function setPackWeight(rarity: CardRarity, value: string) {
+    setPackDraft((current) => ({
+      ...current,
+      rarity_weights: { ...current.rarity_weights, [rarity]: value === '' ? 0 : Number(value) },
+    }));
+  }
+
   if (authLoading || roleLoading) {
     return (
       <AppShell themeControls={themeControls}>
@@ -364,11 +409,12 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
             {[
               ['matches', 'Match Management'],
               ['cards', 'Player Cards'],
+              ['packs', 'Card Packs'],
             ].map(([tab, label]) => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveAdminTab(tab as 'matches' | 'cards')}
+                onClick={() => setActiveAdminTab(tab as 'matches' | 'cards' | 'packs')}
                 className={`border-4 border-main px-4 py-3 font-black uppercase text-xs shadow-[4px_4px_0_var(--color-shadow)] ${activeAdminTab === tab ? 'bg-c2 text-inv' : 'bg-card text-main'}`}
               >
                 {label}
@@ -593,6 +639,106 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                       </tr>
                     ))}
                     {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={6} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>}
+
+          {activeAdminTab === 'packs' && <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] border-4 border-main bg-card">
+            <div className="border-b-4 xl:border-b-0 xl:border-r-4 border-main flex flex-col">
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Card Packs</div>
+              <div className="p-4 flex flex-col gap-3 border-b-4 border-main">
+                <button type="button" onClick={() => setPackDraft(emptyPackDraft())} className="border-2 border-main bg-c1 p-3 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)]">New pack</button>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Pack type
+                  <input value={packDraft.pack_type} onChange={(event) => setPackDraft((current) => ({ ...current, pack_type: event.target.value }))} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" placeholder="special_pack" />
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Title
+                  <input value={packDraft.title} onChange={(event) => setPackDraft((current) => ({ ...current, title: event.target.value }))} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" />
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Description
+                  <textarea value={packDraft.description} onChange={(event) => setPackDraft((current) => ({ ...current, description: event.target.value }))} className="min-h-24 border-2 border-main bg-muted p-2 text-sm font-bold normal-case" />
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Image
+                  <select value={packDraft.image_path} onChange={(event) => setPackDraft((current) => ({ ...current, image_path: event.target.value }))} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                    {PACK_IMAGE_OPTIONS.map((option) => <option key={option.path} value={option.path}>{option.label}</option>)}
+                  </select>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Card count
+                    <input value={packDraft.card_count} onChange={(event) => setPackDraft((current) => ({ ...current, card_count: Number(event.target.value) }))} className="border-2 border-main bg-muted p-2 text-sm font-bold" inputMode="numeric" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Price Coins
+                    <input value={packDraft.price_coins} onChange={(event) => setPackDraft((current) => ({ ...current, price_coins: Number(event.target.value) }))} className="border-2 border-main bg-muted p-2 text-sm font-bold" inputMode="numeric" />
+                  </label>
+                  <label className="flex items-center gap-2 text-[10px] font-black uppercase">
+                    <input type="checkbox" checked={packDraft.once_per_utc_day} onChange={(event) => setPackDraft((current) => ({ ...current, once_per_utc_day: event.target.checked }))} />
+                    Once per UTC day
+                  </label>
+                  <label className="flex items-center gap-2 text-[10px] font-black uppercase">
+                    <input type="checkbox" checked={packDraft.enabled} onChange={(event) => setPackDraft((current) => ({ ...current, enabled: event.target.checked }))} />
+                    Enabled
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase col-span-2">
+                    Sort order
+                    <input value={packDraft.sort_order} onChange={(event) => setPackDraft((current) => ({ ...current, sort_order: Number(event.target.value) }))} className="border-2 border-main bg-muted p-2 text-sm font-bold" inputMode="numeric" />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {CARD_RARITIES.map((rarity) => (
+                    <label key={rarity} className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                      {rarity}
+                      <input value={packDraft.rarity_weights[rarity]} onChange={(event) => setPackWeight(rarity, event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-bold" inputMode="decimal" />
+                    </label>
+                  ))}
+                </div>
+                <button type="button" onClick={() => void savePack()} disabled={packActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save pack</button>
+                {(packActionState.error || packActionState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${packActionState.error ? 'bg-c5' : 'bg-c3'}`}>{packActionState.error ?? packActionState.success}</div>}
+              </div>
+            </div>
+
+            <div className="min-w-0 flex flex-col">
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Pack preview</div>
+              <div className="grid gap-4 p-4 lg:grid-cols-[240px_minmax(0,1fr)] border-b-4 border-main">
+                <div className="flex min-h-64 items-center justify-center border-4 border-main bg-muted p-4">
+                  {PACK_IMAGE_OPTIONS.find((option) => option.path === packDraft.image_path) && <img src={PACK_IMAGE_OPTIONS.find((option) => option.path === packDraft.image_path)?.image} alt="" className="max-h-56 max-w-full object-contain" />}
+                </div>
+                <div className="font-black uppercase text-main">
+                  <h3 className="text-3xl tracking-tight">{packDraft.title || 'Untitled pack'}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{packDraft.description || 'No description yet.'}</p>
+                  <p className="mt-4 text-sm">{packDraft.card_count} cards · {packDraft.price_coins} coins · {packDraft.enabled ? 'Enabled' : 'Disabled'}</p>
+                </div>
+              </div>
+              <div className="max-h-[70dvh] overflow-auto">
+                <table className="w-full min-w-[720px] text-left text-xs font-bold">
+                  <thead className="sticky top-0 z-10 bg-muted font-black uppercase">
+                    <tr>
+                      <th className="border-b-4 border-r-2 border-main p-3">Pack</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Image</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Cards</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Price</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Enabled</th>
+                      <th className="border-b-4 border-main p-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {packCatalog.map((pack) => (
+                      <tr key={pack.pack_type} className="border-b-2 border-main last:border-b-0">
+                        <td className="border-r-2 border-main p-3"><div className="font-black uppercase">{pack.title}</div><div className="text-[10px] text-subtle">{pack.pack_type}</div></td>
+                        <td className="border-r-2 border-main p-3 uppercase">{pack.image_path}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{pack.card_count}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{pack.price_coins}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{pack.enabled ? 'Yes' : 'No'}</td>
+                        <td className="p-3"><button type="button" onClick={() => setPackDraft(pack)} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button></td>
+                      </tr>
+                    ))}
+                    {!loading && packCatalog.length === 0 && <tr><td colSpan={6} className="p-4 font-black uppercase">No card packs yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
