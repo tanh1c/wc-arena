@@ -307,6 +307,15 @@ test('open pack panels render catalog pack tiers with repo artwork and an openin
   assert.match(packImagesSource, /\.\.\/\.\.\/Premium\.png/);
   assert.match(packImagesSource, /\.\.\/\.\.\/Elite\.png/);
   assert.match(packImagesSource, /\.\.\/\.\.\/Icon\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Defensive Line\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Goalkeeper Wall\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Midfield Maestro\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Nation Pride Argentina\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Nation Pride Brazil\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Nation Pride France\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Nation Pride Portugal\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Nation Pride Spain\.png/);
+  assert.match(packImagesSource, /\.\.\/\.\.\/packs\/Striker Hunt\.png/);
   assert.match(packImagesSource, /path: 'Starter\.png'[\s\S]*image: starterPackImage[\s\S]*imageClass: 'scale-\[1\.10\]'/);
   assert.match(cardsSource, /getPackImageOption\(pack\.image_path\)/);
   assert.match(cardsSource, /visiblePackCatalog/);
