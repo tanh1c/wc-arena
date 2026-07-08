@@ -141,7 +141,8 @@ test('cards page follows the attached-card shell layout contract', () => {
   assert.match(cardsSource, /grid lg:grid-cols-\[240px_minmax\(0,1fr\)_320px\]/);
   assert.doesNotMatch(cardsSource, /flex flex-wrap gap-2 border-b-4 border-main bg-card p-3/);
   assert.doesNotMatch(cardsSource, /border-4 border-main px-4 py-3 font-black uppercase text-xs shadow-\[4px_4px_0_var\(--color-shadow\)\]/);
-  assert.match(cardsSource, /border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2 overflow-x-auto lg:overflow-visible/);
+  assert.match(cardsSource, /border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2/);
+  assert.match(cardsSource, /max-h-\[460px\] overflow-y-auto overflow-x-auto/);
   assert.match(cardsSource, /border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-\[radial-gradient/);
   assert.match(cardsSource, /<aside className="bg-card p-3">/);
   assert.match(cardsSource, /grid border-t-4 border-main xl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1\.25fr\)\]/);
@@ -396,7 +397,12 @@ test('open pack tab uses a screenshot-style pack rail and selected pack dashboar
   assert.match(cardsSource, /selectedPack\.pack_type === 'daily' && dailyPackOpenedToday/);
   assert.match(cardsSource, /pack\.price_coins === 0 \? t\('appPages\.cards\.free'\)/);
   assert.match(cardsSource, /style=\{\{ width: `\$\{pack\.rarity_weights\[rarity\]\}%` \}\}/);
-  assert.match(cardsSource, /overflow-x-auto lg:overflow-visible/);
+  assert.match(cardsSource, /packRailRef/);
+  assert.match(cardsSource, /scrollPackRail/);
+  assert.match(cardsSource, /scrollBy\(\{ top: direction \* 180, left: direction \* 220, behavior: 'smooth' \}\)/);
+  assert.match(cardsSource, /aria-label=\{`\$\{t\('appPages\.cards\.choosePack'\)\} up`\}/);
+  assert.match(cardsSource, /aria-label=\{`\$\{t\('appPages\.cards\.choosePack'\)\} down`\}/);
+  assert.match(cardsSource, /max-h-\[460px\] overflow-y-auto overflow-x-auto/);
   assert.match(cardsSource, /grid auto-cols-\[minmax\(210px,72vw\)\] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row/);
   assert.match(cardsSource, /relative min-h-\[420px\] sm:min-h-\[520px\]/);
   assert.match(cardsSource, /h-48 sm:h-72/);

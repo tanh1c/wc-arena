@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import backCardImage from '../../Backcard.png';
@@ -725,33 +725,42 @@ function PackRail({ selectedPackType, setSelectedPackType, packs }: {
   packs: CardPackCatalog[];
 }) {
   const { t } = useTranslation();
+  const packRailRef = useRef<HTMLDivElement>(null);
+  const scrollPackRail = (direction: -1 | 1) => packRailRef.current?.scrollBy({ top: direction * 180, left: direction * 220, behavior: 'smooth' });
+
   return (
-    <aside className="border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2 overflow-x-auto lg:overflow-visible">
-      <p className="mb-2 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">{t('appPages.cards.choosePack')}</p>
-      <div className="grid auto-cols-[minmax(210px,72vw)] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row">
-        {packs.map((pack) => {
-          const artwork = getPackImageOption(pack.image_path);
-          return (
-            <button
-              key={pack.pack_type}
-              type="button"
-              className={`grid grid-cols-[54px_minmax(0,1fr)] items-center gap-2 rounded-sm border-4 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === pack.pack_type ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`}
-              onClick={() => setSelectedPackType(pack.pack_type)}
-            >
-              <span className="flex h-16 items-center justify-center border-2 border-main bg-card p-1">
-                <img src={artwork.image} alt="" className={`max-h-full max-w-full object-contain ${artwork.imageClass ?? ''}`} />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-black uppercase">{pack.title}</span>
-                <span className="mt-1 block text-[10px] font-black uppercase opacity-80">{pack.card_count} {t('appPages.cards.cards')}</span>
-                <span className="mt-1 inline-flex items-center gap-1 border-2 border-main bg-card px-2 py-0.5 text-[10px] font-black uppercase text-main">
-                  {pack.price_coins === 0 ? t('appPages.cards.free') : `${pack.price_coins.toLocaleString()} ${t('ui.coinsShort')}`}
-                  {pack.price_coins > 0 && <PointsCoin size="sm" />}
+    <aside className="border-b-4 lg:border-b-0 lg:border-r-4 border-main bg-card p-2">
+      <div className="mb-2 flex items-center gap-2">
+        <p className="min-w-0 flex-1 border-2 border-main bg-c3 text-main px-2 py-1 text-[10px] font-black uppercase">{t('appPages.cards.choosePack')}</p>
+        <button type="button" aria-label={`${t('appPages.cards.choosePack')} up`} onClick={() => scrollPackRail(-1)} className="border-2 border-main bg-card px-2 py-1 text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">↑</button>
+        <button type="button" aria-label={`${t('appPages.cards.choosePack')} down`} onClick={() => scrollPackRail(1)} className="border-2 border-main bg-card px-2 py-1 text-[10px] font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">↓</button>
+      </div>
+      <div ref={packRailRef} className="max-h-[460px] overflow-y-auto overflow-x-auto pr-1">
+        <div className="grid auto-cols-[minmax(210px,72vw)] grid-flow-col gap-2 lg:auto-cols-auto lg:grid-flow-row">
+          {packs.map((pack) => {
+            const artwork = getPackImageOption(pack.image_path);
+            return (
+              <button
+                key={pack.pack_type}
+                type="button"
+                className={`grid grid-cols-[54px_minmax(0,1fr)] items-center gap-2 rounded-sm border-4 border-main p-2 text-left shadow-[3px_3px_0_var(--color-shadow)] transition-transform hover:-translate-y-0.5 ${selectedPackType === pack.pack_type ? 'bg-c2 text-inv' : 'bg-muted text-main hover:bg-c1'}`}
+                onClick={() => setSelectedPackType(pack.pack_type)}
+              >
+                <span className="flex h-16 items-center justify-center border-2 border-main bg-card p-1">
+                  <img src={artwork.image} alt="" className={`max-h-full max-w-full object-contain ${artwork.imageClass ?? ''}`} />
                 </span>
-              </span>
-            </button>
-          );
-        })}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black uppercase">{pack.title}</span>
+                  <span className="mt-1 block text-[10px] font-black uppercase opacity-80">{pack.card_count} {t('appPages.cards.cards')}</span>
+                  <span className="mt-1 inline-flex items-center gap-1 border-2 border-main bg-card px-2 py-0.5 text-[10px] font-black uppercase text-main">
+                    {pack.price_coins === 0 ? t('appPages.cards.free') : `${pack.price_coins.toLocaleString()} ${t('ui.coinsShort')}`}
+                    {pack.price_coins > 0 && <PointsCoin size="sm" />}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </aside>
   );
