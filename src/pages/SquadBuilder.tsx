@@ -178,8 +178,8 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
               </div>
             </div>
 
-            <div className="bg-[#0b5d3b] p-3 sm:p-5">
-              <div onClick={() => setSelectedSlotId('')} className="relative mx-auto aspect-[12/13] min-h-[620px] max-w-[820px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
+            <div onClick={() => setSelectedSlotId('')} className="bg-[#0b5d3b] p-3 sm:p-5">
+              <div className="relative mx-auto aspect-[12/13] min-h-[620px] max-w-[820px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
                 <div className="absolute inset-4 border-4 border-white/75" />
                 <div className="absolute left-4 right-4 top-1/2 h-1 -translate-y-1/2 bg-white/60" />
                 <div className="absolute left-1/2 top-4 h-20 w-28 -translate-x-1/2 border-x-4 border-b-4 border-white/60" />
@@ -194,6 +194,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                       onClick={(event) => {
                         event.stopPropagation();
                         setSelectedSlotId(slot.id);
+                        setPositionFilter(slot.label);
                       }}
                       className={`absolute w-[96px] -translate-x-1/2 -translate-y-1/2 text-center transition-transform sm:w-[132px] ${selected ? 'z-20 scale-110' : 'z-10 hover:scale-105'}`}
                       style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
