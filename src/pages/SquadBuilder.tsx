@@ -81,6 +81,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('all');
   const [playerSort, setPlayerSort] = useState<PlayerSort>('position');
   const [playerPage, setPlayerPage] = useState(0);
+  const [showAnimatedCards, setShowAnimatedCards] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -167,6 +168,9 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                 ))}
               </div>
               <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setShowAnimatedCards((current) => !current)} className={`border-2 border-main px-3 py-2 text-xs font-black uppercase shadow-[2px_2px_0_var(--color-shadow)] ${showAnimatedCards ? 'bg-c2 text-inv' : 'bg-card text-main hover:bg-c1'}`}>
+                  {t(showAnimatedCards ? 'appPages.squadBuilder.animationOn' : 'appPages.squadBuilder.animationOff')}
+                </button>
                 <button type="button" onClick={() => setAssignments({})} className="inline-flex items-center gap-2 border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-c5">
                   <Trash2 size={14} strokeWidth={3} /> {t('appPages.squadBuilder.clearSquad')}
                 </button>
@@ -201,7 +205,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                     >
                       {assignedCard ? (
                         <span className="block">
-                          <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="mx-auto h-32 w-32 object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.35)] sm:h-40 sm:w-40" />
+                          <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, showAnimatedCards || assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="mx-auto h-32 w-32 object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.35)] sm:h-40 sm:w-40" />
                           <span className="mt-1 inline-block min-w-12 border-2 border-main bg-[#101827] px-2 py-0.5 text-[10px] font-black uppercase leading-tight text-c3 shadow-[2px_2px_0_rgba(0,0,0,0.4)] sm:text-xs">
                             {slot.label}
                           </span>
