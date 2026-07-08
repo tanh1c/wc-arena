@@ -97,6 +97,13 @@ export type ForgePlayerCardResult = {
   coins: number;
 };
 
+export type BulkForgePlayerCardsResult = {
+  cards: Array<OwnedPlayerCard & { duplicate: boolean }>;
+  coins: number;
+  forgedCount: number;
+  consumedCount: number;
+};
+
 const defaultCardPackCatalog: CardPackCatalog[] = [
   { pack_type: 'daily', title: 'Daily Pack', description: 'A free daily card pack with one player card.', image_path: 'Daily.png', card_count: 1, price_coins: 0, once_per_utc_day: true, rarity_weights: { Common: 55, Uncommon: 30, Rare: 12, Epic: 2.5, Legendary: 0.4, Heroes: 0.08, Icon: 0.02, GOAT: 0 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 10 },
   { pack_type: 'starter', title: 'Starter Pack', description: 'Two cards with a balanced chance to grow your squad.', image_path: 'Starter.png', card_count: 2, price_coins: 20, once_per_utc_day: false, rarity_weights: { Common: 42, Uncommon: 34, Rare: 18, Epic: 5, Legendary: 0.8, Heroes: 0.15, Icon: 0.05, GOAT: 0 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 20 },
@@ -378,6 +385,15 @@ export async function forgePlayerCard(rarity: CardRarity, userPlayerCardIds: str
 
   if (error) throw new Error(await getFunctionErrorMessage(error));
   return data as ForgePlayerCardResult;
+}
+
+export async function bulkForgePlayerCards(rarity: CardRarity, userPlayerCardIds: string[]) {
+  const { data, error } = await supabase.functions.invoke<BulkForgePlayerCardsResult>('manage_cards', {
+    body: { action: 'bulkForgeCards', rarity, userPlayerCardIds },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data as BulkForgePlayerCardsResult;
 }
 
 export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {

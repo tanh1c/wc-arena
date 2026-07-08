@@ -501,6 +501,17 @@ test('forge tab lets players manually select five eligible base cards', () => {
   assert.match(cardsSource, /CARD_FORGE_COPY_COUNT/);
   assert.match(cardsSource, /selectedForgeOwnedCardIds\.size === CARD_FORGE_COPY_COUNT/);
   assert.match(cardsSource, /forgePlayerCard\(selectedForgeRarity, Array\.from\(selectedForgeOwnedCardIds\)\)/);
+  assert.match(cardsSource, /bulkForgePlayerCards/);
+  assert.match(cardsSource, /bulkForgeOwnedCardIds/);
+  assert.match(cardsSource, /bulkForgeCount/);
+  assert.match(cardsSource, /Math\.floor\(bulkForgeOwnedCardIds\.length \/ CARD_FORGE_COPY_COUNT\)/);
+  assert.match(cardsSource, /bulkForgeConsumedCount/);
+  assert.match(cardsSource, /bulkForgeOwnedCardIds\.slice\(0, bulkForgeConsumedCount\)/);
+  assert.match(cardsSource, /handleBulkForgeFodder/);
+  assert.match(cardsSource, /bulkForgePlayerCards\(selectedForgeRarity, bulkForgeOwnedCardIds\.slice\(0, bulkForgeConsumedCount\)\)/);
+  assert.match(cardsSource, /setRevealedCards\(result\.cards\)/);
+  assert.match(cardsSource, /appPages\.cards\.forgeBulk/);
+  assert.match(cardsSource, /appPages\.cards\.forgeBulkSummary/);
   assert.match(cardsSource, /Object\.entries\(selectedForgeRecipe\.rarityWeights\)/);
   assert.match(cardsSource, /showcasedOwnedCardIds/);
   assert.match(cardsSource, /is_gif_upgrade/);

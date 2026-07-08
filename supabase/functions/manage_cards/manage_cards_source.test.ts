@@ -50,6 +50,25 @@ test('manage_cards exposes authenticated card GIF upgrades through one RPC', () 
   assert.match(source, /requireAuthenticatedUser\(req, corsHeaders\)[\s\S]*body\.action === 'upgradeCardToGif'/);
 });
 
+test('manage_cards exposes authenticated bulk forge through one weighted RPC', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /action: 'bulkForgeCards'; rarity: CardRarity; userPlayerCardIds: string\[\]/);
+  assert.match(source, /body\.action === 'bulkForgeCards'/);
+  assert.match(source, /bulkForgeCards\(supabase, user\.id, body\.rarity, body\.userPlayerCardIds\)/);
+  assert.match(source, /async function bulkForgeCards/);
+  assert.match(source, /selectedIds\.length < CARD_FORGE_COPY_COUNT/);
+  assert.match(source, /selectedIds\.length % CARD_FORGE_COPY_COUNT !== 0/);
+  assert.match(source, /forgeCount = selectedIds\.length \/ CARD_FORGE_COPY_COUNT/);
+  assert.match(source, /totalPrice = recipe\.priceCoins \* forgeCount/);
+  assert.match(source, /drawCards\(supabase, forgeCount, recipe\.rarityWeights\)/);
+  assert.match(source, /bulk_forge_card_transaction/);
+  assert.match(source, /p_result_card_ids: awardedCards\.map\(\(card\) => card\.id\)/);
+  assert.match(source, /forgedCount: rows\.length/);
+  assert.match(source, /consumedCount: selectedIds\.length/);
+  assert.doesNotMatch(source, /for \([^)]*forgePlayerCard/);
+});
+
 test('manage_cards exposes authenticated selected-card forge through one weighted RPC', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 

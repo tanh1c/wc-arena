@@ -25,6 +25,7 @@ import {
   listCardPackCatalog,
   getPlayerCardDisplayImageUrl,
   forgePlayerCard,
+  bulkForgePlayerCards,
   openCardPack,
   setShowcaseCard,
   upgradePlayerCardToGif,
@@ -278,12 +279,11 @@ export default function Cards({ themeControls }: CardsProps) {
   const selectedForgeCards = useMemo(() => catalog.flatMap((card) => card.ownedCards
     .filter((ownedCard) => selectedForgeOwnedCardIds.has(ownedCard.id))
     .map((ownedCard) => ({ card, ownedCard }))), [catalog, selectedForgeOwnedCardIds]);
-  const autoSelectableForgeOwnedCardIds = useMemo(() => {
+  const bulkForgeOwnedCardIds = useMemo(() => {
     const ids: string[] = [];
     for (const card of catalog.filter((nextCard) => nextCard.rarity === selectedForgeRarity)) {
       let selectedForCard = 0;
       for (const ownedCard of card.ownedCards) {
-        if (ids.length >= CARD_FORGE_COPY_COUNT) return ids;
         if (ownedCard.is_gif_upgrade || showcasedOwnedCardIds.has(ownedCard.id)) continue;
         if (card.baseOwnedCount > selectedForCard + 1) {
           ids.push(ownedCard.id);
@@ -293,6 +293,9 @@ export default function Cards({ themeControls }: CardsProps) {
     }
     return ids;
   }, [catalog, selectedForgeRarity, showcasedOwnedCardIds]);
+  const autoSelectableForgeOwnedCardIds = bulkForgeOwnedCardIds.slice(0, CARD_FORGE_COPY_COUNT);
+  const bulkForgeCount = Math.floor(bulkForgeOwnedCardIds.length / CARD_FORGE_COPY_COUNT);
+  const bulkForgeConsumedCount = bulkForgeCount * CARD_FORGE_COPY_COUNT;
   const hasHighRarityReveal = revealedCards.some((card) => highRevealRarities.has(card.player_cards.rarity));
   const revealAnimationActive = hasHighRarityReveal && !skipRevealAnimation;
   const forgeIngredientGroups = useMemo(() => catalog
@@ -390,6 +393,28 @@ export default function Cards({ themeControls }: CardsProps) {
       setForgeAnimationCards(animationCards);
       setFlippedRevealCardIds(new Set<string>());
       setRevealModalOpen(true);
+      window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
+      await loadCards();
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
+    } finally {
+      setForgingRarity(null);
+    }
+  };
+
+  const handleBulkForgeFodder = async () => {
+    setForgingRarity(selectedForgeRarity);
+    setError('');
+    try {
+      const result = await bulkForgePlayerCards(selectedForgeRarity, bulkForgeOwnedCardIds.slice(0, bulkForgeConsumedCount));
+      setSelectedForgeOwnedCardIds(new Set<string>());
+      setRevealedCards(result.cards);
+      setRecentPullCards([]);
+      setSkipRevealAnimation(false);
+      setRevealAnimationKind(result.cards.some((card) => highRevealRarities.has(card.player_cards.rarity)) ? 'forge' : null);
+      setForgeAnimationCards([]);
+      setFlippedRevealCardIds(new Set<string>());
+      setRevealModalOpen(result.cards.length > 0);
       window.dispatchEvent(new CustomEvent('wc26:profile-coins-changed', { detail: { coins: result.coins } }));
       await loadCards();
     } catch (nextError) {
@@ -508,6 +533,9 @@ export default function Cards({ themeControls }: CardsProps) {
                         <button type="button" className="border-2 border-main bg-c1 px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-card disabled:opacity-60" disabled={autoSelectableForgeOwnedCardIds.length < CARD_FORGE_COPY_COUNT} onClick={handleAutoSelectForgeFodder}>
                           {t('appPages.cards.forgeAutoSelect')}
                         </button>
+                        <button type="button" className="border-2 border-main bg-c3 px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)] hover:bg-card disabled:opacity-60" disabled={bulkForgeCount < 1 || forgingRarity !== null} onClick={handleBulkForgeFodder}>
+                          {t('appPages.cards.forgeBulk')}
+                        </button>
                         <p className="border-2 border-main bg-card px-3 py-2 text-sm font-black uppercase text-main">{selectedForgeRecipe.priceCoins.toLocaleString()} {t('ui.coinsShort')}</p>
                       </div>
                     </div>
@@ -586,6 +614,9 @@ export default function Cards({ themeControls }: CardsProps) {
                         </div>
                       ))}
                     </div>
+                  </div>
+                  <div className="border-b-4 border-main bg-c1 p-3">
+                    <p className="text-xs font-black uppercase text-main">{t('appPages.cards.forgeBulkSummary', { count: bulkForgeCount, consumed: bulkForgeConsumedCount, coins: (selectedForgeRecipe.priceCoins * bulkForgeCount).toLocaleString() })}</p>
                   </div>
                   <div className="border-b-4 border-main bg-muted p-3">
                     <h3 className="mb-2 text-xs font-black uppercase text-main">{t('appPages.cards.forgeResultTitle')}</h3>
