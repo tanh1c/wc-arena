@@ -47,10 +47,10 @@ test('formation slots fit a wider shorter balanced pitch', () => {
 
     assert.ok(minX <= 14, `${formation} should use the wider left side`);
     assert.ok(maxX >= 86, `${formation} should use the wider right side`);
-    assert.ok(rowY('att') >= 24 && rowY('att') <= 28, `${formation} attack row should sit lower`);
-    assert.ok(rowY('mid') >= 48 && rowY('mid') <= 52, `${formation} midfield row should stay central`);
-    assert.ok(rowY('def') >= 66 && rowY('def') <= 70, `${formation} defense row should stay compact`);
-    assert.equal(rowY('gk'), 86);
+    assert.ok(rowY('att') >= 19 && rowY('att') <= 23, `${formation} attack row should sit higher`);
+    assert.ok(rowY('mid') >= 43 && rowY('mid') <= 47, `${formation} midfield row should sit higher`);
+    assert.ok(rowY('def') >= 61 && rowY('def') <= 65, `${formation} defense row should sit higher`);
+    assert.equal(rowY('gk'), 81);
   }
 });
 
