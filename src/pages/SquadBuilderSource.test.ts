@@ -35,9 +35,11 @@ test('squad builder is routed, navigable, and wired to owned cards', () => {
   assert.match(pageSource, /duplicateCount/);
   assert.match(pageSource, /paginatedOwnedCards/);
   assert.match(pageSource, /max-h-\[520px\].*overflow-y-auto/);
-  assert.match(pageSource, /aspect-\[10\/13\]/);
-  assert.match(pageSource, /min-h-\[560px\]/);
-  assert.match(pageSource, /max-w-\[680px\]/);
+  assert.match(pageSource, /aspect-\[12\/13\]/);
+  assert.match(pageSource, /min-h-\[620px\]/);
+  assert.match(pageSource, /max-w-\[820px\]/);
+  assert.match(pageSource, /w-\[96px\].*sm:w-\[132px\]/);
+  assert.match(pageSource, /h-32 w-32.*sm:h-40 sm:w-40/);
   assert.match(pageSource, /drop-shadow-\[4px_4px_0_rgba\(0,0,0,0\.35\)\]/);
   assert.doesNotMatch(pageSource, /radial-gradient/);
   assert.doesNotMatch(pageSource, /rounded-full border-4 border-white\/70/);

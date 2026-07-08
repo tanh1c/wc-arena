@@ -179,7 +179,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
             </div>
 
             <div className="bg-[#0b5d3b] p-3 sm:p-5">
-              <div className="relative mx-auto aspect-[10/13] min-h-[560px] max-w-[680px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
+              <div className="relative mx-auto aspect-[12/13] min-h-[620px] max-w-[820px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
                 <div className="absolute inset-4 border-4 border-white/75" />
                 <div className="absolute left-4 right-4 top-1/2 h-1 -translate-y-1/2 bg-white/60" />
                 <div className="absolute left-1/2 top-4 h-20 w-28 -translate-x-1/2 border-x-4 border-b-4 border-white/60" />
@@ -192,12 +192,12 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                       key={slot.id}
                       type="button"
                       onClick={() => setSelectedSlotId(slot.id)}
-                      className={`absolute w-[76px] -translate-x-1/2 -translate-y-1/2 text-center transition-transform sm:w-[96px] ${selected ? 'z-20 scale-110' : 'z-10 hover:scale-105'}`}
+                      className={`absolute w-[96px] -translate-x-1/2 -translate-y-1/2 text-center transition-transform sm:w-[132px] ${selected ? 'z-20 scale-110' : 'z-10 hover:scale-105'}`}
                       style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                     >
                       {assignedCard ? (
                         <span className="block">
-                          <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="mx-auto h-24 w-24 object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.35)] sm:h-32 sm:w-32" />
+                          <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="mx-auto h-32 w-32 object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.35)] sm:h-40 sm:w-40" />
                           <span className="mt-1 inline-block min-w-12 border-2 border-main bg-[#101827] px-2 py-0.5 text-[10px] font-black uppercase leading-tight text-c3 shadow-[2px_2px_0_rgba(0,0,0,0.4)] sm:text-xs">
                             {slot.label}
                           </span>
