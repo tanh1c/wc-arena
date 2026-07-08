@@ -38,6 +38,22 @@ test('formation returns eleven slots', () => {
   assert.equal(getFormationSlots('4-3-3').length, 11);
 });
 
+test('formation slots fit a wider shorter balanced pitch', () => {
+  for (const formation of ['4-3-3', '4-4-2', '3-5-2'] as const) {
+    const slots = getFormationSlots(formation);
+    const minX = Math.min(...slots.map((slot) => slot.x));
+    const maxX = Math.max(...slots.map((slot) => slot.x));
+    const rowY = (line: 'gk' | 'def' | 'mid' | 'att') => slots.filter((slot) => slot.line === line).reduce((total, slot, index, row) => total + slot.y / row.length, 0);
+
+    assert.ok(minX <= 14, `${formation} should use the wider left side`);
+    assert.ok(maxX >= 86, `${formation} should use the wider right side`);
+    assert.ok(rowY('att') >= 24 && rowY('att') <= 28, `${formation} attack row should sit lower`);
+    assert.ok(rowY('mid') >= 48 && rowY('mid') <= 52, `${formation} midfield row should stay central`);
+    assert.ok(rowY('def') >= 66 && rowY('def') <= 70, `${formation} defense row should stay compact`);
+    assert.equal(rowY('gk'), 86);
+  }
+});
+
 test('assigning a card fills the selected slot', () => {
   assert.deepEqual(assignCardToSlot({}, 'st', 'owned-1'), { st: 'owned-1' });
 });

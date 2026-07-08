@@ -425,7 +425,7 @@ export default function Profile({ themeControls }: ProfileProps) {
                       <div key={slot} className={`min-h-32 border-2 border-main p-2 text-center text-[10px] font-black uppercase text-main ${showcaseCard ? 'bg-cover bg-center' : 'bg-muted'}`} style={{ backgroundImage: showcaseCard ? `url(${getProfileCardBackgroundImage(showcaseCard.rarity)})` : undefined }}>
                         {showcaseCard ? (
                           <>
-                            <img src={getPlayerCardDisplayImageUrl(showcaseCard, showcase.user_player_cards.is_gif_upgrade)} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main bg-card" />
+                            <img src={getPlayerCardDisplayImageUrl(showcaseCard, showcase.user_player_cards.is_gif_upgrade)} alt={showcaseCard.name} className="mx-auto aspect-[3/4] w-full max-w-[120px] object-contain border-2 border-main" />
                             <p className="mt-2 truncate text-white">{showcaseCard.name}</p>
                           </>
                         ) : (

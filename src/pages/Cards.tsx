@@ -652,7 +652,7 @@ export default function Cards({ themeControls }: CardsProps) {
               </button>
             </div>
             <div className="bg-cover bg-center p-4" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(previewGifCard.rarity)})` }}>
-              <img src={getPlayerCardDisplayImageUrl(previewGifCard, true)} alt={previewGifCard.name} loading="lazy" decoding="async" className="mx-auto aspect-[3/4] w-full max-w-[220px] rounded-sm border-4 border-main bg-card object-contain shadow-[4px_4px_0_var(--color-shadow)]" />
+              <img src={getPlayerCardDisplayImageUrl(previewGifCard, true)} alt={previewGifCard.name} loading="lazy" decoding="async" className="mx-auto aspect-[3/4] w-full max-w-[220px] rounded-sm border-4 border-main object-contain shadow-[4px_4px_0_var(--color-shadow)]" />
             </div>
           </section>
         </div>
@@ -946,5 +946,5 @@ function CardImage({ card, useGif }: { card: { name: string; image_url: string; 
     return <div className="mx-auto flex aspect-[3/4] w-full max-w-[180px] items-center justify-center rounded-sm border-2 border-main bg-muted p-2 text-center text-xs font-black uppercase text-main">{card.name}</div>;
   }
 
-  return <img src={getPlayerCardDisplayImageUrl(card, useGif)} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] rounded-sm border-2 border-main bg-muted object-contain" onError={() => setFailed(true)} />;
+  return <img src={getPlayerCardDisplayImageUrl(card, useGif)} alt={card.name} className="mx-auto aspect-[3/4] w-full max-w-[180px] rounded-sm border-2 border-main object-contain" onError={() => setFailed(true)} />;
 }

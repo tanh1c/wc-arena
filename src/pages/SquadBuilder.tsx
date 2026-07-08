@@ -179,7 +179,7 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
             </div>
 
             <div className="bg-[#0b5d3b] p-3 sm:p-5">
-              <div className="relative mx-auto aspect-[9/14] min-h-[620px] max-w-[560px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
+              <div className="relative mx-auto aspect-[10/13] min-h-[560px] max-w-[680px] overflow-hidden border-4 border-white/80 bg-[#147a48] shadow-[6px_6px_0_var(--color-shadow)]">
                 <div className="absolute inset-4 border-4 border-white/75" />
                 <div className="absolute left-4 right-4 top-1/2 h-1 -translate-y-1/2 bg-white/60" />
                 <div className="absolute left-1/2 top-4 h-20 w-28 -translate-x-1/2 border-x-4 border-b-4 border-white/60" />

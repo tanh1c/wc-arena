@@ -67,6 +67,17 @@ test('card art renders at a capped width instead of stretching low-resolution im
   assert.match(profileSource, /max-w-\[120px\]/);
 });
 
+test('player card images do not paint over rarity backgrounds', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+  const profileSource = readFileSync('src/pages/Profile.tsx', 'utf8');
+  const publicProfileSource = readFileSync('src/pages/PublicProfile.tsx', 'utf8');
+
+  assert.doesNotMatch(cardsSource, /<img src=\{getPlayerCardDisplayImageUrl\(card, useGif\)\}[^>]+bg-muted/);
+  assert.doesNotMatch(cardsSource, /<img src=\{getPlayerCardDisplayImageUrl\(previewGifCard, true\)\}[^>]+bg-card/);
+  assert.doesNotMatch(profileSource, /getPlayerCardDisplayImageUrl\(showcaseCard, showcase\.user_player_cards\.is_gif_upgrade\)[^>]+bg-card/);
+  assert.doesNotMatch(publicProfileSource, /getPlayerCardDisplayImageUrl\(showcaseCard, showcase\.user_player_cards\.is_gif_upgrade\)[^>]+bg-card/);
+});
+
 test('player cards render GIF only after upgrade unlock and expose a five-copy upgrade action', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
   const profileSource = readFileSync('src/pages/Profile.tsx', 'utf8');
