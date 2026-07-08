@@ -145,6 +145,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [packCatalog, setPackCatalog] = useState<CardPackCatalog[]>([]);
   const [packDraft, setPackDraft] = useState<CardPackCatalogInput>(emptyPackDraft());
   const [packActionState, setPackActionState] = useState<ActionState>({});
+  const [packPoolPickerOpen, setPackPoolPickerOpen] = useState(false);
   const [cardSearchQuery, setCardSearchQuery] = useState('');
   const [cardRarityFilter, setCardRarityFilter] = useState<CardRarityFilter>('all');
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
@@ -328,11 +329,19 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   }
 
   function setPackPoolType(poolType: CardPackPoolType) {
+    setPackPoolPickerOpen(false);
     setPackDraft((current) => ({ ...current, pool_type: poolType, pool_values: [] }));
   }
 
   function setPackPoolValues(values: string[]) {
     setPackDraft((current) => ({ ...current, pool_values: values }));
+  }
+
+  function togglePackPoolValue(value: string) {
+    setPackDraft((current) => ({
+      ...current,
+      pool_values: current.pool_values.includes(value) ? current.pool_values.filter((poolValue) => poolValue !== value) : [...current.pool_values, value],
+    }));
   }
 
   if (authLoading || roleLoading) {
@@ -400,6 +409,8 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     position: uniqueOptions(playerCards.flatMap((card) => [card.position, ...splitAlternatePositions(card.alternate_positions)])),
   };
   const activePoolOptions = packDraft.pool_type === 'all' ? [] : packPoolOptions[packDraft.pool_type];
+  const selectedPoolLabels = packDraft.pool_values.map((value) => activePoolOptions.find((option) => option.value === value)?.label ?? value);
+  const selectedPoolValueCount = packDraft.pool_values.length;
 
   return (
     <AppShell themeControls={themeControls}>
@@ -716,13 +727,18 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                     {poolTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
-                {packDraft.pool_type !== 'all' && <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
-                  Pool values
-                  <select multiple value={packDraft.pool_values} onChange={(event) => setPackPoolValues([...event.currentTarget.selectedOptions].map((option) => option.value))} className="min-h-40 border-2 border-main bg-muted p-2 text-sm font-bold normal-case">
-                    {activePoolOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                  <span className="text-[10px] font-bold normal-case text-muted-foreground">Hold Ctrl/Cmd to select multiple values from player card database.</span>
-                </label>}
+                {packDraft.pool_type !== 'all' && <div className="flex flex-col gap-2 border-2 border-main bg-muted p-3 text-[10px] font-black uppercase">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Pool values</span>
+                    <span>{selectedPoolValueCount} selected</span>
+                  </div>
+                  <p className="line-clamp-2 text-xs font-bold normal-case text-muted-foreground">{selectedPoolLabels.length > 0 ? selectedPoolLabels.join(', ') : 'No pool values selected.'}</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button type="button" onClick={() => setPackPoolPickerOpen(true)} className="border-2 border-main bg-c1 p-2 font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Manage pool values</button>
+                    {selectedPoolValueCount > 0 && <button type="button" onClick={() => setPackPoolValues([])} className="border-2 border-main bg-card p-2 font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Clear pool</button>}
+                  </div>
+                  <span className="text-[10px] font-bold normal-case text-muted-foreground">Choose values from the player card database.</span>
+                </div>}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
                     Card count
@@ -801,6 +817,44 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 </table>
               </div>
             </div>
+          </div>}
+
+          {packPoolPickerOpen && packDraft.pool_type !== 'all' && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6" onClick={() => setPackPoolPickerOpen(false)}>
+            <section role="dialog" aria-modal="true" className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-main p-3 text-inv">
+                <div>
+                  <h2 className="font-black uppercase">Pool values</h2>
+                  <p className="text-[10px] font-black uppercase opacity-80">{selectedPoolValueCount} selected</p>
+                </div>
+                <button type="button" onClick={() => setPackPoolPickerOpen(false)} className="border-2 border-main bg-card px-4 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Done</button>
+              </div>
+              <div className="min-h-0 overflow-auto p-3">
+                {packDraft.pool_type === 'manual' ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {playerCards.map((card) => {
+                    const selected = packDraft.pool_values.includes(card.id);
+
+                    return <button key={card.id} type="button" onClick={() => togglePackPoolValue(card.id)} className={`flex items-center gap-3 border-2 border-main p-2 text-left shadow-[2px_2px_0_var(--color-shadow)] ${selected ? 'bg-c1' : 'bg-muted'}`}>
+                      <input type="checkbox" checked={selected} readOnly className="shrink-0" />
+                      <img src={card.image_url} alt={card.name} className="h-20 w-14 shrink-0 object-contain" />
+                      <span className="min-w-0 font-black uppercase">
+                        <span className="block truncate text-sm">{card.name}</span>
+                        <span className="block text-[10px] text-muted-foreground">{card.position} · {card.team}</span>
+                        <span className="block text-[10px] text-muted-foreground">{card.rarity}</span>
+                      </span>
+                    </button>;
+                  })}
+                  {playerCards.length === 0 && <p className="border-2 border-main bg-muted p-3 text-xs font-black uppercase">No player cards yet.</p>}
+                </div> : <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {activePoolOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-3 border-2 border-main bg-muted p-3 text-xs font-black uppercase shadow-[2px_2px_0_var(--color-shadow)]">
+                      <input type="checkbox" checked={packDraft.pool_values.includes(option.value)} onChange={() => togglePackPoolValue(option.value)} />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                  {activePoolOptions.length === 0 && <p className="border-2 border-main bg-muted p-3 text-xs font-black uppercase">No pool values found.</p>}
+                </div>}
+              </div>
+            </section>
           </div>}
         </div>
       </div>

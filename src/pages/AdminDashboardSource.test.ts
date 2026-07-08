@@ -98,11 +98,21 @@ test('admin dashboard derives pack pool selectors from player card database rows
   assert.match(source, /splitAlternatePositions/);
   assert.match(source, /Pool type/);
   assert.match(source, /Pool values/);
-  assert.match(source, /multiple/);
   assert.match(source, /packDraft\.pool_type/);
   assert.match(source, /packDraft\.pool_values/);
   assert.match(source, /setPackPoolType/);
   assert.match(source, /setPackPoolValues/);
+  assert.match(source, /packPoolPickerOpen/);
+  assert.match(source, /togglePackPoolValue/);
+  assert.match(source, /Manage pool values/);
+  assert.match(source, /Clear pool/);
+  assert.match(source, /Done/);
+  assert.match(source, /fixed inset-0 z-50/);
+  assert.match(source, /bg-black\/70/);
+  assert.match(source, /border-4 border-main/);
+  assert.match(source, /playerCards\.map\(\(card\) =>/);
+  assert.match(source, /<img src=\{card\.image_url\}/);
+  assert.doesNotMatch(source, /<select multiple value=\{packDraft\.pool_values\}/);
   assert.doesNotMatch(source, /placeholder="\{.*pool/s);
 });
 
