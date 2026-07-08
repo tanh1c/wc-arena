@@ -26,9 +26,16 @@ type Body =
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'deletePlayerCard'; id: string };
 
+type CardPackPoolType = 'all' | 'manual' | 'team' | 'nation_region' | 'league' | 'position';
+
 type PlayerCard = {
   id: string;
   rarity: CardRarity;
+  position: string;
+  alternate_positions: string | null;
+  team: string;
+  league: string;
+  nation_region: string;
   drop_weight: number;
 };
 
@@ -41,6 +48,8 @@ type CardPackCatalogRow = {
   price_coins: number;
   once_per_utc_day: boolean;
   rarity_weights: Record<CardRarity, number>;
+  pool_type: CardPackPoolType;
+  pool_values: string[];
   enabled: boolean;
   sort_order: number;
 };
@@ -176,7 +185,7 @@ async function openCardPack(supabase: SupabaseClient, userId: string, packType: 
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const iconChasePity = packType === 'icon' ? await getIconChasePityState(supabase, userId) : null;
-    const awardedCards = await drawCards(supabase, pack.card_count, pack.rarity_weights, { forceIcon: iconChasePity?.nextGuaranteed ?? false });
+    const awardedCards = await drawCards(supabase, pack.card_count, pack.rarity_weights, { forceIcon: iconChasePity?.nextGuaranteed ?? false, poolType: pack.pool_type, poolValues: pack.pool_values });
     if (awardedCards.length !== pack.card_count) throw new Error('Not enough cards are available for this pack.');
 
     const { data: openedRows, error: openError } = await supabase.rpc('open_card_pack_transaction', {
@@ -228,6 +237,8 @@ async function getPackConfig(supabase: SupabaseClient, packType: PackType): Prom
     price_coins: fallback.priceCoins,
     once_per_utc_day: fallback.oncePerUtcDay,
     rarity_weights: fallback.rarityWeights,
+    pool_type: 'all',
+    pool_values: [],
     enabled: true,
     sort_order: 0,
   };
@@ -247,6 +258,7 @@ async function upsertCardPackCatalog(supabase: SupabaseClient, pack: CardPackCat
 }
 
 function normalizePackCatalogInput(pack: CardPackCatalogInput) {
+  const poolType = normalizePoolType(pack.pool_type);
   return {
     pack_type: normalizeRequiredString(pack.pack_type, 'pack_type'),
     title: normalizeRequiredString(pack.title, 'title'),
@@ -256,6 +268,8 @@ function normalizePackCatalogInput(pack: CardPackCatalogInput) {
     price_coins: normalizeInteger(pack.price_coins, 'price_coins', 0, 1000000),
     once_per_utc_day: Boolean(pack.once_per_utc_day),
     rarity_weights: normalizeRarityWeights(pack.rarity_weights),
+    pool_type: poolType,
+    pool_values: normalizePoolValues(poolType, pack.pool_values),
     enabled: pack.enabled !== false,
     sort_order: normalizeInteger(pack.sort_order, 'sort_order', -1000000, 1000000),
     updated_at: new Date().toISOString(),
@@ -265,6 +279,20 @@ function normalizePackCatalogInput(pack: CardPackCatalogInput) {
 function normalizeRarityWeights(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Pack rarity_weights are required.');
   return Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, normalizeWeight((value as Record<string, unknown>)[rarity])]));
+}
+
+function normalizePoolType(value: unknown): CardPackPoolType {
+  const poolType = value == null || value === '' ? 'all' : String(value);
+  if (!['all', 'manual', 'team', 'nation_region', 'league', 'position'].includes(poolType)) throw new Error('Pack pool_type is invalid.');
+  return poolType as CardPackPoolType;
+}
+
+function normalizePoolValues(poolType: CardPackPoolType, value: unknown) {
+  if (poolType === 'all') return [];
+  if (!Array.isArray(value)) throw new Error('Pack pool_values are required.');
+  const values = [...new Set(value.map((item) => normalizeRequiredString(item, 'pool_value')))];
+  if (values.length === 0) throw new Error('Pack pool_values are required.');
+  return values;
 }
 
 function normalizeInteger(value: unknown, field: string, min: number, max: number) {
@@ -283,7 +311,7 @@ async function drawCards(
   supabase: SupabaseClient,
   count: number,
   rarityWeights: Record<CardRarity, number>,
-  options: { forceIcon?: boolean } = {},
+  options: { forceIcon?: boolean; poolType?: CardPackPoolType; poolValues?: string[] } = {},
 ) {
   const [{ data, error }, { data: weightRows, error: weightsError }] = await Promise.all([
     supabase.from('player_cards').select('*'),
@@ -293,10 +321,12 @@ async function drawCards(
   if (weightsError) throw weightsError;
 
   const weightsByCardId = new Map((weightRows ?? []).map((row: { card_id: string; drop_weight: number }) => [row.card_id, Number(row.drop_weight)]));
-  const cards = ((data ?? []) as Array<Omit<PlayerCard, 'drop_weight'>>).map((card) => ({
-    ...card,
-    drop_weight: weightsByCardId.get(card.id) ?? 1,
-  }));
+  const cards = ((data ?? []) as Array<Omit<PlayerCard, 'drop_weight'>>)
+    .filter((card) => cardMatchesPackPool(card, options.poolType ?? 'all', options.poolValues ?? []))
+    .map((card) => ({
+      ...card,
+      drop_weight: weightsByCardId.get(card.id) ?? 1,
+    }));
   const cardsByRarity = new Map<CardRarity, PlayerCard[]>();
   for (const card of cards) {
     if (card.drop_weight <= 0) continue;
@@ -320,6 +350,21 @@ async function drawCards(
   }
 
   return picked;
+}
+
+function cardMatchesPackPool(card: Omit<PlayerCard, 'drop_weight'>, poolType: CardPackPoolType, poolValues: string[]) {
+  if (poolType === 'all') return true;
+  const values = new Set(poolValues);
+  if (poolType === 'manual') return values.has(card.id);
+  if (poolType === 'team') return values.has(card.team);
+  if (poolType === 'nation_region') return values.has(card.nation_region);
+  if (poolType === 'league') return values.has(card.league);
+  if (poolType === 'position') return [card.position, ...splitAlternatePositions(card.alternate_positions)].some((position) => values.has(position));
+  return false;
+}
+
+function splitAlternatePositions(value: string | null) {
+  return (value ?? '').split(',').map((position) => position.trim()).filter(Boolean);
 }
 
 async function setShowcaseCard(supabase: SupabaseClient, userId: string, slotNumber: number, userPlayerCardId: string) {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 test('pack catalog migration exposes readable admin-managed packs', () => {
@@ -15,4 +15,17 @@ test('pack catalog migration exposes readable admin-managed packs', () => {
   assert.match(source, /grant select on public\.card_pack_catalog to anon, authenticated/);
   assert.match(source, /grant select, insert, update on public\.card_pack_catalog to service_role/);
   assert.match(source, /daily[\s\S]*Starter\.png[\s\S]*premium[\s\S]*Icon\.png/);
+});
+
+test('pack catalog pool migration adds typed pool fields with all-card defaults', () => {
+  const migrationFile = readdirSync('supabase/migrations').find((file) => file.endsWith('_add_card_pack_pools.sql'));
+  assert.ok(migrationFile);
+
+  const source = readFileSync(`supabase/migrations/${migrationFile}`, 'utf8');
+
+  assert.match(source, /alter table public\.card_pack_catalog/);
+  assert.match(source, /pool_type text not null default 'all'/);
+  assert.match(source, /pool_values text\[\] not null default '\{\}'/);
+  assert.match(source, /card_pack_catalog_pool_type_check/);
+  assert.match(source, /pool_type in \('all', 'manual', 'team', 'nation_region', 'league', 'position'\)/);
 });

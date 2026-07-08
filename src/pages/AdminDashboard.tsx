@@ -7,7 +7,7 @@ import { CARD_RARITIES, type CardRarity } from '../config/cardPacks';
 import { PACK_IMAGE_OPTIONS } from '../config/packImages';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { deletePlayerCard, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, playerCardToAdminInput, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, playerCardToAdminInput, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -27,6 +27,16 @@ type ActionState = { loading?: boolean; error?: string; success?: string };
 type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity' | 'drop_weight'>;
 type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
 type CardRarityFilter = 'all' | CardRarity;
+type PackPoolOption = { value: string; label: string };
+
+const poolTypeOptions: Array<{ value: CardPackPoolType; label: string }> = [
+  { value: 'all', label: 'All cards' },
+  { value: 'manual', label: 'Manual players' },
+  { value: 'team', label: 'Team' },
+  { value: 'nation_region', label: 'Nation/Region' },
+  { value: 'league', label: 'League' },
+  { value: 'position', label: 'Position' },
+];
 
 const cardRarities: CardRarity[] = [...CARD_RARITIES];
 const cardRarityRank = new Map(cardRarities.map((rarity, index) => [rarity, index]));
@@ -73,6 +83,8 @@ function emptyPackDraft(): CardPackCatalogInput {
     price_coins: 0,
     once_per_utc_day: false,
     rarity_weights: Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, 0])) as Record<CardRarity, number>,
+    pool_type: 'all',
+    pool_values: [],
     enabled: true,
     sort_order: 0,
   };
@@ -84,6 +96,20 @@ function compareCardText(left: string | null | undefined, right: string | null |
 
 function getCardSearchText(card: PlayerCard) {
   return [card.id, card.name, card.position, card.team, card.league, card.nation_region, card.rarity].join(' ').toLowerCase();
+}
+
+function splitAlternatePositions(value: string | null) {
+  return (value ?? '').split(',').map((position) => position.trim()).filter(Boolean);
+}
+
+function uniqueOptions(values: Array<string | null | undefined>): PackPoolOption[] {
+  return [...new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])].sort((left, right) => compareCardText(left, right)).map((value) => ({ value, label: value }));
+}
+
+function getPoolSummary(pack: Pick<CardPackCatalogInput, 'pool_type' | 'pool_values'>) {
+  if (pack.pool_type === 'all') return 'Pool: All cards';
+  if (pack.pool_type === 'manual') return `Pool: ${pack.pool_values.length} selected players`;
+  return `Pool: ${pack.pool_type.replace('_', ' ')} · ${pack.pool_values.join(', ') || 'No values selected'}`;
 }
 
 function formatDate(value: string) {
@@ -301,6 +327,14 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     }));
   }
 
+  function setPackPoolType(poolType: CardPackPoolType) {
+    setPackDraft((current) => ({ ...current, pool_type: poolType, pool_values: [] }));
+  }
+
+  function setPackPoolValues(values: string[]) {
+    setPackDraft((current) => ({ ...current, pool_values: values }));
+  }
+
   if (authLoading || roleLoading) {
     return (
       <AppShell themeControls={themeControls}>
@@ -358,6 +392,14 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
       return (cardRarityRank.get(left.rarity) ?? 99) - (cardRarityRank.get(right.rarity) ?? 99) || compareCardText(left.name, right.name);
     });
+  const packPoolOptions: Record<Exclude<CardPackPoolType, 'all'>, PackPoolOption[]> = {
+    manual: playerCards.map((card) => ({ value: card.id, label: `${card.name} · ${card.position} · ${card.team} · ${card.rarity}` })),
+    team: uniqueOptions(playerCards.map((card) => card.team)),
+    nation_region: uniqueOptions(playerCards.map((card) => card.nation_region)),
+    league: uniqueOptions(playerCards.map((card) => card.league)),
+    position: uniqueOptions(playerCards.flatMap((card) => [card.position, ...splitAlternatePositions(card.alternate_positions)])),
+  };
+  const activePoolOptions = packDraft.pool_type === 'all' ? [] : packPoolOptions[packDraft.pool_type];
 
   return (
     <AppShell themeControls={themeControls}>
@@ -668,6 +710,19 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                     {PACK_IMAGE_OPTIONS.map((option) => <option key={option.path} value={option.path}>{option.label}</option>)}
                   </select>
                 </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Pool type
+                  <select value={packDraft.pool_type} onChange={(event) => setPackPoolType(event.target.value as CardPackPoolType)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                    {poolTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                {packDraft.pool_type !== 'all' && <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Pool values
+                  <select multiple value={packDraft.pool_values} onChange={(event) => setPackPoolValues([...event.currentTarget.selectedOptions].map((option) => option.value))} className="min-h-40 border-2 border-main bg-muted p-2 text-sm font-bold normal-case">
+                    {activePoolOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  <span className="text-[10px] font-bold normal-case text-muted-foreground">Hold Ctrl/Cmd to select multiple values from player card database.</span>
+                </label>}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
                     Card count
@@ -713,6 +768,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   <h3 className="text-3xl tracking-tight">{packDraft.title || 'Untitled pack'}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">{packDraft.description || 'No description yet.'}</p>
                   <p className="mt-4 text-sm">{packDraft.card_count} cards · {packDraft.price_coins} coins · {packDraft.enabled ? 'Enabled' : 'Disabled'}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{getPoolSummary(packDraft)}</p>
                 </div>
               </div>
               <div className="max-h-[70dvh] overflow-auto">
@@ -723,6 +779,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                       <th className="border-b-4 border-r-2 border-main p-3">Image</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Cards</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Price</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Pool</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Enabled</th>
                       <th className="border-b-4 border-main p-3">Actions</th>
                     </tr>
@@ -734,6 +791,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         <td className="border-r-2 border-main p-3 uppercase">{pack.image_path}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{pack.card_count}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{pack.price_coins}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{getPoolSummary(pack)}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{pack.enabled ? 'Yes' : 'No'}</td>
                         <td className="p-3"><button type="button" onClick={() => setPackDraft(pack)} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button></td>
                       </tr>

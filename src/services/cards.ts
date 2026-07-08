@@ -32,6 +32,8 @@ export type AdminPlayerCard = PlayerCard & {
   drop_weight: number;
 };
 
+export type CardPackPoolType = 'all' | 'manual' | 'team' | 'nation_region' | 'league' | 'position';
+
 export type CardPackCatalog = {
   pack_type: PackType;
   title: string;
@@ -41,6 +43,8 @@ export type CardPackCatalog = {
   price_coins: number;
   once_per_utc_day: boolean;
   rarity_weights: Record<CardRarity, number>;
+  pool_type: CardPackPoolType;
+  pool_values: string[];
   enabled: boolean;
   sort_order: number;
 };
@@ -94,11 +98,11 @@ export type ForgePlayerCardResult = {
 };
 
 const defaultCardPackCatalog: CardPackCatalog[] = [
-  { pack_type: 'daily', title: 'Daily Pack', description: 'A free daily card pack with one player card.', image_path: 'Daily.png', card_count: 1, price_coins: 0, once_per_utc_day: true, rarity_weights: { Common: 55, Uncommon: 30, Rare: 12, Epic: 2.5, Legendary: 0.4, Heroes: 0.08, Icon: 0.02, GOAT: 0 }, enabled: true, sort_order: 10 },
-  { pack_type: 'starter', title: 'Starter Pack', description: 'Two cards with a balanced chance to grow your squad.', image_path: 'Starter.png', card_count: 2, price_coins: 20, once_per_utc_day: false, rarity_weights: { Common: 42, Uncommon: 34, Rare: 18, Epic: 5, Legendary: 0.8, Heroes: 0.15, Icon: 0.05, GOAT: 0 }, enabled: true, sort_order: 20 },
-  { pack_type: 'premium', title: 'Premium Pack', description: 'Three cards with improved rare and epic odds.', image_path: 'Premium.png', card_count: 3, price_coins: 50, once_per_utc_day: false, rarity_weights: { Common: 25, Uncommon: 32, Rare: 28, Epic: 12, Legendary: 2.4, Heroes: 0.45, Icon: 0.13, GOAT: 0.02 }, enabled: true, sort_order: 30 },
-  { pack_type: 'elite', title: 'Elite Pack', description: 'Five cards with strong epic and legendary odds.', image_path: 'Elite.png', card_count: 5, price_coins: 100, once_per_utc_day: false, rarity_weights: { Common: 8, Uncommon: 18, Rare: 34, Epic: 30, Legendary: 8, Heroes: 1.5, Icon: 0.45, GOAT: 0.05 }, enabled: true, sort_order: 40 },
-  { pack_type: 'icon', title: 'Icon Chase Pack', description: 'Five premium cards with Icon Chase pity progress.', image_path: 'Icon.png', card_count: 5, price_coins: 300, once_per_utc_day: false, rarity_weights: { Common: 0, Uncommon: 0, Rare: 32, Epic: 43, Legendary: 17, Heroes: 5, Icon: 2.8, GOAT: 0.2 }, enabled: true, sort_order: 50 },
+  { pack_type: 'daily', title: 'Daily Pack', description: 'A free daily card pack with one player card.', image_path: 'Daily.png', card_count: 1, price_coins: 0, once_per_utc_day: true, rarity_weights: { Common: 55, Uncommon: 30, Rare: 12, Epic: 2.5, Legendary: 0.4, Heroes: 0.08, Icon: 0.02, GOAT: 0 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 10 },
+  { pack_type: 'starter', title: 'Starter Pack', description: 'Two cards with a balanced chance to grow your squad.', image_path: 'Starter.png', card_count: 2, price_coins: 20, once_per_utc_day: false, rarity_weights: { Common: 42, Uncommon: 34, Rare: 18, Epic: 5, Legendary: 0.8, Heroes: 0.15, Icon: 0.05, GOAT: 0 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 20 },
+  { pack_type: 'premium', title: 'Premium Pack', description: 'Three cards with improved rare and epic odds.', image_path: 'Premium.png', card_count: 3, price_coins: 50, once_per_utc_day: false, rarity_weights: { Common: 25, Uncommon: 32, Rare: 28, Epic: 12, Legendary: 2.4, Heroes: 0.45, Icon: 0.13, GOAT: 0.02 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 30 },
+  { pack_type: 'elite', title: 'Elite Pack', description: 'Five cards with strong epic and legendary odds.', image_path: 'Elite.png', card_count: 5, price_coins: 100, once_per_utc_day: false, rarity_weights: { Common: 8, Uncommon: 18, Rare: 34, Epic: 30, Legendary: 8, Heroes: 1.5, Icon: 0.45, GOAT: 0.05 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 40 },
+  { pack_type: 'icon', title: 'Icon Chase Pack', description: 'Five premium cards with Icon Chase pity progress.', image_path: 'Icon.png', card_count: 5, price_coins: 300, once_per_utc_day: false, rarity_weights: { Common: 0, Uncommon: 0, Rare: 32, Epic: 43, Legendary: 17, Heroes: 5, Icon: 2.8, GOAT: 0.2 }, pool_type: 'all', pool_values: [], enabled: true, sort_order: 50 },
 ];
 
 export type AdminPlayerCardInput = {

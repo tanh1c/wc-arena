@@ -88,6 +88,24 @@ test('admin dashboard exposes pack catalog editing with repo image selection', (
   assert.match(source, /PACK_IMAGE_OPTIONS\.map/);
 });
 
+test('admin dashboard derives pack pool selectors from player card database rows', () => {
+  const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
+
+  assert.match(source, /type CardPackPoolType/);
+  assert.match(source, /poolTypeOptions/);
+  assert.match(source, /packPoolOptions/);
+  assert.match(source, /playerCards\.flatMap/);
+  assert.match(source, /splitAlternatePositions/);
+  assert.match(source, /Pool type/);
+  assert.match(source, /Pool values/);
+  assert.match(source, /multiple/);
+  assert.match(source, /packDraft\.pool_type/);
+  assert.match(source, /packDraft\.pool_values/);
+  assert.match(source, /setPackPoolType/);
+  assert.match(source, /setPackPoolValues/);
+  assert.doesNotMatch(source, /placeholder="\{.*pool/s);
+});
+
 test('admin access check is stable across refreshed session objects for the same user', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 

@@ -30,6 +30,16 @@ test('cards service sends admin player card upserts, deletes, admin listings, an
   assert.match(source, /getFunctionErrorMessage\(error\)/);
 });
 
+test('pack catalog supports admin-configured card pools', () => {
+  const source = readFileSync('src/services/cards.ts', 'utf8');
+
+  assert.match(source, /export type CardPackPoolType = 'all' \| 'manual' \| 'team' \| 'nation_region' \| 'league' \| 'position'/);
+  assert.match(source, /pool_type: CardPackPoolType/);
+  assert.match(source, /pool_values: string\[\]/);
+  assert.match(source, /pool_type: 'all'/);
+  assert.match(source, /pool_values: \[\]/);
+});
+
 test('player card display image only uses gif_url after GIF unlock', () => {
   assert.equal(getPlayerCardDisplayImageUrl({ image_url: 'card.png', gif_url: 'card.gif' }, false), 'card.png');
   assert.equal(getPlayerCardDisplayImageUrl({ image_url: 'card.png', gif_url: 'card.gif' }, true), 'card.gif');

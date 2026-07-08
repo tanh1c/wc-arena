@@ -102,6 +102,25 @@ test('manage_cards uses protected per-card drop weights for admin edits and pack
   assert.doesNotMatch(source, /Math\.floor\(Math\.random\(\) \* options\.length\)/);
 });
 
+test('manage_cards filters pack draws by admin-configured card pools', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /type CardPackPoolType = 'all' \| 'manual' \| 'team' \| 'nation_region' \| 'league' \| 'position'/);
+  assert.match(source, /pool_type: CardPackPoolType/);
+  assert.match(source, /pool_values: string\[\]/);
+  assert.match(source, /poolType: pack\.pool_type/);
+  assert.match(source, /poolValues: pack\.pool_values/);
+  assert.match(source, /normalizePoolType/);
+  assert.match(source, /normalizePoolValues/);
+  assert.match(source, /cardMatchesPackPool/);
+  assert.match(source, /poolType === 'manual'/);
+  assert.match(source, /poolType === 'team'/);
+  assert.match(source, /poolType === 'nation_region'/);
+  assert.match(source, /poolType === 'league'/);
+  assert.match(source, /poolType === 'position'/);
+  assert.match(source, /splitAlternatePositions/);
+});
+
 test('manage_cards validates admin card import boundary input', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 

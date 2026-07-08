@@ -257,6 +257,8 @@ export type Database = {
           image_path: string
           once_per_utc_day: boolean
           pack_type: string
+          pool_type: string
+          pool_values: string[]
           price_coins: number
           rarity_weights: Json
           sort_order: number
@@ -271,6 +273,8 @@ export type Database = {
           image_path: string
           once_per_utc_day?: boolean
           pack_type: string
+          pool_type?: string
+          pool_values?: string[]
           price_coins?: number
           rarity_weights: Json
           sort_order?: number
@@ -285,6 +289,8 @@ export type Database = {
           image_path?: string
           once_per_utc_day?: boolean
           pack_type?: string
+          pool_type?: string
+          pool_values?: string[]
           price_coins?: number
           rarity_weights?: Json
           sort_order?: number
