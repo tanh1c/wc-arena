@@ -27,6 +27,7 @@ type ActionState = { loading?: boolean; error?: string; success?: string };
 type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity' | 'drop_weight'>;
 type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
 type CardRarityFilter = 'all' | CardRarity;
+type PackPoolPlayerSort = 'name-asc' | 'position-asc' | 'nation-asc' | 'team-asc' | 'league-asc' | 'rarity-asc';
 type PackPoolOption = { value: string; label: string };
 
 const poolTypeOptions: Array<{ value: CardPackPoolType; label: string }> = [
@@ -146,6 +147,12 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [packDraft, setPackDraft] = useState<CardPackCatalogInput>(emptyPackDraft());
   const [packActionState, setPackActionState] = useState<ActionState>({});
   const [packPoolPickerOpen, setPackPoolPickerOpen] = useState(false);
+  const [packPoolSearchQuery, setPackPoolSearchQuery] = useState('');
+  const [packPoolPositionFilter, setPackPoolPositionFilter] = useState('all');
+  const [packPoolNationFilter, setPackPoolNationFilter] = useState('all');
+  const [packPoolTeamFilter, setPackPoolTeamFilter] = useState('all');
+  const [packPoolLeagueFilter, setPackPoolLeagueFilter] = useState('all');
+  const [packPoolSort, setPackPoolSort] = useState<PackPoolPlayerSort>('name-asc');
   const [cardSearchQuery, setCardSearchQuery] = useState('');
   const [cardRarityFilter, setCardRarityFilter] = useState<CardRarityFilter>('all');
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
@@ -344,6 +351,15 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     }));
   }
 
+  function clearPackPoolFilters() {
+    setPackPoolSearchQuery('');
+    setPackPoolPositionFilter('all');
+    setPackPoolNationFilter('all');
+    setPackPoolTeamFilter('all');
+    setPackPoolLeagueFilter('all');
+    setPackPoolSort('name-asc');
+  }
+
   if (authLoading || roleLoading) {
     return (
       <AppShell themeControls={themeControls}>
@@ -411,6 +427,25 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const activePoolOptions = packDraft.pool_type === 'all' ? [] : packPoolOptions[packDraft.pool_type];
   const selectedPoolLabels = packDraft.pool_values.map((value) => activePoolOptions.find((option) => option.value === value)?.label ?? value);
   const selectedPoolValueCount = packDraft.pool_values.length;
+  const packPoolPositionOptions = uniqueOptions(playerCards.flatMap((card) => [card.position, ...splitAlternatePositions(card.alternate_positions)]));
+  const packPoolNationOptions = uniqueOptions(playerCards.map((card) => card.nation_region));
+  const packPoolTeamOptions = uniqueOptions(playerCards.map((card) => card.team));
+  const packPoolLeagueOptions = uniqueOptions(playerCards.map((card) => card.league));
+  const normalizedPackPoolSearch = packPoolSearchQuery.trim().toLowerCase();
+  const visiblePoolPlayerCards = [...playerCards]
+    .filter((card) => !normalizedPackPoolSearch || card.name.toLowerCase().includes(normalizedPackPoolSearch))
+    .filter((card) => packPoolPositionFilter === 'all' || [card.position, ...splitAlternatePositions(card.alternate_positions)].includes(packPoolPositionFilter))
+    .filter((card) => packPoolNationFilter === 'all' || card.nation_region === packPoolNationFilter)
+    .filter((card) => packPoolTeamFilter === 'all' || card.team === packPoolTeamFilter)
+    .filter((card) => packPoolLeagueFilter === 'all' || card.league === packPoolLeagueFilter)
+    .sort((left, right) => {
+      if (packPoolSort === 'position-asc') return compareCardText(left.position, right.position) || compareCardText(left.name, right.name);
+      if (packPoolSort === 'nation-asc') return compareCardText(left.nation_region, right.nation_region) || compareCardText(left.name, right.name);
+      if (packPoolSort === 'team-asc') return compareCardText(left.team, right.team) || compareCardText(left.name, right.name);
+      if (packPoolSort === 'league-asc') return compareCardText(left.league, right.league) || compareCardText(left.name, right.name);
+      if (packPoolSort === 'rarity-asc') return (cardRarityRank.get(left.rarity) ?? 99) - (cardRarityRank.get(right.rarity) ?? 99) || compareCardText(left.name, right.name);
+      return compareCardText(left.name, right.name);
+    });
 
   return (
     <AppShell themeControls={themeControls}>
@@ -819,31 +854,81 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
             </div>
           </div>}
 
-          {packPoolPickerOpen && packDraft.pool_type !== 'all' && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6" onClick={() => setPackPoolPickerOpen(false)}>
-            <section role="dialog" aria-modal="true" className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]" onClick={(event) => event.stopPropagation()}>
-              <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-main p-3 text-inv">
+          {packPoolPickerOpen && packDraft.pool_type !== 'all' && <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 p-3 pt-16 sm:p-6 sm:pt-20" onClick={() => setPackPoolPickerOpen(false)}>
+            <section role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-5rem)] w-full max-w-6xl flex-col overflow-hidden border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]" onClick={(event) => event.stopPropagation()}>
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b-4 border-main bg-main p-3 text-inv">
                 <div>
                   <h2 className="font-black uppercase">Pool values</h2>
-                  <p className="text-[10px] font-black uppercase opacity-80">{selectedPoolValueCount} selected</p>
+                  <p className="text-[10px] font-black uppercase opacity-80">{selectedPoolValueCount} selected · {packDraft.pool_type === 'manual' ? visiblePoolPlayerCards.length : activePoolOptions.length} shown</p>
                 </div>
                 <button type="button" onClick={() => setPackPoolPickerOpen(false)} className="border-2 border-main bg-card px-4 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Done</button>
               </div>
+              {packDraft.pool_type === 'manual' && <div className="shrink-0 border-b-4 border-main bg-card p-3">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-6">
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase md:col-span-3 xl:col-span-2">
+                    Search player name
+                    <input value={packPoolSearchQuery} onChange={(event) => setPackPoolSearchQuery(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" placeholder="Messi, Mbappe..." />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Position filter
+                    <select value={packPoolPositionFilter} onChange={(event) => setPackPoolPositionFilter(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                      <option value="all">All</option>
+                      {packPoolPositionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Nation filter
+                    <select value={packPoolNationFilter} onChange={(event) => setPackPoolNationFilter(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                      <option value="all">All</option>
+                      {packPoolNationOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Team filter
+                    <select value={packPoolTeamFilter} onChange={(event) => setPackPoolTeamFilter(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                      <option value="all">All</option>
+                      {packPoolTeamOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    League filter
+                    <select value={packPoolLeagueFilter} onChange={(event) => setPackPoolLeagueFilter(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                      <option value="all">All</option>
+                      {packPoolLeagueOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                    Sort players
+                    <select value={packPoolSort} onChange={(event) => setPackPoolSort(event.target.value as PackPoolPlayerSort)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                      <option value="name-asc">Name A-Z</option>
+                      <option value="position-asc">Position A-Z</option>
+                      <option value="nation-asc">Nation A-Z</option>
+                      <option value="team-asc">Team A-Z</option>
+                      <option value="league-asc">League A-Z</option>
+                      <option value="rarity-asc">Rarity</option>
+                    </select>
+                  </label>
+                  <button type="button" onClick={clearPackPoolFilters} className="border-2 border-main bg-c1 p-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]">Clear filters</button>
+                </div>
+              </div>}
               <div className="min-h-0 overflow-auto p-3">
                 {packDraft.pool_type === 'manual' ? <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {playerCards.map((card) => {
+                  {visiblePoolPlayerCards.map((card) => {
                     const selected = packDraft.pool_values.includes(card.id);
 
-                    return <button key={card.id} type="button" onClick={() => togglePackPoolValue(card.id)} className={`flex items-center gap-3 border-2 border-main p-2 text-left shadow-[2px_2px_0_var(--color-shadow)] ${selected ? 'bg-c1' : 'bg-muted'}`}>
+                    return <button key={card.id} type="button" onClick={() => togglePackPoolValue(card.id)} className={`flex items-center gap-3 rounded-2xl border-2 border-main p-3 text-left shadow-[3px_3px_0_var(--color-shadow)] ${selected ? 'bg-c1' : 'bg-muted'}`}>
                       <input type="checkbox" checked={selected} readOnly className="shrink-0" />
-                      <img src={card.image_url} alt={card.name} className="h-20 w-14 shrink-0 object-contain" />
+                      <img src={card.image_url} alt={card.name} className="h-20 w-16 shrink-0 object-contain" />
                       <span className="min-w-0 font-black uppercase">
-                        <span className="block truncate text-sm">{card.name}</span>
-                        <span className="block text-[10px] text-muted-foreground">{card.position} · {card.team}</span>
+                        <span className="block truncate text-base">{card.name}</span>
+                        <span className="block text-xs text-muted-foreground">{card.position} · {card.nation_region}</span>
+                        <span className="block text-[10px] text-muted-foreground">{card.team} · {card.league}</span>
                         <span className="block text-[10px] text-muted-foreground">{card.rarity}</span>
                       </span>
                     </button>;
                   })}
                   {playerCards.length === 0 && <p className="border-2 border-main bg-muted p-3 text-xs font-black uppercase">No player cards yet.</p>}
+                  {playerCards.length > 0 && visiblePoolPlayerCards.length === 0 && <p className="border-2 border-main bg-muted p-3 text-xs font-black uppercase">No player cards match your filters.</p>}
                 </div> : <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                   {activePoolOptions.map((option) => (
                     <label key={option.value} className="flex items-center gap-3 border-2 border-main bg-muted p-3 text-xs font-black uppercase shadow-[2px_2px_0_var(--color-shadow)]">
