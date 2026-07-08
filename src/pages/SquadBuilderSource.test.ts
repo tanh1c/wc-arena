@@ -38,8 +38,12 @@ test('squad builder is routed, navigable, and wired to owned cards', () => {
   assert.match(pageSource, /aspect-\[10\/13\]/);
   assert.match(pageSource, /min-h-\[560px\]/);
   assert.match(pageSource, /max-w-\[680px\]/);
+  assert.match(pageSource, /drop-shadow-\[4px_4px_0_rgba\(0,0,0,0\.35\)\]/);
   assert.doesNotMatch(pageSource, /radial-gradient/);
   assert.doesNotMatch(pageSource, /rounded-full border-4 border-white\/70/);
+  assert.doesNotMatch(pageSource, /block overflow-hidden border-4 border-main bg-card/);
+  assert.doesNotMatch(pageSource, /flex h-20 items-end justify-center bg-muted/);
+  assert.doesNotMatch(pageSource, /block border-t-2 border-main bg-card/);
 
   assert.match(resourcesSource, /squadBuilder: 'Squad Builder'/);
   assert.match(resourcesSource, /squadBuilderShort: 'Squad'/);

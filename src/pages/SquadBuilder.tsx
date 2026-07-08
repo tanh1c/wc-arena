@@ -196,13 +196,10 @@ export default function SquadBuilder({ themeControls }: SquadBuilderProps) {
                       style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                     >
                       {assignedCard ? (
-                        <span className="block overflow-hidden border-4 border-main bg-card shadow-[4px_4px_0_var(--color-shadow)]">
-                          <span className="flex h-20 items-end justify-center bg-muted sm:h-24">
-                            <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="max-h-full max-w-full object-contain" />
-                          </span>
-                          <span className="block border-t-2 border-main bg-card px-1 py-1 text-[9px] font-black uppercase leading-tight text-main sm:text-[10px]">
-                            <span className="block truncate">{assignedCard.player_cards.name}</span>
-                            <span className="text-subtle">{slot.label}</span>
+                        <span className="block">
+                          <img src={getPlayerCardDisplayImageUrl(assignedCard.player_cards, assignedCard.is_gif_upgrade)} alt={assignedCard.player_cards.name} className="mx-auto h-24 w-24 object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.35)] sm:h-32 sm:w-32" />
+                          <span className="mt-1 inline-block min-w-12 border-2 border-main bg-[#101827] px-2 py-0.5 text-[10px] font-black uppercase leading-tight text-c3 shadow-[2px_2px_0_rgba(0,0,0,0.4)] sm:text-xs">
+                            {slot.label}
                           </span>
                         </span>
                       ) : (
