@@ -30,3 +30,21 @@ test('admin role lookup uses an authenticated function instead of direct profile
   assert.match(guardSource, /requireAuthenticatedUser\(req, corsHeaders\)/);
   assert.match(guardSource, /select\('role'\)/);
 });
+
+test('admin RLS policies use a private helper after role column reads are revoked', () => {
+  const migration = readdirSync('supabase/migrations')
+    .filter((file) => file.endsWith('_fix_admin_rls_after_profile_privacy.sql'))
+    .sort()
+    .at(-1);
+
+  assert.ok(migration);
+  const source = readFileSync(`supabase/migrations/${migration}`, 'utf8');
+
+  assert.match(source, /create or replace function private\.current_user_is_admin\(\)/);
+  assert.match(source, /security definer/);
+  assert.match(source, /grant execute on function private\.current_user_is_admin\(\) to authenticated/);
+  assert.match(source, /admin_audit_logs_admin_read[\s\S]*private\.current_user_is_admin\(\)/);
+  assert.match(source, /user_trust_signals_admin_read[\s\S]*private\.current_user_is_admin\(\)/);
+  assert.match(source, /reward_reviews_read[\s\S]*private\.current_user_is_admin\(\)/);
+  assert.doesNotMatch(source.split('create policy').slice(1).join('create policy'), /\b(profile|p)\.role\s*=\s*'admin'/);
+});

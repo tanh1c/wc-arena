@@ -365,6 +365,22 @@ test('card pack panels hide rarity drop rates behind a gacha-style popup button'
   assert.match(resourcesSource, /dropRates: 'Drop Rates'/);
 });
 
+test('cards page lets players inspect selected pack players in a rarity-tab popup', () => {
+  const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
+
+  assert.match(cardsSource, /packPlayersModalOpen/);
+  assert.match(cardsSource, /packPlayersRarity/);
+  assert.match(cardsSource, /cardMatchesPackPool/);
+  assert.match(cardsSource, /selectedPackCardsByRarity/);
+  assert.match(cardsSource, /CARD_RARITIES\.map/);
+  assert.match(cardsSource, /setPackPlayersRarity/);
+  assert.match(cardsSource, /setPackPlayersModalOpen\(true\)/);
+  assert.match(cardsSource, /appPages\.cards\.packPlayers/);
+  assert.match(cardsSource, /appPages\.cards\.packPoolCards/);
+  assert.match(cardsSource, /role="dialog"/);
+  assert.match(cardsSource, /<CardImage card=\{card\} useGif=\{false\} \/>/);
+});
+
 test('pack artwork renders in a compact mobile Daily-standard display box', () => {
   const cardsSource = readFileSync('src/pages/Cards.tsx', 'utf8');
 

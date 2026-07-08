@@ -150,6 +150,21 @@ function formatUtcResetCountdown(value = new Date()) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
+function splitAlternatePositions(value: string | null) {
+  return value?.split(/[,/]/).map((position) => position.trim()).filter(Boolean) ?? [];
+}
+
+function cardMatchesPackPool(card: CatalogCardWithOwnedCount, pack: CardPackCatalog) {
+  if (pack.pool_type === 'all') return true;
+  const values = new Set(pack.pool_values);
+  if (pack.pool_type === 'manual') return values.has(card.id);
+  if (pack.pool_type === 'team') return values.has(card.team);
+  if (pack.pool_type === 'nation_region') return values.has(card.nation_region);
+  if (pack.pool_type === 'league') return values.has(card.league);
+  if (pack.pool_type === 'position') return [card.position, ...splitAlternatePositions(card.alternate_positions)].some((position) => values.has(position));
+  return false;
+}
+
 export default function Cards({ themeControls }: CardsProps) {
   const { t } = useTranslation();
   const [catalog, setCatalog] = useState<CatalogCardWithOwnedCount[]>([]);
@@ -178,6 +193,8 @@ export default function Cards({ themeControls }: CardsProps) {
   const [revealAnimationKind, setRevealAnimationKind] = useState<'pack' | 'forge' | null>(null);
   const [forgeAnimationCards, setForgeAnimationCards] = useState<CatalogCardWithOwnedCount[]>([]);
   const [previewGifCard, setPreviewGifCard] = useState<CatalogCardWithOwnedCount | null>(null);
+  const [packPlayersModalOpen, setPackPlayersModalOpen] = useState(false);
+  const [packPlayersRarity, setPackPlayersRarity] = useState<CardRarity>('Common');
   const [error, setError] = useState('');
 
   const loadCards = async () => {
@@ -243,6 +260,10 @@ export default function Cards({ themeControls }: CardsProps) {
   const showcaseSlotsUsed = showcase.length;
   const visiblePackCatalog = useMemo(() => packCatalog.filter((pack) => pack.enabled), [packCatalog]);
   const selectedPack = visiblePackCatalog.find((pack) => pack.pack_type === selectedPackType) ?? visiblePackCatalog[0];
+  const selectedPackCardsByRarity = useMemo(() => Object.fromEntries(CARD_RARITIES.map((nextRarity) => [
+    nextRarity,
+    selectedPack ? catalog.filter((card) => card.rarity === nextRarity && cardMatchesPackPool(card, selectedPack)) : [],
+  ])) as Record<CardRarity, CatalogCardWithOwnedCount[]>, [catalog, selectedPack]);
   const selectedForgeRecipe = CARD_FORGE_RECIPES[selectedForgeRarity];
   const canConfirmForge = selectedForgeOwnedCardIds.size === CARD_FORGE_COPY_COUNT;
   const showcasedOwnedCardIds = useMemo(() => new Set(showcase.map((item) => item.user_player_card_id)), [showcase]);
@@ -426,7 +447,9 @@ export default function Cards({ themeControls }: CardsProps) {
                 <section className="border-b-4 border-main bg-card p-3 xl:border-b-0 xl:border-r-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h3 className="font-black uppercase text-main">{t('appPages.cards.potentialRewards')}</h3>
-                    <span className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main">{t('appPages.cards.viewAll')}</span>
+                    <button type="button" className="border-2 border-main px-2 py-1 text-[10px] font-black uppercase text-main hover:bg-c1" onClick={() => setPackPlayersModalOpen(true)}>
+                      {t('appPages.cards.packPlayers')}
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(rarities.filter((nextRarity) => nextRarity !== 'all') as CardRarity[]).map((rarity) => (
@@ -619,6 +642,55 @@ export default function Cards({ themeControls }: CardsProps) {
           </div>
         </section>
       </div>
+
+      {packPlayersModalOpen && selectedPack && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+          <section role="dialog" aria-modal="true" className="grid max-h-[92vh] w-full max-w-[1180px] grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden rounded-sm border-4 border-main bg-card shadow-[8px_8px_0_var(--color-shadow)]">
+            <div className="flex items-center justify-between gap-3 border-b-4 border-main bg-c2 p-3 text-inv">
+              <div>
+                <p className="text-[10px] font-black uppercase opacity-80">{t('appPages.cards.packPoolCards')}</p>
+                <h2 className="text-2xl font-black uppercase tracking-tight">{selectedPack.title}</h2>
+              </div>
+              <button type="button" className="border-2 border-main bg-card px-3 py-2 text-xs font-black uppercase text-main shadow-[2px_2px_0_var(--color-shadow)]" onClick={() => setPackPlayersModalOpen(false)}>
+                {t('ui.close')}
+              </button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto border-b-4 border-main bg-muted p-2">
+              {CARD_RARITIES.map((nextRarity) => (
+                <button key={nextRarity} type="button" className={`shrink-0 border-2 border-main px-3 py-2 text-[10px] font-black uppercase ${packPlayersRarity === nextRarity ? getRarityBadgeClass(nextRarity) : 'bg-card text-main hover:bg-c1'}`} onClick={() => setPackPlayersRarity(nextRarity)}>
+                  {nextRarity} · {selectedPackCardsByRarity[nextRarity].length}
+                </button>
+              ))}
+            </div>
+            {selectedPackCardsByRarity[packPlayersRarity].length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 overflow-y-auto p-3 sm:grid-cols-3 lg:grid-cols-5">
+                {selectedPackCardsByRarity[packPlayersRarity].map((card) => {
+                  const Flag = getNationFlag(card.nation_region);
+                  return (
+                    <article key={card.id} className={`min-w-0 overflow-hidden rounded-sm border-4 bg-card shadow-[4px_4px_0_var(--color-shadow)] ${getRarityCardFrameClass(card.rarity)}`}>
+                      <div className="relative rounded-sm border-b-4 border-main bg-cover bg-center p-2" style={{ backgroundImage: `url(${getRarityCardBackgroundImage(card.rarity)})` }}>
+                        <CardImage card={card} useGif={false} />
+                        <span className={`absolute left-2 top-2 rounded-sm border-2 border-main px-2 py-1 text-xs font-black shadow-[2px_2px_0_var(--color-shadow)] ${getRarityBadgeClass(card.rarity)}`}>{card.rarity}</span>
+                      </div>
+                      <div className="grid gap-2 p-3 text-center">
+                        <h3 className="truncate text-sm font-black uppercase text-main" title={card.name}>{card.name}</h3>
+                        <p className="rounded-sm border-2 border-main bg-c1 px-2 py-1 text-[10px] font-black uppercase text-main">{card.position}</p>
+                        <p className="truncate rounded-sm border-2 border-main bg-muted px-2 py-1 text-[10px] font-black uppercase text-main">{card.team}</p>
+                        <p className="flex items-center justify-center gap-1 rounded-sm border-2 border-main bg-card px-2 py-1 text-[10px] font-black uppercase text-main">
+                          {Flag && <Flag className="h-3 w-5 shrink-0" title={card.nation_region} />}
+                          <span className="truncate">{card.nation_region}</span>
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="m-3 rounded-sm border-4 border-main bg-muted p-6 text-center text-sm font-black uppercase text-muted-foreground">{t('appPages.cards.noCardsMatch')}</p>
+            )}
+          </section>
+        </div>
+      )}
 
       {previewGifCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
