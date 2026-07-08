@@ -153,7 +153,11 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Unknown card action.' }, 400);
   } catch (error) {
     console.error('manage_cards failed', error);
-    const message = error instanceof Error ? error.message : 'Card action failed.';
+    const message = error instanceof Error
+      ? error.message
+      : typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : 'Card action failed.';
     return jsonResponse({ error: message }, 400);
   }
 });

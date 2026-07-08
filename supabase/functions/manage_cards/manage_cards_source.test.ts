@@ -64,6 +64,7 @@ test('manage_cards exposes authenticated bulk forge through one weighted RPC', (
   assert.match(source, /drawCards\(supabase, forgeCount, recipe\.rarityWeights\)/);
   assert.match(source, /bulk_forge_card_transaction/);
   assert.match(source, /p_result_card_ids: awardedCards\.map\(\(card\) => card\.id\)/);
+  assert.match(source, /typeof \(error as \{ message\?: unknown \}\)\.message === 'string'/);
   assert.match(source, /forgedCount: rows\.length/);
   assert.match(source, /consumedCount: selectedIds\.length/);
   assert.doesNotMatch(source, /for \([^)]*forgePlayerCard/);

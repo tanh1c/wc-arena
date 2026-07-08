@@ -13,6 +13,9 @@ test('bulk forge RPC consumes selected spare base cards in one safe transaction'
   assert.match(source, /p_source_owned_card_ids uuid\[\]/);
   assert.match(source, /p_result_card_ids uuid\[\]/);
   assert.match(source, /p_total_price_coins integer/);
+  assert.match(source, /from unnest\(p_result_card_ids\) as result_card_id/);
+  assert.match(source, /left join public\.player_cards on player_cards\.id = result_card_id/);
+  assert.match(source, /where player_cards\.id is null/);
   assert.match(source, /array_length\(p_source_owned_card_ids, 1\) <> array_length\(p_result_card_ids, 1\) \* 5/);
   assert.match(source, /for update/);
   assert.match(source, /user_player_cards\.is_gif_upgrade = false/);
