@@ -73,7 +73,9 @@ test('player card images do not paint over rarity backgrounds', () => {
   const publicProfileSource = readFileSync('src/pages/PublicProfile.tsx', 'utf8');
 
   assert.doesNotMatch(cardsSource, /<img src=\{getPlayerCardDisplayImageUrl\(card, useGif\)\}[^>]+bg-muted/);
+  assert.doesNotMatch(cardsSource, /<img src=\{getPlayerCardDisplayImageUrl\(card, useGif\)\}[^>]+border-/);
   assert.doesNotMatch(cardsSource, /<img src=\{getPlayerCardDisplayImageUrl\(previewGifCard, true\)\}[^>]+bg-card/);
+  assert.doesNotMatch(cardsSource, /<img src=\{getPlayerCardDisplayImageUrl\(previewGifCard, true\)\}[^>]+border-/);
   assert.doesNotMatch(profileSource, /getPlayerCardDisplayImageUrl\(showcaseCard, showcase\.user_player_cards\.is_gif_upgrade\)[^>]+bg-card/);
   assert.doesNotMatch(publicProfileSource, /getPlayerCardDisplayImageUrl\(showcaseCard, showcase\.user_player_cards\.is_gif_upgrade\)[^>]+bg-card/);
 });
