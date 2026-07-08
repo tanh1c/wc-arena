@@ -142,7 +142,7 @@ test('admin access check is stable across refreshed session objects for the same
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
   assert.match(source, /const userId = user\?\.id \?\? null/);
-  assert.match(source, /getCurrentUserRole\(userId\)/);
+  assert.match(source, /getCurrentUserRole\(\)/);
   assert.match(source, /\}, \[userId\]\)/);
   assert.doesNotMatch(source, /\}, \[user\]\)/);
 });

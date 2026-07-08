@@ -57,7 +57,7 @@ export default function AdminAudit({ themeControls }: AdminAuditProps) {
     setRoleLoading(true);
     setError(null);
 
-    getCurrentUserRole(userId)
+    getCurrentUserRole()
       .then((nextRole) => {
         if (!active) return;
         setRole(nextRole);

@@ -44,6 +44,20 @@ export async function requireAuthenticatedUser(req: Request, corsHeaders: Record
   return { supabase, user: userData.user };
 }
 
+export async function getCurrentUserRole(req: Request, corsHeaders: Record<string, string>) {
+  const auth = await requireAuthenticatedUser(req, corsHeaders);
+  if (auth instanceof Response) return auth;
+
+  const { data: profile, error: profileError } = await auth.supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', auth.user.id)
+    .single();
+
+  if (profileError) return jsonResponse(corsHeaders, { error: 'Forbidden' }, 403);
+  return jsonResponse(corsHeaders, { role: profile.role });
+}
+
 export async function requireAdminUser(req: Request, corsHeaders: Record<string, string>): Promise<GuardResult<{ supabase: EdgeSupabaseClient; user: EdgeUser }>> {
   const auth = await requireAuthenticatedUser(req, corsHeaders);
   if (auth instanceof Response) return auth;
