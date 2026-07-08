@@ -86,6 +86,12 @@ test('admin dashboard exposes pack catalog editing with repo image selection', (
   assert.match(source, /Save pack/);
   assert.match(source, /Copy rarity rates/);
   assert.match(source, /copyPackRarityWeights/);
+  assert.match(source, /Drop ease presets/);
+  assert.match(source, /DROP_EASE_PRESETS/);
+  assert.match(source, /applyDropEasePreset/);
+  assert.match(source, /Effective odds for selected pool/);
+  assert.match(source, /effectiveRarityOdds/);
+  assert.match(source, /0 cards \/ skipped/);
   assert.match(source, /packCatalog\.filter\(\(pack\) => pack\.pack_type !== packDraft\.pack_type\)/);
   assert.match(source, /rarity_weights: \{ \.\.\.sourcePack\.rarity_weights \}/);
   assert.match(source, /packDraft\.image_path/);

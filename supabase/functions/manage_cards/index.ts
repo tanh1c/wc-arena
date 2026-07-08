@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, getEffectiveRarityOdds, getIconChasePityPacksUntilGuaranteed, getUtcDay, ICON_CHASE_PITY_PACK_THRESHOLD, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity, type PackType } from '../../../src/config/cardPacks.ts';
 import { jsonResponse as sharedJsonResponse, requireAdminUser, requireAuthenticatedUser } from '../_shared/authGuards.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
 
@@ -336,10 +336,11 @@ async function drawCards(
   }
 
   const availableRarities = new Set(cardsByRarity.keys());
+  const effectiveRarityWeights = Object.fromEntries(getEffectiveRarityOdds(rarityWeights, availableRarities).map(({ rarity, weight }) => [rarity, weight])) as Record<CardRarity, number>;
   const picked: PlayerCard[] = [];
 
   for (let index = 0; index < count; index += 1) {
-    const rarity = options.forceIcon && index === 0 ? 'Icon' : pickWeightedRarity(rarityWeights, availableRarities);
+    const rarity = options.forceIcon && index === 0 ? 'Icon' : pickWeightedRarity(effectiveRarityWeights, availableRarities);
     if (!rarity) break;
     const card = pickWeightedCard(cardsByRarity.get(rarity) ?? []);
     if (!card) {

@@ -12,6 +12,13 @@ export type CardPackConfig = {
 export const ICON_CHASE_PITY_PACK_THRESHOLD = 10;
 export const CARD_FORGE_COPY_COUNT = 5;
 
+export const DROP_EASE_PRESETS = {
+  Safe: { weights: { Common: 55, Uncommon: 30, Rare: 12, Epic: 2.5, Legendary: 0.4, Heroes: 0.08, Icon: 0.02, GOAT: 0 } },
+  Balanced: { weights: { Common: 25, Uncommon: 32, Rare: 28, Epic: 12, Legendary: 2.4, Heroes: 0.45, Icon: 0.13, GOAT: 0.02 } },
+  Premium: { weights: { Common: 8, Uncommon: 18, Rare: 34, Epic: 30, Legendary: 8, Heroes: 1.5, Icon: 0.45, GOAT: 0.05 } },
+  Jackpot: { weights: { Common: 0, Uncommon: 0, Rare: 32, Epic: 43, Legendary: 17, Heroes: 5, Icon: 2.8, GOAT: 0.2 } },
+} satisfies Record<string, { weights: Record<CardRarity, number> }>;
+
 export const CARD_FORGE_RECIPES = {
   Common: { priceCoins: 10, rarityWeights: { Common: 75, Uncommon: 22, Rare: 3, Epic: 0, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
   Uncommon: { priceCoins: 20, rarityWeights: { Common: 0, Uncommon: 72, Rare: 24, Epic: 4, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 } },
@@ -108,14 +115,25 @@ export function getIconChasePityPacksUntilGuaranteed(iconMissCount: number) {
   return Math.max(1, ICON_CHASE_PITY_PACK_THRESHOLD - iconMissCount);
 }
 
+export function getEffectiveRarityOdds(weights: Record<CardRarity, number>, availableRarities: Set<CardRarity>) {
+  const entries = CARD_RARITIES
+    .filter((rarity) => availableRarities.has(rarity))
+    .map((rarity) => ({ rarity, weight: Math.max(0, weights[rarity] ?? 0) }));
+  const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+
+  return entries.map((entry) => ({
+    ...entry,
+    chance: total > 0 ? Math.round((entry.weight / total) * 10000) / 100 : 0,
+  }));
+}
+
 export function pickWeightedRarity(
   weights: Record<CardRarity, number>,
   availableRarities: Set<CardRarity>,
   random = Math.random,
 ) {
-  const entries = (Object.entries(weights) as Array<[CardRarity, number]>).filter(
-    ([rarity, weight]) => weight > 0 && availableRarities.has(rarity),
-  );
+  const effectiveWeights = Object.fromEntries(getEffectiveRarityOdds(weights, availableRarities).map(({ rarity, weight }) => [rarity, weight])) as Record<CardRarity, number>;
+  const entries = (Object.entries(effectiveWeights) as Array<[CardRarity, number]>).filter(([, weight]) => weight > 0);
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
   if (total <= 0) return null;
 

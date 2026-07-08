@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardCheck, Radar, ShieldCheck, Trophy } from 'lucide-react';
 import AppShell from '../components/layout/AppShell';
-import { CARD_RARITIES, type CardRarity } from '../config/cardPacks';
+import { CARD_RARITIES, DROP_EASE_PRESETS, getEffectiveRarityOdds, type CardRarity } from '../config/cardPacks';
 import { PACK_IMAGE_OPTIONS } from '../config/packImages';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
@@ -111,6 +111,17 @@ function getPoolSummary(pack: Pick<CardPackCatalogInput, 'pool_type' | 'pool_val
   if (pack.pool_type === 'all') return 'Pool: All cards';
   if (pack.pool_type === 'manual') return `Pool: ${pack.pool_values.length} selected players`;
   return `Pool: ${pack.pool_type.replace('_', ' ')} · ${pack.pool_values.join(', ') || 'No values selected'}`;
+}
+
+function cardMatchesPackDraftPool(card: PlayerCard, pack: Pick<CardPackCatalogInput, 'pool_type' | 'pool_values'>) {
+  if (pack.pool_type === 'all') return true;
+  const values = new Set(pack.pool_values);
+  if (pack.pool_type === 'manual') return values.has(card.id);
+  if (pack.pool_type === 'team') return values.has(card.team);
+  if (pack.pool_type === 'nation_region') return values.has(card.nation_region);
+  if (pack.pool_type === 'league') return values.has(card.league);
+  if (pack.pool_type === 'position') return [card.position, ...splitAlternatePositions(card.alternate_positions)].some((position) => values.has(position));
+  return false;
 }
 
 function formatDate(value: string) {
@@ -341,6 +352,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     setPackDraft((current) => ({ ...current, rarity_weights: { ...sourcePack.rarity_weights } }));
   }
 
+  function applyDropEasePreset(name: keyof typeof DROP_EASE_PRESETS) {
+    setPackDraft((current) => ({ ...current, rarity_weights: { ...DROP_EASE_PRESETS[name].weights } }));
+  }
+
   function setPackPoolType(poolType: CardPackPoolType) {
     setPackPoolPickerOpen(false);
     setPackDraft((current) => ({ ...current, pool_type: poolType, pool_values: [] }));
@@ -452,6 +467,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       if (packPoolSort === 'rarity-asc') return (cardRarityRank.get(left.rarity) ?? 99) - (cardRarityRank.get(right.rarity) ?? 99) || compareCardText(left.name, right.name);
       return compareCardText(left.name, right.name);
     });
+  const packPoolCards = playerCards.filter((card) => cardMatchesPackDraftPool(card, packDraft));
+  const packPoolRarityCounts = Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, packPoolCards.filter((card) => card.rarity === rarity).length])) as Record<CardRarity, number>;
+  const effectiveRarityOdds = getEffectiveRarityOdds(packDraft.rarity_weights, new Set(packPoolCards.map((card) => card.rarity)));
+  const effectiveRarityOddsByRarity = new Map(effectiveRarityOdds.map((odds) => [odds.rarity, odds]));
 
   return (
     <AppShell themeControls={themeControls}>
@@ -809,6 +828,14 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                     {packCatalog.filter((pack) => pack.pack_type !== packDraft.pack_type).map((pack) => <option key={pack.pack_type} value={pack.pack_type}>{pack.title || pack.pack_type}</option>)}
                   </select>
                 </label>
+                <div className="flex flex-col gap-2 text-[10px] font-black uppercase">
+                  Drop ease presets
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(DROP_EASE_PRESETS) as Array<keyof typeof DROP_EASE_PRESETS>).map((name) => (
+                      <button key={name} type="button" onClick={() => applyDropEasePreset(name)} className="border-2 border-main bg-c1 p-2 text-main shadow-[2px_2px_0_var(--color-shadow)]">{name}</button>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {CARD_RARITIES.map((rarity) => (
                     <label key={rarity} className="flex flex-col gap-1 text-[10px] font-black uppercase">
@@ -833,6 +860,19 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   <p className="mt-2 text-sm text-muted-foreground">{packDraft.description || 'No description yet.'}</p>
                   <p className="mt-4 text-sm">{packDraft.card_count} cards · {packDraft.price_coins} coins · {packDraft.enabled ? 'Enabled' : 'Disabled'}</p>
                   <p className="mt-2 text-sm text-muted-foreground">{getPoolSummary(packDraft)}</p>
+                  <div className="mt-4 border-2 border-main bg-card p-3 text-xs">
+                    <p className="mb-2 text-sm">Effective odds for selected pool</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {CARD_RARITIES.map((rarity) => {
+                        const cardCount = packPoolRarityCounts[rarity];
+                        const odds = effectiveRarityOddsByRarity.get(rarity);
+                        return <div key={rarity} className="border-2 border-main bg-muted p-2">
+                          <div>{rarity}</div>
+                          <div className="text-[10px] text-muted-foreground">{cardCount === 0 ? '0 cards / skipped' : `${cardCount} cards · ${odds?.chance ?? 0}%`}</div>
+                        </div>;
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="max-h-[70dvh] overflow-auto">

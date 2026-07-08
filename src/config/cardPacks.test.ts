@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, ICON_CHASE_PITY_PACK_THRESHOLD, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
+import { CARD_FORGE_COPY_COUNT, CARD_FORGE_RECIPES, CARD_PACKS, CARD_RARITIES, DROP_EASE_PRESETS, ICON_CHASE_PITY_PACK_THRESHOLD, getEffectiveRarityOdds, getIconChasePityPacksUntilGuaranteed, isIconChasePityDue, pickWeightedCard, pickWeightedRarity, type CardRarity } from './cardPacks';
 
 test('card rarity ladder uses eight gacha tiers', () => {
   assert.deepEqual(CARD_RARITIES, ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Heroes', 'Icon', 'GOAT']);
@@ -118,4 +118,37 @@ test('weighted rarity selection returns null when no configured rarity is availa
   };
 
   assert.equal(pickWeightedRarity(weights, new Set<CardRarity>(['Common']), () => 0), null);
+});
+
+test('effective rarity odds renormalize when low rarities are missing', () => {
+  const odds = getEffectiveRarityOdds(
+    { Common: 50, Uncommon: 30, Rare: 15, Epic: 5, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 },
+    new Set<CardRarity>(['Rare', 'Epic']),
+  );
+
+  assert.deepEqual(odds.map(({ rarity, chance }) => [rarity, chance]), [['Rare', 75], ['Epic', 25]]);
+});
+
+test('effective rarity odds skip unavailable high rarities', () => {
+  const odds = getEffectiveRarityOdds(
+    { Common: 0, Uncommon: 0, Rare: 50, Epic: 25, Legendary: 15, Heroes: 5, Icon: 4, GOAT: 1 },
+    new Set<CardRarity>(['Rare', 'Epic']),
+  );
+
+  assert.deepEqual(odds.map(({ rarity, chance }) => [rarity, chance]), [['Rare', 66.67], ['Epic', 33.33]]);
+});
+
+test('effective rarity odds return zero chances when all available weights are zero', () => {
+  const odds = getEffectiveRarityOdds(
+    { Common: 100, Uncommon: 0, Rare: 0, Epic: 0, Legendary: 0, Heroes: 0, Icon: 0, GOAT: 0 },
+    new Set<CardRarity>(['Rare', 'Epic']),
+  );
+
+  assert.deepEqual(odds.map(({ rarity, chance }) => [rarity, chance]), [['Rare', 0], ['Epic', 0]]);
+});
+
+test('drop ease presets provide one-click rarity weight curves', () => {
+  assert.deepEqual(Object.keys(DROP_EASE_PRESETS), ['Safe', 'Balanced', 'Premium', 'Jackpot']);
+  assert.equal(DROP_EASE_PRESETS.Safe.weights.Common > DROP_EASE_PRESETS.Safe.weights.Epic, true);
+  assert.equal(DROP_EASE_PRESETS.Jackpot.weights.Icon > DROP_EASE_PRESETS.Safe.weights.Icon, true);
 });
