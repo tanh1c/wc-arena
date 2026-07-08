@@ -375,10 +375,15 @@ test('cards page lets players inspect selected pack players in a rarity-tab popu
   assert.match(cardsSource, /CARD_RARITIES\.map/);
   assert.match(cardsSource, /setPackPlayersRarity/);
   assert.match(cardsSource, /setPackPlayersModalOpen\(true\)/);
+  assert.match(cardsSource, /onShowPackPlayers=\{\(\) => setPackPlayersModalOpen\(true\)\}/);
+  assert.match(cardsSource, /onShowPackPlayers/);
   assert.match(cardsSource, /appPages\.cards\.packPlayers/);
   assert.match(cardsSource, /appPages\.cards\.packPoolCards/);
   assert.match(cardsSource, /role="dialog"/);
-  assert.match(cardsSource, /<CardImage card=\{card\} useGif=\{false\} \/>/);
+  assert.match(cardsSource, /max-h-\[92vh\][^\n]+overflow-y-auto/);
+  assert.match(cardsSource, /grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 lg:grid-cols-4/);
+  assert.match(cardsSource, /<CardTile key=\{card\.id\} card=\{card\} ownedCount=\{card\.ownedCount\} useGif=\{false\} \/>/);
+  assert.doesNotMatch(cardsSource, /<h3 className="font-black uppercase text-main">\{t\('appPages\.cards\.potentialRewards'\)\}<\/h3>\s*<button[\s\S]*?setPackPlayersModalOpen\(true\)/);
 });
 
 test('pack artwork renders in a compact mobile Daily-standard display box', () => {
