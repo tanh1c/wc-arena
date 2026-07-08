@@ -335,6 +335,12 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     }));
   }
 
+  function copyPackRarityWeights(packType: string) {
+    const sourcePack = packCatalog.find((pack) => pack.pack_type === packType);
+    if (!sourcePack) return;
+    setPackDraft((current) => ({ ...current, rarity_weights: { ...sourcePack.rarity_weights } }));
+  }
+
   function setPackPoolType(poolType: CardPackPoolType) {
     setPackPoolPickerOpen(false);
     setPackDraft((current) => ({ ...current, pool_type: poolType, pool_values: [] }));
@@ -796,6 +802,13 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                     <input value={packDraft.sort_order} onChange={(event) => setPackDraft((current) => ({ ...current, sort_order: Number(event.target.value) }))} className="border-2 border-main bg-muted p-2 text-sm font-bold" inputMode="numeric" />
                   </label>
                 </div>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Copy rarity rates
+                  <select value="" onChange={(event) => copyPackRarityWeights(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                    <option value="">Choose source pack</option>
+                    {packCatalog.filter((pack) => pack.pack_type !== packDraft.pack_type).map((pack) => <option key={pack.pack_type} value={pack.pack_type}>{pack.title || pack.pack_type}</option>)}
+                  </select>
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   {CARD_RARITIES.map((rarity) => (
                     <label key={rarity} className="flex flex-col gap-1 text-[10px] font-black uppercase">
