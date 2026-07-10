@@ -30,6 +30,10 @@ type CardRarityFilter = 'all' | CardRarity;
 type PackPoolPlayerSort = 'name-asc' | 'position-asc' | 'nation-asc' | 'team-asc' | 'league-asc' | 'rarity-asc';
 type PackPoolOption = { value: string; label: string };
 
+const manualGameplayProfileStatKeys = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'] as const;
+type ManualGameplayProfileStat = typeof manualGameplayProfileStatKeys[number];
+type ManualGameplayProfileStats = Record<ManualGameplayProfileStat, string>;
+
 const poolTypeOptions: Array<{ value: CardPackPoolType; label: string }> = [
   { value: 'all', label: 'All cards' },
   { value: 'manual', label: 'Manual players' },
@@ -72,6 +76,19 @@ function emptyPlayerCardDraft(): AdminPlayerCardInput {
     rarity: 'Common',
     drop_weight: 1,
   };
+}
+
+function emptyManualGameplayProfileStats(): ManualGameplayProfileStats {
+  return Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, ''])) as ManualGameplayProfileStats;
+}
+
+function getCardGameplayProfile(card: AdminPlayerCard) {
+  return Array.isArray(card.player_card_gameplay_profiles) ? card.player_card_gameplay_profiles[0] : card.player_card_gameplay_profiles;
+}
+
+function manualGameplayProfileStatsFromCard(card: AdminPlayerCard): ManualGameplayProfileStats {
+  const rawStats = getCardGameplayProfile(card)?.raw_stats;
+  return Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, rawStats?.[stat]?.toString() ?? ''])) as ManualGameplayProfileStats;
 }
 
 function emptyPackDraft(): CardPackCatalogInput {
@@ -169,7 +186,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
   const [cardCsvImport, setCardCsvImport] = useState('');
   const [profileCsvImport, setProfileCsvImport] = useState('');
-  const [manualProfileStats, setManualProfileStats] = useState('');
+  const [manualProfileStats, setManualProfileStats] = useState<ManualGameplayProfileStats>(emptyManualGameplayProfileStats());
   const [manualProfilePlaystyles, setManualProfilePlaystyles] = useState('');
   const [manualProfileTraits, setManualProfileTraits] = useState('');
   const [csvImportRarity, setCsvImportRarity] = useState<CardRarity>('Common');
@@ -290,6 +307,21 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
     setCardDraft((current) => ({ ...current, [field]: value }));
   }
 
+  function startNewPlayerCard() {
+    setCardDraft(emptyPlayerCardDraft());
+    setManualProfileStats(emptyManualGameplayProfileStats());
+    setManualProfilePlaystyles('');
+    setManualProfileTraits('');
+  }
+
+  function editPlayerCard(card: AdminPlayerCard) {
+    const profile = getCardGameplayProfile(card);
+    setCardDraft(playerCardToAdminInput(card));
+    setManualProfileStats(manualGameplayProfileStatsFromCard(card));
+    setManualProfilePlaystyles(profile?.playstyles.join('; ') ?? '');
+    setManualProfileTraits(profile?.traits.join('; ') ?? '');
+  }
+
   async function savePlayerCard() {
     setCardActionState({ loading: true });
 
@@ -350,14 +382,16 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
     try {
       if (!cardDraft.id || !cardDraft.image_url) throw new Error('Select a saved player card first.');
-      const raw_stats: unknown = JSON.parse(manualProfileStats);
-      if (!raw_stats || typeof raw_stats !== 'object' || Array.isArray(raw_stats)) throw new Error('Stats must be a JSON object.');
+      if (manualGameplayProfileStatKeys.some((stat) => !manualProfileStats[stat].trim())) throw new Error('Enter a number for every gameplay stat.');
+      const raw_stats = Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, Number(manualProfileStats[stat])])) as Record<ManualGameplayProfileStat, number>;
+      if (Object.values(raw_stats).some((stat) => !Number.isFinite(stat))) throw new Error('Enter a number for every gameplay stat.');
       const result = await importPlayerCardGameplayProfiles([{
         source_image_url: cardDraft.image_url,
-        raw_stats: raw_stats as Record<string, number>,
+        raw_stats,
         playstyles: manualProfilePlaystyles.split(';').map((item) => item.trim()).filter(Boolean),
         traits: manualProfileTraits.split(';').map((item) => item.trim()).filter(Boolean),
       }]);
+      await loadPlayerCards();
       setCardActionState({ success: `Saved gameplay profile for ${cardDraft.name || 'player card'} (${result.importedCount}).` });
     } catch (nextError) {
       setCardActionState({ error: getErrorMessage(nextError) });
@@ -695,7 +729,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
             <div className="border-b-4 xl:border-b-0 xl:border-r-4 border-main flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Player Cards</div>
               <div className="p-4 flex flex-col gap-3 border-b-4 border-main">
-                <button type="button" onClick={() => setCardDraft(emptyPlayerCardDraft())} className="border-2 border-main bg-c1 p-3 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)]">New card</button>
+                <button type="button" onClick={startNewPlayerCard} className="border-2 border-main bg-c1 p-3 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)]">New card</button>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {cardDraftFields.map((field) => (
                     <label key={field.key} className={`flex flex-col gap-1 text-[10px] font-black uppercase ${field.wide ? 'sm:col-span-2' : ''}`}>
@@ -717,7 +751,14 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 <button type="button" onClick={() => void savePlayerCard()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save card</button>
                 <div className="border-2 border-main bg-muted p-3 flex flex-col gap-2">
                   <div className="text-xs font-black uppercase">Manual gameplay profile</div>
-                  <textarea value={manualProfileStats} onChange={(event) => setManualProfileStats(event.target.value)} className="min-h-28 w-full resize-y border-2 border-main bg-card p-2 font-mono text-xs text-main" spellCheck={false} aria-label="Manual gameplay profile stats" placeholder='{"OVR":91,"PAC":95,"SHO":91,"PAS":88,"DRI":96,"DEF":37,"PHY":63}' />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {manualGameplayProfileStatKeys.map((stat) => (
+                      <label key={stat} className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                        {stat}
+                        <input value={manualProfileStats[stat]} onChange={(event) => setManualProfileStats((current) => ({ ...current, [stat]: event.target.value }))} className="border-2 border-main bg-card p-2 text-sm font-bold" inputMode="numeric" aria-label={`Manual gameplay profile ${stat}`} />
+                      </label>
+                    ))}
+                  </div>
                   <input value={manualProfilePlaystyles} onChange={(event) => setManualProfilePlaystyles(event.target.value)} className="border-2 border-main bg-card p-2 text-xs font-bold normal-case" aria-label="Manual gameplay profile playstyles" placeholder="PlayStyles separated by ;" />
                   <input value={manualProfileTraits} onChange={(event) => setManualProfileTraits(event.target.value)} className="border-2 border-main bg-card p-2 text-xs font-bold normal-case" aria-label="Manual gameplay profile traits" placeholder="Traits separated by ;" />
                   <button type="button" onClick={() => void saveManualGameplayProfile()} disabled={cardActionState.loading || !cardDraft.id} className="border-2 border-main bg-c1 p-2 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save gameplay profile</button>
@@ -824,7 +865,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         <td className="border-r-2 border-main p-3 uppercase">{card.drop_weight}</td>
                         <td className="p-3">
                           <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => setCardDraft(playerCardToAdminInput(card))} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button>
+                            <button type="button" onClick={() => editPlayerCard(card)} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button>
                             <button type="button" onClick={() => void removePlayerCard(card)} disabled={cardActionState.loading} className="border-2 border-main bg-c5 px-3 py-2 font-black uppercase text-[10px] disabled:opacity-60">Delete</button>
                           </div>
                         </td>

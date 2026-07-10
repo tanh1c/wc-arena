@@ -47,6 +47,27 @@ test('admin player-card editor exposes per-card drop weight controls', () => {
   assert.match(source, /listAdminPlayerCards/);
 });
 
+test('admin player-card editor uses field-based gameplay profile inputs', () => {
+  const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
+
+  assert.match(source, /manualGameplayProfileStatKeys/);
+  assert.match(source, /OVR/);
+  assert.match(source, /PAC/);
+  assert.match(source, /SHO/);
+  assert.match(source, /PAS/);
+  assert.match(source, /DRI/);
+  assert.match(source, /DEF/);
+  assert.match(source, /PHY/);
+  assert.match(source, /inputMode="numeric"/);
+  assert.match(source, /importPlayerCardGameplayProfiles/);
+  assert.match(source, /source_image_url: cardDraft\.image_url/);
+  assert.match(source, /raw_stats/);
+  assert.match(source, /player_card_gameplay_profiles/);
+  assert.match(source, /editPlayerCard/);
+  assert.match(source, /startNewPlayerCard/);
+  assert.doesNotMatch(source, /JSON\.parse\(manualProfileStats\)/);
+});
+
 test('admin player-card catalog exposes local search, rarity filter, and sort controls', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
