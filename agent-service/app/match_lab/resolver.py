@@ -73,6 +73,10 @@ def _normalized_card_stat(card: dict[str, Any], reference_profiles: list[dict[st
 
 def _card_strength(card: dict[str, Any], event_type: str, reference_profiles: list[dict[str, Any]]) -> float:
     stat_groups = EVENT_STATS[event_type]
+    if isinstance(card.get("effective_stats"), dict):
+        effective_card = {**card, "stats": card["effective_stats"]}
+        return sum(_stat(effective_card, names)[1] / 100 for names in stat_groups) / len(stat_groups)
+    # ponytail: remove the legacy raw-stat fallback after every environment applies the effective-stats migration.
     value = sum(_normalized_card_stat(card, reference_profiles, names) for names in stat_groups) / len(stat_groups)
     return max(0.0, min(1.0, value + rarity_modifier(card.get("rarity"))))
 

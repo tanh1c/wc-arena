@@ -27,6 +27,7 @@ type ActionState = { loading?: boolean; error?: string; success?: string };
 type CardDraftTextField = Exclude<keyof AdminPlayerCardInput, 'rarity' | 'drop_weight'>;
 type CardCatalogSort = 'rarity-asc' | 'name-asc' | 'name-desc' | 'team-asc' | 'position-asc';
 type CardRarityFilter = 'all' | CardRarity;
+type CatalogStatView = 'raw' | 'effective';
 type PackPoolPlayerSort = 'name-asc' | 'position-asc' | 'nation-asc' | 'team-asc' | 'league-asc' | 'rarity-asc';
 type PackPoolOption = { value: string; label: string };
 
@@ -205,6 +206,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [cardSearchQuery, setCardSearchQuery] = useState('');
   const [cardRarityFilter, setCardRarityFilter] = useState<CardRarityFilter>('all');
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
+  const [catalogStatView, setCatalogStatView] = useState<CatalogStatView>('raw');
   const [cardCsvImport, setCardCsvImport] = useState('');
   const [profileCsvImport, setProfileCsvImport] = useState('');
   const [gameplayProfileDraftByCardId, setGameplayProfileDraftByCardId] = useState<Record<string, GameplayStatDraft>>({});
@@ -801,7 +803,8 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
             <div className="min-w-0 flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Catalog ({visiblePlayerCards.length}/{playerCards.length})</div>
-              <div className="grid grid-cols-1 gap-3 border-b-4 border-main bg-card p-4 md:grid-cols-[1fr_180px_220px]">
+              <div className="border-b-4 border-main bg-muted p-4 text-xs font-bold normal-case">Raw stats are imported from CSV. Effective stats are read-only. Derived from the current catalog range and rarity bonus.</div>
+              <div className="grid grid-cols-1 gap-3 border-b-4 border-main bg-card p-4 md:grid-cols-[minmax(0,1fr)_180px_220px_220px]">
                 <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
                   Search cards
                   <input value={cardSearchQuery} onChange={(event) => setCardSearchQuery(event.target.value)} className="border-2 border-main bg-muted p-2 text-sm font-bold normal-case" placeholder="Name, team, position, league..." />
@@ -821,6 +824,13 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                     <option value="name-desc">Name Z-A</option>
                     <option value="team-asc">Team A-Z</option>
                     <option value="position-asc">Position A-Z</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
+                  Stat view
+                  <select value={catalogStatView} onChange={(event) => setCatalogStatView(event.target.value as CatalogStatView)} className="border-2 border-main bg-muted p-2 text-sm font-black uppercase">
+                    <option value="raw">Raw stats (editable)</option>
+                    <option value="effective">Effective stats (derived)</option>
                   </select>
                 </label>
               </div>
@@ -873,21 +883,21 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                         <td className="border-r-2 border-main p-3 uppercase">{card.added_on || '—'}</td>
                         {gameplayStatColumns.map((stat) => <td key={stat} className="border-r-2 border-main p-2">
                           <input
-                            value={gameplayProfileDraftByCardId[card.id]?.stats[stat] ?? ''}
+                            value={catalogStatView === 'raw' ? gameplayProfileDraftByCardId[card.id]?.stats[stat] ?? '' : profile?.effective_stats?.[stat]?.toFixed(2) ?? '—'}
                             onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, stats: { ...draft.stats, [stat]: event.target.value } }))}
-                            disabled={!profile}
+                            disabled={!profile || catalogStatView === 'effective'}
                             className="w-20 min-w-0 border-2 border-main bg-card px-2 py-1 text-center text-xs font-black disabled:opacity-50"
                             inputMode="decimal"
                             aria-label={`${card.name} ${stat}`}
                           />
                         </td>)}
-                        <td className="border-r-2 border-main p-2"><input value={gameplayProfileDraftByCardId[card.id]?.playstyles ?? ''} onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, playstyles: event.target.value }))} disabled={!profile} className="w-40 min-w-0 border-2 border-main bg-card px-2 py-1 text-xs font-bold normal-case disabled:opacity-50" placeholder="; separated" /></td>
-                        <td className="border-r-2 border-main p-2"><input value={gameplayProfileDraftByCardId[card.id]?.traits ?? ''} onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, traits: event.target.value }))} disabled={!profile} className="w-40 min-w-0 border-2 border-main bg-card px-2 py-1 text-xs font-bold normal-case disabled:opacity-50" placeholder="; separated" /></td>
+                        <td className="border-r-2 border-main p-2"><input value={gameplayProfileDraftByCardId[card.id]?.playstyles ?? ''} onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, playstyles: event.target.value }))} disabled={!profile || catalogStatView === 'effective'} className="w-40 min-w-0 border-2 border-main bg-card px-2 py-1 text-xs font-bold normal-case disabled:opacity-50" placeholder="; separated" /></td>
+                        <td className="border-r-2 border-main p-2"><input value={gameplayProfileDraftByCardId[card.id]?.traits ?? ''} onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, traits: event.target.value }))} disabled={!profile || catalogStatView === 'effective'} className="w-40 min-w-0 border-2 border-main bg-card px-2 py-1 text-xs font-bold normal-case disabled:opacity-50" placeholder="; separated" /></td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.rarity}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.drop_weight}</td>
                         <td className="p-3">
                           <div className="flex min-w-[120px] flex-col gap-2">
-                            {profile ? <button type="button" onClick={() => void saveGameplayProfile(card)} disabled={cardActionState.loading || savingGameplayProfileCardId === card.id} className="border-2 border-main bg-c2 px-3 py-2 font-black uppercase text-[10px] text-inv disabled:opacity-60">Save stats</button> : <span className="max-w-28 truncate text-[10px] font-black uppercase text-c5" title="Import profile CSV first">Import profile CSV first</span>}
+                            {profile ? catalogStatView === 'raw' && <button type="button" onClick={() => void saveGameplayProfile(card)} disabled={cardActionState.loading || savingGameplayProfileCardId === card.id} className="border-2 border-main bg-c2 px-3 py-2 font-black uppercase text-[10px] text-inv disabled:opacity-60">Save stats</button> : <span className="max-w-28 truncate text-[10px] font-black uppercase text-c5" title="Import profile CSV first">Import profile CSV first</span>}
                             <button type="button" onClick={() => editPlayerCard(card)} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button>
                             <button type="button" onClick={() => void removePlayerCard(card)} disabled={cardActionState.loading} className="border-2 border-main bg-c5 px-3 py-2 font-black uppercase text-[10px] disabled:opacity-60">Delete</button>
                           </div>

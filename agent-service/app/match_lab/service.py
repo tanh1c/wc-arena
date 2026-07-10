@@ -18,11 +18,12 @@ def list_bots() -> list[dict[str, str]]:
     return [{"id": bot_id, **recipe} for bot_id, recipe in BOT_RECIPES.items()]
 
 
-def _profile(catalog: dict[str, Any]) -> dict[str, Any] | None:
+def _profile(catalog: dict[str, Any], key: str = "raw_stats") -> dict[str, Any] | None:
     value = catalog.get("player_card_gameplay_profiles")
     if isinstance(value, list):
         value = value[0] if value else None
-    return value.get("raw_stats") if isinstance(value, dict) else None
+    profile = value.get(key) if isinstance(value, dict) else None
+    return profile if isinstance(profile, dict) else None
 
 
 def _matches_ovr_band(stats: dict[str, Any], band: str) -> bool:
@@ -41,14 +42,15 @@ def sanitize_xi(xi: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _owned_xi(access_token: str, user_id: str, formation: str, selections: list[dict[str, str]]) -> list[dict[str, Any]]:
     client = get_user_supabase_client(access_token)
     owned_ids = [selection["owned_card_id"] for selection in selections]
-    response = client.table("user_player_cards").select("id,card_id,player_cards(id,position,alternate_positions,rarity,player_card_gameplay_profiles(raw_stats))").eq("user_id", user_id).in_("id", owned_ids).execute()
+    response = client.table("user_player_cards").select("id,card_id,player_cards(id,position,alternate_positions,rarity,player_card_gameplay_profiles(raw_stats, effective_stats))").eq("user_id", user_id).in_("id", owned_ids).execute()
     cards = {row["id"]: row for row in response.data or []}
     xi = []
     for selection in selections:
         owned = cards.get(selection["owned_card_id"])
         catalog = owned and owned.get("player_cards")
-        profile = _profile(catalog) if catalog else None
-        if not owned or not catalog or not profile:
+        raw_stats = _profile(catalog) if catalog else None
+        effective_stats = _profile(catalog, "effective_stats") if catalog else None
+        if not owned or not catalog or not raw_stats:
             raise ValueError("Every selected card must be owned and have a gameplay profile.")
         xi.append({
             "slot_id": selection["slot_id"],
@@ -56,8 +58,9 @@ def _owned_xi(access_token: str, user_id: str, formation: str, selections: list[
             "card_id": owned["card_id"],
             "position": catalog["position"],
             "alternate_positions": catalog.get("alternate_positions") or [],
-            "profile": profile,
-            "stats": profile,
+            "profile": raw_stats,
+            "stats": effective_stats or raw_stats,
+            "effective_stats": effective_stats,
             "rarity": catalog["rarity"],
         })
     validated = validate_xi(formation, xi)
@@ -66,19 +69,13 @@ def _owned_xi(access_token: str, user_id: str, formation: str, selections: list[
     return validated
 
 
-def _catalog_profiles(access_token: str) -> list[dict[str, Any]]:
-    client = get_user_supabase_client(access_token)
-    response = client.table("player_cards").select("player_card_gameplay_profiles(raw_stats)").limit(500).execute()
-    return [profile for card in response.data or [] if (profile := _profile(card))]
-
-
 def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
     recipe = BOT_RECIPES.get(bot_id)
     if not recipe:
         raise ValueError("Unknown Match Lab bot.")
     client = get_user_supabase_client(access_token)
     slots = FORMATIONS[recipe["formation"]]
-    response = client.table("player_cards").select("id,position,alternate_positions,rarity,player_card_gameplay_profiles(raw_stats)").limit(500).execute()
+    response = client.table("player_cards").select("id,position,alternate_positions,rarity,player_card_gameplay_profiles(raw_stats, effective_stats)").limit(500).execute()
     cards = response.data or []
     selected: list[dict[str, Any]] = []
     used = set()
@@ -86,11 +83,12 @@ def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
         card = next((row for row in cards if row["id"] not in used and position in {item.strip() for item in [row["position"], *(row.get("alternate_positions") or "").split(",")]} and (profile := _profile(row)) and _matches_ovr_band(profile, recipe["ovr_band"])), None)
         if not card:
             raise RuntimeError("Match Lab bot roster is not configured.")
-        profile = _profile(card)
-        if not profile:
+        raw_stats = _profile(card)
+        if not raw_stats:
             raise RuntimeError("Match Lab bot roster is not configured.")
+        effective_stats = _profile(card, "effective_stats")
         used.add(card["id"])
-        selected.append({"slot_id": slot_id, "card_id": card["id"], "position": card["position"], "stats": profile, "rarity": card["rarity"]})
+        selected.append({"slot_id": slot_id, "card_id": card["id"], "position": card["position"], "stats": effective_stats or raw_stats, "effective_stats": effective_stats, "rarity": card["rarity"]})
     return selected
 
 
@@ -98,7 +96,7 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
     player_xi = _owned_xi(access_token, user_id, formation, selections)
     bot_xi = _bot_xi(access_token, bot_id)
     seed = secrets.token_urlsafe(16)
-    result = resolve_match(seed, player_xi, bot_xi, 12, _catalog_profiles(access_token))
+    result = resolve_match(seed, player_xi, bot_xi, 12)
     report = {"score": result["score"], "timeline": result["timeline"], "metrics": {"hotspots": len(result["timeline"])} }
     report_text = json.dumps(report, separators=(",", ":"))
     if len(report_text.encode()) > 25600:

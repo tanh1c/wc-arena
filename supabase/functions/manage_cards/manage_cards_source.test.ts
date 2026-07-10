@@ -30,6 +30,7 @@ test('manage_cards exposes admin-only player card upserts and deletes without re
   assert.match(source, /body\.action === 'deletePlayerCard'/);
   assert.match(source, /requireAdminUser\(req, corsHeaders\)/);
   assert.match(source, /listAdminPlayerCards\(adminAuth\.supabase\)/);
+  assert.match(source, /player_card_gameplay_profiles\(raw_stats, effective_stats, playstyles, traits\)/);
   assert.match(source, /upsertPlayerCards\(adminAuth\.supabase, body\.cards\)/);
   assert.match(source, /deletePlayerCard\(adminAuth\.supabase, body\.id\)/);
   assert.match(source, /\.from\('player_cards'\)\.upsert/);

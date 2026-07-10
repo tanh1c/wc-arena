@@ -29,7 +29,7 @@ function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_card
       image_url: 'https://example.com/card.png',
       gif_url: null,
       rarity,
-      player_card_gameplay_profiles: [{ raw_stats: { OVR: rating }, playstyles: [], traits: [], source_image_url: 'https://example.com/card.png' }],
+      player_card_gameplay_profiles: [{ raw_stats: { OVR: rating }, effective_stats: { OVR: rating }, playstyles: [], traits: [], source_image_url: 'https://example.com/card.png' }],
       rating,
     } as OwnedPlayerCard['player_cards'] & { rating: number },
   };

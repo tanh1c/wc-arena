@@ -1345,6 +1345,7 @@ export type Database = {
         Row: {
           card_id: string
           created_at: string
+          effective_stats: Json
           playstyles: string[]
           raw_stats: Json
           source_image_url: string
@@ -1354,6 +1355,7 @@ export type Database = {
         Insert: {
           card_id: string
           created_at?: string
+          effective_stats?: Json
           playstyles?: string[]
           raw_stats: Json
           source_image_url: string
@@ -1363,6 +1365,7 @@ export type Database = {
         Update: {
           card_id?: string
           created_at?: string
+          effective_stats?: Json
           playstyles?: string[]
           raw_stats?: Json
           source_image_url?: string

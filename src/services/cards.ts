@@ -10,12 +10,13 @@ export type CardSourceType = PackType | 'upgrade' | 'forge';
 
 export type PlayerCardGameplayProfile = {
   raw_stats: Record<string, number>;
+  effective_stats: Record<string, number>;
   playstyles: string[];
   traits: string[];
   source_image_url: string;
 };
 
-export type PlayerCardGameplayProfileInput = PlayerCardGameplayProfile;
+export type PlayerCardGameplayProfileInput = Omit<PlayerCardGameplayProfile, 'effective_stats'>;
 
 const REQUIRED_GAMEPLAY_STATS = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'] as const;
 export type PlayerCardGameplayProfileCoreInput = Record<typeof REQUIRED_GAMEPLAY_STATS[number], number>;

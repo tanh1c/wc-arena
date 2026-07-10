@@ -44,6 +44,18 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertGreater(rarity_modifier("GOAT"), rarity_modifier("Common"))
         self.assertLessEqual(rarity_modifier("GOAT"), 0.035)
 
+    def test_persisted_effective_stats_do_not_receive_a_second_rarity_bonus(self):
+        card = {
+            "slot_id": "rw",
+            "card_id": "salah",
+            "effective_stats": {"OVR": 50, "PAC": 50, "SHO": 50, "PAS": 50, "DRI": 50, "DEF": 50, "PHY": 50},
+            "rarity": "GOAT",
+        }
+
+        strengths = resolve_team_strengths([card], [card])
+
+        self.assertEqual(strengths["home"]["shot"], 0.5)
+
     def test_xi_requires_unique_position_eligible_cards(self):
         cards = [
             {"slot_id": "gk", "owned_card_id": "a", "card_id": "goalkeeper", "position": "GK", "alternate_positions": [], "profile": {"OVR": 80}},
