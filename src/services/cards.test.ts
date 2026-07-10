@@ -38,6 +38,9 @@ test('cards service sends admin player card upserts, deletes, admin listings, an
   assert.match(source, /export type PlayerCardGameplayProfileCoreInput/);
   assert.match(source, /export async function updatePlayerCardGameplayProfileCore/);
   assert.match(source, /action: 'updatePlayerCardGameplayProfileCore', cardId, rawStats, playstyles, traits/);
+  assert.match(source, /export type PlayerCardGameplayProfileRawStatsInput = Record<string, number>/);
+  assert.match(source, /export async function replacePlayerCardGameplayProfileRawStats/);
+  assert.match(source, /action: 'replacePlayerCardGameplayProfileRawStats', cardId, rawStats, playstyles, traits/);
 });
 
 test('pack catalog supports admin-configured card pools', () => {

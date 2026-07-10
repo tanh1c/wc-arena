@@ -155,6 +155,18 @@ test('manage_cards patches core gameplay stats without replacing imported raw st
   assert.match(source, /\.from\('player_card_gameplay_profiles'\)\.upsert/);
 });
 
+test('manage_cards lets admins replace a complete gameplay stat map without trusting image URLs', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /action: 'replacePlayerCardGameplayProfileRawStats'/);
+  assert.match(source, /body\.action === 'replacePlayerCardGameplayProfileRawStats'/);
+  assert.match(source, /replacePlayerCardGameplayProfileRawStats\(adminAuth\.supabase, body\.cardId, body\.rawStats, body\.playstyles, body\.traits\)/);
+  assert.match(source, /async function replacePlayerCardGameplayProfileRawStats/);
+  assert.match(source, /raw_stats: normalizeRawStats\(rawStats\)/);
+  assert.match(source, /source_image_url: profile\.source_image_url/);
+  assert.match(source, /requireAdminUser\(req, corsHeaders\)/);
+});
+
 test('manage_cards validates admin card import boundary input', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 

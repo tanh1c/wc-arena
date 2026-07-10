@@ -27,6 +27,7 @@ type Body =
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'importPlayerCardGameplayProfiles'; profiles: PlayerCardGameplayProfileInput[] }
   | { action: 'updatePlayerCardGameplayProfileCore'; cardId: string; rawStats: unknown; playstyles?: unknown; traits?: unknown }
+  | { action: 'replacePlayerCardGameplayProfileRawStats'; cardId: string; rawStats: unknown; playstyles?: unknown; traits?: unknown }
   | { action: 'deletePlayerCard'; id: string };
 
 type CardPackPoolType = 'all' | 'manual' | 'team' | 'nation_region' | 'league' | 'position';
@@ -132,6 +133,12 @@ Deno.serve(async (req) => {
       const adminAuth = await requireAdminUser(req, corsHeaders);
       if (adminAuth instanceof Response) return adminAuth;
       return jsonResponse(await updatePlayerCardGameplayProfileCore(adminAuth.supabase, body.cardId, body.rawStats, body.playstyles, body.traits));
+    }
+
+    if (body.action === 'replacePlayerCardGameplayProfileRawStats') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await replacePlayerCardGameplayProfileRawStats(adminAuth.supabase, body.cardId, body.rawStats, body.playstyles, body.traits));
     }
 
     if (body.action === 'deletePlayerCard') {
@@ -668,6 +675,38 @@ async function updatePlayerCardGameplayProfileCore(
       card_id: cardId,
       source_image_url: profile.source_image_url,
       raw_stats: mergedStats,
+      playstyles: normalizeStringArray(playstyles, 'playstyles'),
+      traits: normalizeStringArray(traits, 'traits'),
+      updated_at: new Date().toISOString(),
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return { profile: data };
+}
+
+async function replacePlayerCardGameplayProfileRawStats(
+  supabase: SupabaseClient,
+  id: string,
+  rawStats: unknown,
+  playstyles: unknown,
+  traits: unknown,
+) {
+  const cardId = normalizeRequiredString(id, 'cardId');
+  const { data: profile, error: profileError } = await supabase
+    .from('player_card_gameplay_profiles')
+    .select('source_image_url')
+    .eq('card_id', cardId)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profile) throw new Error('Player card gameplay profile is missing. Import it from CSV first.');
+
+  const { data, error } = await supabase
+    .from('player_card_gameplay_profiles')
+    .upsert({
+      card_id: cardId,
+      source_image_url: profile.source_image_url,
+      raw_stats: normalizeRawStats(rawStats),
       playstyles: normalizeStringArray(playstyles, 'playstyles'),
       traits: normalizeStringArray(traits, 'traits'),
       updated_at: new Date().toISOString(),

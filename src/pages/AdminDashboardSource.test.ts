@@ -47,21 +47,19 @@ test('admin player-card editor exposes per-card drop weight controls', () => {
   assert.match(source, /listAdminPlayerCards/);
 });
 
-test('admin player-card editor uses field-based gameplay profile inputs', () => {
+test('admin player-card catalog edits complete gameplay profiles inline without overflowing cells', () => {
   const source = readFileSync('src/pages/AdminDashboard.tsx', 'utf8');
 
-  assert.match(source, /manualGameplayProfileStatKeys/);
-  assert.match(source, /OVR/);
-  assert.match(source, /PAC/);
-  assert.match(source, /SHO/);
-  assert.match(source, /PAS/);
-  assert.match(source, /DRI/);
-  assert.match(source, /DEF/);
-  assert.match(source, /PHY/);
-  assert.match(source, /inputMode="numeric"/);
-  assert.match(source, /importPlayerCardGameplayProfiles/);
-  assert.match(source, /updatePlayerCardGameplayProfileCore/);
-  assert.match(source, /updatePlayerCardGameplayProfileCore\(\s*cardDraft\.id,\s*raw_stats/);
+  assert.match(source, /gameplayStatColumns/);
+  assert.match(source, /replacePlayerCardGameplayProfileRawStats/);
+  assert.match(source, /importPlayerCardGameplayProfiles\(matchedProfiles\)[\s\S]*await loadPlayerCards\(\)/);
+  assert.match(source, /Save stats/);
+  assert.match(source, /Import profile CSV first/);
+  assert.match(source, /inputMode="decimal"/);
+  assert.match(source, /w-20 min-w-0/);
+  assert.match(source, /truncate/);
+  assert.match(source, /max-h-\[70dvh\] overflow-x-auto overflow-y-auto/);
+  assert.match(source, /min-w-max/);
   assert.match(source, /player_card_gameplay_profiles/);
   assert.match(source, /editPlayerCard/);
   assert.match(source, /startNewPlayerCard/);
@@ -87,7 +85,7 @@ test('admin player-card catalog exposes local search, rarity filter, and sort co
   assert.match(source, /Position A-Z/);
   assert.match(source, /No player cards match your search\./);
   assert.match(source, /max-h-\[70dvh\] overflow-x-auto overflow-y-auto/);
-  assert.match(source, /min-w-\[1700px\]/);
+  assert.match(source, /min-w-max/);
   assert.match(source, /League/);
   assert.match(source, /Nation/);
   assert.match(source, /Alternate positions/);

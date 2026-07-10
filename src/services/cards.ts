@@ -19,6 +19,7 @@ export type PlayerCardGameplayProfileInput = PlayerCardGameplayProfile;
 
 const REQUIRED_GAMEPLAY_STATS = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'] as const;
 export type PlayerCardGameplayProfileCoreInput = Record<typeof REQUIRED_GAMEPLAY_STATS[number], number>;
+export type PlayerCardGameplayProfileRawStatsInput = Record<string, number>;
 
 export type GameplayProfileImportResult = {
   importedCount: number;
@@ -462,6 +463,15 @@ export async function importPlayerCardGameplayProfiles(profiles: PlayerCardGamep
 export async function updatePlayerCardGameplayProfileCore(cardId: string, rawStats: PlayerCardGameplayProfileCoreInput, playstyles: string[], traits: string[]) {
   const { data, error } = await supabase.functions.invoke<{ profile: PlayerCardGameplayProfile }>('manage_cards', {
     body: { action: 'updatePlayerCardGameplayProfileCore', cardId, rawStats, playstyles, traits },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data.profile;
+}
+
+export async function replacePlayerCardGameplayProfileRawStats(cardId: string, rawStats: PlayerCardGameplayProfileRawStatsInput, playstyles: string[], traits: string[]) {
+  const { data, error } = await supabase.functions.invoke<{ profile: PlayerCardGameplayProfile }>('manage_cards', {
+    body: { action: 'replacePlayerCardGameplayProfileRawStats', cardId, rawStats, playstyles, traits },
   });
 
   if (error) throw new Error(await getFunctionErrorMessage(error));

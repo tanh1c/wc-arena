@@ -7,7 +7,7 @@ import { CARD_RARITIES, DROP_EASE_PRESETS, getEffectiveRarityOdds, type CardRari
 import { PACK_IMAGE_OPTIONS } from '../config/packImages';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { deletePlayerCard, importPlayerCardGameplayProfiles, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, parsePlayerCardGameplayProfilesCsv, playerCardToAdminInput, updatePlayerCardGameplayProfileCore, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, importPlayerCardGameplayProfiles, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, parsePlayerCardGameplayProfilesCsv, playerCardToAdminInput, replacePlayerCardGameplayProfileRawStats, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -30,9 +30,39 @@ type CardRarityFilter = 'all' | CardRarity;
 type PackPoolPlayerSort = 'name-asc' | 'position-asc' | 'nation-asc' | 'team-asc' | 'league-asc' | 'rarity-asc';
 type PackPoolOption = { value: string; label: string };
 
-const manualGameplayProfileStatKeys = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'] as const;
-type ManualGameplayProfileStat = typeof manualGameplayProfileStatKeys[number];
-type ManualGameplayProfileStats = Record<ManualGameplayProfileStat, string>;
+const requiredGameplayStatKeys = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'] as const;
+type GameplayStatDraft = { stats: Record<string, string>; playstyles: string; traits: string };
+
+function gameplayProfileDraft(card: AdminPlayerCard): GameplayStatDraft | null {
+  const profile = getCardGameplayProfile(card);
+  if (!profile) return null;
+  return {
+    stats: Object.fromEntries(Object.entries(profile.raw_stats).map(([key, value]) => [key, String(value)])),
+    playstyles: profile.playstyles.join('; '),
+    traits: profile.traits.join('; '),
+  };
+}
+
+function getGameplayStatColumns(cards: AdminPlayerCard[]) {
+  const statKeys = new Set(cards.flatMap((card) => Object.keys(getCardGameplayProfile(card)?.raw_stats ?? {})));
+  return [...requiredGameplayStatKeys, ...[...statKeys].filter((key) => !requiredGameplayStatKeys.includes(key as typeof requiredGameplayStatKeys[number])).sort((left, right) => left.localeCompare(right))];
+}
+
+function gameplayProfileDrafts(cards: AdminPlayerCard[]) {
+  return Object.fromEntries(cards.flatMap((card) => {
+    const draft = gameplayProfileDraft(card);
+    return draft ? [[card.id, draft]] : [];
+  }));
+}
+
+function splitProfileLabels(value: string) {
+  return value.split(';').map((item) => item.trim()).filter(Boolean);
+}
+
+function isGameplayProfileDraftValid(draft: GameplayStatDraft) {
+  return requiredGameplayStatKeys.every((key) => Number.isFinite(Number(draft.stats[key])))
+    && Object.entries(draft.stats).every(([key, value]) => key.trim() && Number.isFinite(Number(value)));
+}
 
 const poolTypeOptions: Array<{ value: CardPackPoolType; label: string }> = [
   { value: 'all', label: 'All cards' },
@@ -78,17 +108,8 @@ function emptyPlayerCardDraft(): AdminPlayerCardInput {
   };
 }
 
-function emptyManualGameplayProfileStats(): ManualGameplayProfileStats {
-  return Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, ''])) as ManualGameplayProfileStats;
-}
-
 function getCardGameplayProfile(card: AdminPlayerCard) {
   return Array.isArray(card.player_card_gameplay_profiles) ? card.player_card_gameplay_profiles[0] : card.player_card_gameplay_profiles;
-}
-
-function manualGameplayProfileStatsFromCard(card: AdminPlayerCard): ManualGameplayProfileStats {
-  const rawStats = getCardGameplayProfile(card)?.raw_stats;
-  return Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, rawStats?.[stat]?.toString() ?? ''])) as ManualGameplayProfileStats;
 }
 
 function emptyPackDraft(): CardPackCatalogInput {
@@ -186,15 +207,16 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
   const [cardCsvImport, setCardCsvImport] = useState('');
   const [profileCsvImport, setProfileCsvImport] = useState('');
-  const [manualProfileStats, setManualProfileStats] = useState<ManualGameplayProfileStats>(emptyManualGameplayProfileStats());
-  const [manualProfilePlaystyles, setManualProfilePlaystyles] = useState('');
-  const [manualProfileTraits, setManualProfileTraits] = useState('');
+  const [gameplayProfileDraftByCardId, setGameplayProfileDraftByCardId] = useState<Record<string, GameplayStatDraft>>({});
+  const [savingGameplayProfileCardId, setSavingGameplayProfileCardId] = useState<string | null>(null);
   const [csvImportRarity, setCsvImportRarity] = useState<CardRarity>('Common');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   async function loadPlayerCards() {
-    setPlayerCards(await listAdminPlayerCards());
+    const cards = await listAdminPlayerCards();
+    setPlayerCards(cards);
+    setGameplayProfileDraftByCardId(gameplayProfileDrafts(cards));
   }
 
   async function loadPackCatalog() {
@@ -225,6 +247,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       setRewardReviews(nextRewardReviews);
       setRecentPredictions(nextRecentPredictions);
       setPlayerCards(nextPlayerCards);
+      setGameplayProfileDraftByCardId(gameplayProfileDrafts(nextPlayerCards));
       setPackCatalog(nextPacks);
       setResultDrafts(Object.fromEntries(nextMatches.map((match) => [match.id, {
         homeScore: match.home_score?.toString() ?? '',
@@ -309,17 +332,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
   function startNewPlayerCard() {
     setCardDraft(emptyPlayerCardDraft());
-    setManualProfileStats(emptyManualGameplayProfileStats());
-    setManualProfilePlaystyles('');
-    setManualProfileTraits('');
   }
 
   function editPlayerCard(card: AdminPlayerCard) {
-    const profile = getCardGameplayProfile(card);
     setCardDraft(playerCardToAdminInput(card));
-    setManualProfileStats(manualGameplayProfileStatsFromCard(card));
-    setManualProfilePlaystyles(profile?.playstyles.join('; ') ?? '');
-    setManualProfileTraits(profile?.traits.join('; ') ?? '');
   }
 
   async function savePlayerCard() {
@@ -371,30 +387,43 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       const matchedProfiles = profiles.filter((profile) => catalogUrls.has(profile.source_image_url));
       if (matchedProfiles.length === 0) throw new Error('No gameplay profiles match a live player card image URL.');
       const result = await importPlayerCardGameplayProfiles(matchedProfiles);
+      await loadPlayerCards();
       setCardActionState({ success: `Imported ${result.importedCount} profiles. Skipped ${profiles.length - matchedProfiles.length} unmatched CSV rows, including GOAT Salah until entered manually.` });
     } catch (nextError) {
       setCardActionState({ error: getErrorMessage(nextError) });
     }
   }
 
-  async function saveManualGameplayProfile() {
-    setCardActionState({ loading: true });
+  function updateGameplayProfileDraft(cardId: string, update: (draft: GameplayStatDraft) => GameplayStatDraft) {
+    setGameplayProfileDraftByCardId((current) => {
+      const draft = current[cardId];
+      return draft ? { ...current, [cardId]: update(draft) } : current;
+    });
+  }
 
+  async function saveGameplayProfile(card: AdminPlayerCard) {
+    const draft = gameplayProfileDraftByCardId[card.id];
+    if (!draft) return;
+    if (!isGameplayProfileDraftValid(draft)) {
+      setCardActionState({ error: 'Enter a finite number for every stat, including OVR, PAC, SHO, PAS, DRI, DEF, and PHY.' });
+      return;
+    }
+
+    setSavingGameplayProfileCardId(card.id);
+    setCardActionState({ loading: true });
     try {
-      if (!cardDraft.id || !cardDraft.image_url) throw new Error('Select a saved player card first.');
-      if (manualGameplayProfileStatKeys.some((stat) => !manualProfileStats[stat].trim())) throw new Error('Enter a number for every gameplay stat.');
-      const raw_stats = Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, Number(manualProfileStats[stat])])) as Record<ManualGameplayProfileStat, number>;
-      if (Object.values(raw_stats).some((stat) => !Number.isFinite(stat))) throw new Error('Enter a number for every gameplay stat.');
-      await updatePlayerCardGameplayProfileCore(
-        cardDraft.id,
-        raw_stats,
-        manualProfilePlaystyles.split(';').map((item) => item.trim()).filter(Boolean),
-        manualProfileTraits.split(';').map((item) => item.trim()).filter(Boolean),
+      await replacePlayerCardGameplayProfileRawStats(
+        card.id,
+        Object.fromEntries(Object.entries(draft.stats).map(([key, value]) => [key.trim(), Number(value)])),
+        splitProfileLabels(draft.playstyles),
+        splitProfileLabels(draft.traits),
       );
       await loadPlayerCards();
-      setCardActionState({ success: `Saved gameplay profile for ${cardDraft.name || 'player card'}.` });
+      setCardActionState({ success: `Saved gameplay profile for ${card.name}.` });
     } catch (nextError) {
       setCardActionState({ error: getErrorMessage(nextError) });
+    } finally {
+      setSavingGameplayProfileCardId(null);
     }
   }
 
@@ -510,6 +539,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
       return (cardRarityRank.get(left.rarity) ?? 99) - (cardRarityRank.get(right.rarity) ?? 99) || compareCardText(left.name, right.name);
     });
+  const gameplayStatColumns = getGameplayStatColumns(playerCards);
   const packPoolOptions: Record<Exclude<CardPackPoolType, 'all'>, PackPoolOption[]> = {
     manual: playerCards.map((card) => ({ value: card.id, label: `${card.name} · ${card.position} · ${card.team} · ${card.rarity}` })),
     team: uniqueOptions(playerCards.map((card) => card.team)),
@@ -749,20 +779,6 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   </label>
                 </div>
                 <button type="button" onClick={() => void savePlayerCard()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save card</button>
-                <div className="border-2 border-main bg-muted p-3 flex flex-col gap-2">
-                  <div className="text-xs font-black uppercase">Manual gameplay profile</div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {manualGameplayProfileStatKeys.map((stat) => (
-                      <label key={stat} className="flex flex-col gap-1 text-[10px] font-black uppercase">
-                        {stat}
-                        <input value={manualProfileStats[stat]} onChange={(event) => setManualProfileStats((current) => ({ ...current, [stat]: event.target.value }))} className="border-2 border-main bg-card p-2 text-sm font-bold" inputMode="numeric" aria-label={`Manual gameplay profile ${stat}`} />
-                      </label>
-                    ))}
-                  </div>
-                  <input value={manualProfilePlaystyles} onChange={(event) => setManualProfilePlaystyles(event.target.value)} className="border-2 border-main bg-card p-2 text-xs font-bold normal-case" aria-label="Manual gameplay profile playstyles" placeholder="PlayStyles separated by ;" />
-                  <input value={manualProfileTraits} onChange={(event) => setManualProfileTraits(event.target.value)} className="border-2 border-main bg-card p-2 text-xs font-bold normal-case" aria-label="Manual gameplay profile traits" placeholder="Traits separated by ;" />
-                  <button type="button" onClick={() => void saveManualGameplayProfile()} disabled={cardActionState.loading || !cardDraft.id} className="border-2 border-main bg-c1 p-2 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save gameplay profile</button>
-                </div>
                 {(cardActionState.error || cardActionState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${cardActionState.error ? 'bg-c5' : 'bg-c3'}`}>{cardActionState.error ?? cardActionState.success}</div>}
               </div>
 
@@ -809,10 +825,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 </label>
               </div>
               <div className="max-h-[70dvh] overflow-x-auto overflow-y-auto">
-                <table className="w-full min-w-[1700px] text-left text-xs font-bold">
+                <table className="w-full min-w-max text-left text-xs font-bold">
                   <thead className="sticky top-0 z-10 bg-muted font-black uppercase">
                     <tr>
-                      <th className="border-b-4 border-r-2 border-main p-3">Card</th>
+                      <th className="sticky left-0 z-20 w-56 border-b-4 border-r-2 border-main bg-muted p-3">Card</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Position</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Alternate positions</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Team</th>
@@ -823,8 +839,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                       <th className="border-b-4 border-r-2 border-main p-3">Height / weight</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Work rates</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Added</th>
-                      <th className="border-b-4 border-r-2 border-main p-3">OVR</th>
-                      <th className="border-b-4 border-r-2 border-main p-3">Core stats</th>
+                      {gameplayStatColumns.map((stat) => <th key={stat} title={stat} className="w-24 border-b-4 border-r-2 border-main p-3"><span className="block truncate">{stat}</span></th>)}
                       <th className="border-b-4 border-r-2 border-main p-3">PlayStyles</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Traits</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Rarity</th>
@@ -834,44 +849,52 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   </thead>
                   <tbody>
                     {visiblePlayerCards.map((card) => {
-                      const profile = Array.isArray(card.player_card_gameplay_profiles) ? card.player_card_gameplay_profiles[0] : card.player_card_gameplay_profiles;
-                      const stats = profile?.raw_stats;
+                      const profile = getCardGameplayProfile(card);
 
                       return <tr key={card.id} className="border-b-2 border-main last:border-b-0 align-top">
-                        <td className="border-r-2 border-main p-3">
-                          <div className="flex items-center gap-3">
-                            <img src={card.image_url} alt="" className="h-12 w-12 border-2 border-main object-cover bg-muted" loading="lazy" />
-                            <div>
-                              <div className="font-black uppercase">{card.name}</div>
+                        <td className="sticky left-0 z-10 border-r-2 border-main bg-card p-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <img src={card.image_url} alt="" className="h-12 w-12 shrink-0 border-2 border-main bg-muted object-cover" loading="lazy" />
+                            <div className="min-w-0">
+                              <div className="truncate font-black uppercase" title={card.name}>{card.name}</div>
                               <a href={card.image_url} target="_blank" rel="noreferrer" className="text-[10px] text-c2 underline">Image link</a>
                             </div>
                           </div>
                         </td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.position}</td>
-                        <td className="border-r-2 border-main p-3 uppercase">{card.alternate_positions || '—'}</td>
-                        <td className="border-r-2 border-main p-3 uppercase">{card.team}</td>
-                        <td className="border-r-2 border-main p-3 uppercase">{card.league}</td>
-                        <td className="border-r-2 border-main p-3 uppercase">{card.nation_region}</td>
+                        <td className="max-w-36 border-r-2 border-main p-3 uppercase"><span className="block truncate" title={card.alternate_positions || '—'}>{card.alternate_positions || '—'}</span></td>
+                        <td className="max-w-36 border-r-2 border-main p-3 uppercase"><span className="block truncate" title={card.team}>{card.team}</span></td>
+                        <td className="max-w-36 border-r-2 border-main p-3 uppercase"><span className="block truncate" title={card.league}>{card.league}</span></td>
+                        <td className="max-w-36 border-r-2 border-main p-3 uppercase"><span className="block truncate" title={card.nation_region}>{card.nation_region}</span></td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.footedness || '—'}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.skill_moves || '—'}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{[card.height, card.weight].filter(Boolean).join(' / ') || '—'}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{[card.work_rate_att, card.work_rate_def].filter(Boolean).join(' / ') || '—'}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.added_on || '—'}</td>
-                        <td className="border-r-2 border-main p-3 uppercase">{stats?.OVR ?? '—'}</td>
-                        <td className="border-r-2 border-main p-3 uppercase">{stats ? `PAC ${stats.PAC} · SHO ${stats.SHO} · PAS ${stats.PAS} · DRI ${stats.DRI} · DEF ${stats.DEF} · PHY ${stats.PHY}` : '—'}</td>
-                        <td className="border-r-2 border-main p-3 normal-case">{profile?.playstyles.join(', ') || '—'}</td>
-                        <td className="border-r-2 border-main p-3 normal-case">{profile?.traits.join(', ') || '—'}</td>
+                        {gameplayStatColumns.map((stat) => <td key={stat} className="border-r-2 border-main p-2">
+                          <input
+                            value={gameplayProfileDraftByCardId[card.id]?.stats[stat] ?? ''}
+                            onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, stats: { ...draft.stats, [stat]: event.target.value } }))}
+                            disabled={!profile}
+                            className="w-20 min-w-0 border-2 border-main bg-card px-2 py-1 text-center text-xs font-black disabled:opacity-50"
+                            inputMode="decimal"
+                            aria-label={`${card.name} ${stat}`}
+                          />
+                        </td>)}
+                        <td className="border-r-2 border-main p-2"><input value={gameplayProfileDraftByCardId[card.id]?.playstyles ?? ''} onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, playstyles: event.target.value }))} disabled={!profile} className="w-40 min-w-0 border-2 border-main bg-card px-2 py-1 text-xs font-bold normal-case disabled:opacity-50" placeholder="; separated" /></td>
+                        <td className="border-r-2 border-main p-2"><input value={gameplayProfileDraftByCardId[card.id]?.traits ?? ''} onChange={(event) => updateGameplayProfileDraft(card.id, (draft) => ({ ...draft, traits: event.target.value }))} disabled={!profile} className="w-40 min-w-0 border-2 border-main bg-card px-2 py-1 text-xs font-bold normal-case disabled:opacity-50" placeholder="; separated" /></td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.rarity}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.drop_weight}</td>
                         <td className="p-3">
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex min-w-[120px] flex-col gap-2">
+                            {profile ? <button type="button" onClick={() => void saveGameplayProfile(card)} disabled={cardActionState.loading || savingGameplayProfileCardId === card.id} className="border-2 border-main bg-c2 px-3 py-2 font-black uppercase text-[10px] text-inv disabled:opacity-60">Save stats</button> : <span className="max-w-28 truncate text-[10px] font-black uppercase text-c5" title="Import profile CSV first">Import profile CSV first</span>}
                             <button type="button" onClick={() => editPlayerCard(card)} className="border-2 border-main bg-c1 px-3 py-2 font-black uppercase text-[10px]">Edit</button>
                             <button type="button" onClick={() => void removePlayerCard(card)} disabled={cardActionState.loading} className="border-2 border-main bg-c5 px-3 py-2 font-black uppercase text-[10px] disabled:opacity-60">Delete</button>
                           </div>
                         </td>
                       </tr>;
                     })}
-                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={18} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
+                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={12 + gameplayStatColumns.length} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
                   </tbody>
                 </table>
               </div>
