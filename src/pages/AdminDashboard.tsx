@@ -7,7 +7,7 @@ import { CARD_RARITIES, DROP_EASE_PRESETS, getEffectiveRarityOdds, type CardRari
 import { PACK_IMAGE_OPTIONS } from '../config/packImages';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { deletePlayerCard, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, playerCardToAdminInput, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, importPlayerCardGameplayProfiles, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, parsePlayerCardGameplayProfilesCsv, playerCardToAdminInput, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -168,6 +168,10 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
   const [cardRarityFilter, setCardRarityFilter] = useState<CardRarityFilter>('all');
   const [cardCatalogSort, setCardCatalogSort] = useState<CardCatalogSort>('rarity-asc');
   const [cardCsvImport, setCardCsvImport] = useState('');
+  const [profileCsvImport, setProfileCsvImport] = useState('');
+  const [manualProfileStats, setManualProfileStats] = useState('');
+  const [manualProfilePlaystyles, setManualProfilePlaystyles] = useState('');
+  const [manualProfileTraits, setManualProfileTraits] = useState('');
   const [csvImportRarity, setCsvImportRarity] = useState<CardRarity>('Common');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -321,6 +325,40 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       const savedCards = await upsertPlayerCards(parsedCards);
       await loadPlayerCards();
       setCardActionState({ success: `Imported ${savedCards.length} player cards.` });
+    } catch (nextError) {
+      setCardActionState({ error: getErrorMessage(nextError) });
+    }
+  }
+
+  async function importGameplayProfileCsv() {
+    setCardActionState({ loading: true });
+
+    try {
+      const profiles = parsePlayerCardGameplayProfilesCsv(profileCsvImport);
+      const catalogUrls = new Set(playerCards.map((card) => card.image_url));
+      const matchedProfiles = profiles.filter((profile) => catalogUrls.has(profile.source_image_url));
+      if (matchedProfiles.length === 0) throw new Error('No gameplay profiles match a live player card image URL.');
+      const result = await importPlayerCardGameplayProfiles(matchedProfiles);
+      setCardActionState({ success: `Imported ${result.importedCount} profiles. Skipped ${profiles.length - matchedProfiles.length} unmatched CSV rows, including GOAT Salah until entered manually.` });
+    } catch (nextError) {
+      setCardActionState({ error: getErrorMessage(nextError) });
+    }
+  }
+
+  async function saveManualGameplayProfile() {
+    setCardActionState({ loading: true });
+
+    try {
+      if (!cardDraft.id || !cardDraft.image_url) throw new Error('Select a saved player card first.');
+      const raw_stats: unknown = JSON.parse(manualProfileStats);
+      if (!raw_stats || typeof raw_stats !== 'object' || Array.isArray(raw_stats)) throw new Error('Stats must be a JSON object.');
+      const result = await importPlayerCardGameplayProfiles([{
+        source_image_url: cardDraft.image_url,
+        raw_stats: raw_stats as Record<string, number>,
+        playstyles: manualProfilePlaystyles.split(';').map((item) => item.trim()).filter(Boolean),
+        traits: manualProfileTraits.split(';').map((item) => item.trim()).filter(Boolean),
+      }]);
+      setCardActionState({ success: `Saved gameplay profile for ${cardDraft.name || 'player card'} (${result.importedCount}).` });
     } catch (nextError) {
       setCardActionState({ error: getErrorMessage(nextError) });
     }
@@ -677,6 +715,13 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   </label>
                 </div>
                 <button type="button" onClick={() => void savePlayerCard()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save card</button>
+                <div className="border-2 border-main bg-muted p-3 flex flex-col gap-2">
+                  <div className="text-xs font-black uppercase">Manual gameplay profile</div>
+                  <textarea value={manualProfileStats} onChange={(event) => setManualProfileStats(event.target.value)} className="min-h-28 w-full resize-y border-2 border-main bg-card p-2 font-mono text-xs text-main" spellCheck={false} aria-label="Manual gameplay profile stats" placeholder='{"OVR":91,"PAC":95,"SHO":91,"PAS":88,"DRI":96,"DEF":37,"PHY":63}' />
+                  <input value={manualProfilePlaystyles} onChange={(event) => setManualProfilePlaystyles(event.target.value)} className="border-2 border-main bg-card p-2 text-xs font-bold normal-case" aria-label="Manual gameplay profile playstyles" placeholder="PlayStyles separated by ;" />
+                  <input value={manualProfileTraits} onChange={(event) => setManualProfileTraits(event.target.value)} className="border-2 border-main bg-card p-2 text-xs font-bold normal-case" aria-label="Manual gameplay profile traits" placeholder="Traits separated by ;" />
+                  <button type="button" onClick={() => void saveManualGameplayProfile()} disabled={cardActionState.loading || !cardDraft.id} className="border-2 border-main bg-c1 p-2 font-black uppercase text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Save gameplay profile</button>
+                </div>
                 {(cardActionState.error || cardActionState.success) && <div className={`border-2 border-main p-3 font-black uppercase text-xs ${cardActionState.error ? 'bg-c5' : 'bg-c3'}`}>{cardActionState.error ?? cardActionState.success}</div>}
               </div>
 
@@ -687,6 +732,13 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                 </select>
                 <textarea value={cardCsvImport} onChange={(event) => setCardCsvImport(event.target.value)} className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main" spellCheck={false} aria-label="Player card CSV" placeholder="Name,Position,Alternate Positions,TEAM,LEAGUE,NATION/REGION,Skill Moves,STRONG FOOT / WEAK FOOT,Height,Weight,Work Rate (ATT) / Work Rate (DEF),Added on,PNG URL,GIF URL" />
                 <button type="button" onClick={() => void importPlayerCardCsv()} disabled={cardActionState.loading} className="border-2 border-main bg-c2 p-3 font-black uppercase text-inv text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Import CSV</button>
+              </div>
+
+              <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-y-4 border-main">Gameplay Profiles</div>
+              <div className="p-4 flex flex-col gap-3">
+                <p className="text-xs font-bold text-subtle">Imports only exact PNG URL matches. Unmatched rows, including GOAT Salah, stay unprofiled for manual entry.</p>
+                <textarea value={profileCsvImport} onChange={(event) => setProfileCsvImport(event.target.value)} className="min-h-64 w-full resize-y border-2 border-main bg-muted p-3 font-mono text-xs text-main" spellCheck={false} aria-label="Gameplay profile CSV" placeholder="Name,...,PAC,SHO,PAS,DRI,DEF,PHY,...,PNG URL,...,OVR,PlayStyles,Traits" />
+                <button type="button" onClick={() => void importGameplayProfileCsv()} disabled={cardActionState.loading} className="border-2 border-main bg-c3 p-3 font-black uppercase text-main text-xs shadow-[2px_2px_0_var(--color-shadow)] disabled:opacity-60">Import gameplay profiles</button>
               </div>
             </div>
 

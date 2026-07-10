@@ -25,9 +25,34 @@ type Body =
   | { action: 'upsertCardPackCatalog'; pack: CardPackCatalogInput }
   | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
+  | { action: 'importPlayerCardGameplayProfiles'; profiles: PlayerCardGameplayProfileInput[] }
   | { action: 'deletePlayerCard'; id: string };
 
 type CardPackPoolType = 'all' | 'manual' | 'team' | 'nation_region' | 'league' | 'position';
+
+type PlayerCardGameplayProfileInput = {
+  source_image_url?: unknown;
+  raw_stats?: unknown;
+  playstyles?: unknown;
+  traits?: unknown;
+};
+
+const REQUIRED_GAMEPLAY_STATS = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'];
+
+function normalizeStringArray(value: unknown, field: string) {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) throw new Error(`Card ${field} must be an array of strings.`);
+  return [...new Set(value.map((item) => item.trim()).filter(Boolean))];
+}
+
+function normalizeRawStats(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Card raw_stats must be an object.');
+  const stats = Object.fromEntries(Object.entries(value).filter(([, stat]) => typeof stat === 'number' && Number.isFinite(stat)));
+  for (const stat of REQUIRED_GAMEPLAY_STATS) {
+    if (typeof stats[stat] !== 'number') throw new Error(`Card required gameplay stat ${stat} must be a number.`);
+  }
+  return stats;
+}
 
 type PlayerCard = {
   id: string;
@@ -94,6 +119,12 @@ Deno.serve(async (req) => {
       const adminAuth = await requireAdminUser(req, corsHeaders);
       if (adminAuth instanceof Response) return adminAuth;
       return jsonResponse(await upsertPlayerCards(adminAuth.supabase, body.cards));
+    }
+
+    if (body.action === 'importPlayerCardGameplayProfiles') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await importPlayerCardGameplayProfiles(adminAuth.supabase, body.profiles));
     }
 
     if (body.action === 'deletePlayerCard') {
@@ -569,6 +600,37 @@ function mergeDropWeights(cards: unknown[], weights: Array<{ card_id: string; dr
   }));
 }
 
+async function importPlayerCardGameplayProfiles(supabase: SupabaseClient, profiles: PlayerCardGameplayProfileInput[]) {
+  if (!Array.isArray(profiles) || profiles.length === 0) throw new Error('Gameplay profiles must be a non-empty array.');
+  const sourceImageUrls = profiles.map((profile) => normalizeRequiredString(profile.source_image_url, 'source_image_url'));
+  if (new Set(sourceImageUrls).size !== sourceImageUrls.length) throw new Error('Gameplay profile source image URLs must be unique.');
+
+  const rows = [];
+  for (const [index, profile] of profiles.entries()) {
+    const source_image_url = sourceImageUrls[index];
+    const { data: cards, error } = await supabase
+      .from('player_cards')
+      .select('id')
+      .eq('image_url', profile.source_image_url)
+      .limit(2);
+    if (error) throw error;
+    if ((cards ?? []).length !== 1) throw new Error('Player card source image URL is ambiguous or missing.');
+
+    rows.push({
+      card_id: cards![0].id,
+      source_image_url,
+      raw_stats: normalizeRawStats(profile.raw_stats),
+      playstyles: normalizeStringArray(profile.playstyles, 'playstyles'),
+      traits: normalizeStringArray(profile.traits, 'traits'),
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  const { data, error } = await supabase.from('player_card_gameplay_profiles').upsert(rows).select('*');
+  if (error) throw error;
+  return { profiles: data ?? [], importedCount: rows.length };
+}
+
 async function deletePlayerCard(supabase: SupabaseClient, id: string) {
   const cardId = normalizeRequiredString(id, 'id');
   const { error } = await supabase.from('player_cards').delete().eq('id', cardId);
@@ -607,4 +669,3 @@ async function getUserCoins(supabase: SupabaseClient, userId: string) {
   if (error) throw error;
   return Math.max(0, wallet?.balance ?? 0);
 }
-

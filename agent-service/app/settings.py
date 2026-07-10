@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     mem0_api_key: str = ""
     supabase_url: str = ""
     supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
     agent_allowed_origin: str = "http://localhost:3000"
     agent_email: str = ""
     agent_password: str = ""

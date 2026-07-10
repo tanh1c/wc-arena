@@ -218,36 +218,6 @@ export type Database = {
         }
         Relationships: []
       }
-      card_pack_openings: {
-        Row: {
-          cards_awarded: number
-          coins_spent: number
-          id: string
-          opened_at: string
-          opened_on_utc: string
-          pack_type: string
-          user_id: string
-        }
-        Insert: {
-          cards_awarded: number
-          coins_spent?: number
-          id?: string
-          opened_at?: string
-          opened_on_utc: string
-          pack_type: string
-          user_id: string
-        }
-        Update: {
-          cards_awarded?: number
-          coins_spent?: number
-          id?: string
-          opened_at?: string
-          opened_on_utc?: string
-          pack_type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       card_pack_catalog: {
         Row: {
           card_count: number
@@ -296,6 +266,36 @@ export type Database = {
           sort_order?: number
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      card_pack_openings: {
+        Row: {
+          cards_awarded: number
+          coins_spent: number
+          id: string
+          opened_at: string
+          opened_on_utc: string
+          pack_type: string
+          user_id: string
+        }
+        Insert: {
+          cards_awarded: number
+          coins_spent?: number
+          id?: string
+          opened_at?: string
+          opened_on_utc: string
+          pack_type: string
+          user_id: string
+        }
+        Update: {
+          cards_awarded?: number
+          coins_spent?: number
+          id?: string
+          opened_at?: string
+          opened_on_utc?: string
+          pack_type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1105,6 +1105,75 @@ export type Database = {
           },
         ]
       }
+      match_lab_runs: {
+        Row: {
+          away_score: number
+          bot_id: string
+          bot_squad: Json
+          broadcast_timeline: Json
+          clarity_rating: number | null
+          completed_at: string | null
+          created_at: string
+          fairness_rating: number | null
+          feedback_text: string | null
+          final_report: Json | null
+          formation: string
+          fun_rating: number | null
+          home_score: number
+          hotspot_index: number
+          id: string
+          player_squad: Json
+          seed: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          away_score?: number
+          bot_id: string
+          bot_squad: Json
+          broadcast_timeline?: Json
+          clarity_rating?: number | null
+          completed_at?: string | null
+          created_at?: string
+          fairness_rating?: number | null
+          feedback_text?: string | null
+          final_report?: Json | null
+          formation: string
+          fun_rating?: number | null
+          home_score?: number
+          hotspot_index?: number
+          id?: string
+          player_squad: Json
+          seed: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          away_score?: number
+          bot_id?: string
+          bot_squad?: Json
+          broadcast_timeline?: Json
+          clarity_rating?: number | null
+          completed_at?: string | null
+          created_at?: string
+          fairness_rating?: number | null
+          feedback_text?: string | null
+          final_report?: Json | null
+          formation?: string
+          fun_rating?: number | null
+          home_score?: number
+          hotspot_index?: number
+          id?: string
+          player_squad?: Json
+          seed?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           away_score: number | null
@@ -1265,6 +1334,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "player_card_drop_weights_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: true
+            referencedRelation: "player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_card_gameplay_profiles: {
+        Row: {
+          card_id: string
+          created_at: string
+          playstyles: string[]
+          raw_stats: Json
+          source_image_url: string
+          traits: string[]
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          playstyles?: string[]
+          raw_stats: Json
+          source_image_url: string
+          traits?: string[]
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          playstyles?: string[]
+          raw_stats?: Json
+          source_image_url?: string
+          traits?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_card_gameplay_profiles_card_id_fkey"
             columns: ["card_id"]
             isOneToOne: true
             referencedRelation: "player_cards"
@@ -2094,6 +2201,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_forge_card_transaction: {
+        Args: {
+          p_result_card_ids: string[]
+          p_source_owned_card_ids: string[]
+          p_source_rarity: string
+          p_total_price_coins: number
+          p_user_id: string
+        }
+        Returns: {
+          next_coins: number
+          owned_card: Json
+        }[]
+      }
       claim_daily_login_reward: {
         Args: { target_user_id: string }
         Returns: {

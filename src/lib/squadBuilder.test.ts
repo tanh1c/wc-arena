@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { assignCardToSlot, clearSlot, getAssignedOwnedCardIds, getFormationSlots, getSquadSummary } from './squadBuilder';
+import { assignCardToSlot, clearSlot, getAssignedOwnedCardIds, getCardPositions, getFormationSlots, getSquadSummary, isCardEligibleForSlot, validateMatchLabSquad } from './squadBuilder';
 import type { OwnedPlayerCard } from '../services/cards';
 
 function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_cards']['rarity'] = 'Common'): OwnedPlayerCard {
@@ -29,6 +29,7 @@ function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_card
       image_url: 'https://example.com/card.png',
       gif_url: null,
       rarity,
+      player_card_gameplay_profiles: [{ raw_stats: { OVR: rating }, playstyles: [], traits: [], source_image_url: 'https://example.com/card.png' }],
       rating,
     } as OwnedPlayerCard['player_cards'] & { rating: number },
   };
@@ -36,6 +37,33 @@ function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_card
 
 test('formation returns eleven slots', () => {
   assert.equal(getFormationSlots('4-3-3').length, 11);
+  assert.equal(getFormationSlots('4-2-3-1').length, 11);
+});
+
+test('card positions include clean alternate positions', () => {
+  const card = ownedCard('wide');
+  card.player_cards.position = 'RW';
+  card.player_cards.alternate_positions = ' RM, CAM, , ';
+
+  assert.deepEqual(getCardPositions(card.player_cards), ['RW', 'RM', 'CAM']);
+  assert.ok(isCardEligibleForSlot(card, { id: 'rm', label: 'RM', line: 'mid', x: 0, y: 0 }));
+});
+
+test('match lab validation requires an eligible distinct profiled eleven', () => {
+  const slots = getFormationSlots('4-3-3');
+  const cards = slots.map((slot, index) => {
+    const card = ownedCard(`owned-${index}`);
+    card.card_id = `player-${index}`;
+    card.player_cards.position = slot.label;
+    return card;
+  });
+  const assignments = Object.fromEntries(slots.map((slot, index) => [slot.id, cards[index].id]));
+
+  assert.deepEqual(validateMatchLabSquad('4-3-3', assignments, cards), { valid: true, reason: null });
+  assert.equal(validateMatchLabSquad('4-3-3', { ...assignments, rw: cards[0].id }, cards).valid, false);
+  assert.equal(validateMatchLabSquad('4-3-3', Object.fromEntries(Object.entries(assignments).slice(1)), cards).valid, false);
+  cards[1].card_id = cards[0].card_id;
+  assert.equal(validateMatchLabSquad('4-3-3', assignments, cards).valid, false);
 });
 
 test('formation slots fit a wider shorter balanced pitch', () => {

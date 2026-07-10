@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 
 from app.auth import verify_supabase_user
 from app.graph.workflow import run_agent_turn
+from app.match_lab.models import MatchLabFeedbackRequest, MatchLabRunRequest
+from app.match_lab.service import list_bots, run_match_lab
 from app.models import AgentChatRequest, AgentChatResponse, AuthenticatedUser
 from app.picks.runner import run_agent_picks
 from app.settings import get_settings
@@ -22,6 +24,21 @@ def _client_metadata(metadata: dict) -> dict[str, str]:
 @router.api_route("/health", methods=["GET", "HEAD"])
 def health() -> dict[str, bool]:
     return {"ok": True}
+
+
+@router.get("/match-lab/bots")
+async def match_lab_bots(user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    return {"bots": list_bots()}
+
+
+@router.post("/match-lab/runs")
+async def match_lab_run(payload: MatchLabRunRequest, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    try:
+        return run_match_lab(user.access_token, user.user_id, payload.formation, payload.bot_id, [selection.model_dump() for selection in payload.xi], payload.debug)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 @router.post("/agent/chat", response_model=AgentChatResponse)

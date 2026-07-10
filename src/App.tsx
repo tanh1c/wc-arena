@@ -25,6 +25,7 @@ const LeagueCreate = lazy(() => import('./pages/LeagueCreate'));
 const LeagueDetail = lazy(() => import('./pages/LeagueDetail'));
 const Leagues = lazy(() => import('./pages/Leagues'));
 const MatchDetail = lazy(() => import('./pages/MatchDetail'));
+const MatchLab = lazy(() => import('./pages/MatchLab'));
 const MyPredictions = lazy(() => import('./pages/MyPredictions'));
 const PredictionBreakdown = lazy(() => import('./pages/PredictionBreakdown'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -228,6 +229,7 @@ export default function App() {
           <Route path="/admin" element={<AdminDashboard themeControls={themeControls} />} />
           <Route path="/admin/audit" element={<AdminAudit themeControls={themeControls} />} />
           <Route path="/matches/:matchId" element={<MatchDetail themeControls={themeControls} />} />
+          <Route path="/match-lab" element={<MatchLab themeControls={themeControls} />} />
           <Route path="/predictions/:predictionId" element={<PredictionBreakdown themeControls={themeControls} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

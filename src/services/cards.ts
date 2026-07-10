@@ -8,6 +8,21 @@ export function getPlayerCardDisplayImageUrl(card: { image_url: string; gif_url?
 
 export type CardSourceType = PackType | 'upgrade' | 'forge';
 
+export type PlayerCardGameplayProfile = {
+  raw_stats: Record<string, number>;
+  playstyles: string[];
+  traits: string[];
+  source_image_url: string;
+};
+
+export type PlayerCardGameplayProfileInput = PlayerCardGameplayProfile;
+
+const REQUIRED_GAMEPLAY_STATS = ['OVR', 'PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY'];
+
+export type GameplayProfileImportResult = {
+  importedCount: number;
+};
+
 export type PlayerCard = {
   id: string;
   name: string;
@@ -26,6 +41,7 @@ export type PlayerCard = {
   image_url: string;
   gif_url: string | null;
   rarity: CardRarity;
+  player_card_gameplay_profiles?: PlayerCardGameplayProfile[];
 };
 
 export type AdminPlayerCard = PlayerCard & {
@@ -221,6 +237,43 @@ export function parsePlayerCardCsv(csv: string, rarity: CardRarity): AdminPlayer
   });
 }
 
+function splitProfileLabels(value: string) {
+  return value.split(';').map((item) => item.trim()).filter(Boolean);
+}
+
+export function parsePlayerCardGameplayProfilesCsv(csv: string): PlayerCardGameplayProfileInput[] {
+  const [headers, ...rows] = parseCsvRows(csv);
+  if (!headers || rows.length === 0) return [];
+
+  const headerIndex = new Map(headers.map((header, index) => [header, index]));
+  const read = (row: string[], header: string) => row[headerIndex.get(header) ?? -1]?.trim() ?? '';
+
+  return rows.map((row, index) => {
+    const source_image_url = read(row, 'PNG URL');
+    if (!source_image_url) throw new Error(`Row ${index + 2} is missing PNG URL.`);
+
+    const raw_stats: Record<string, number> = {};
+    for (const header of headers) {
+      if (['Name', 'Position', 'Alternate Positions', 'TEAM', 'LEAGUE', 'NATION/REGION', 'Skill Moves', 'STRONG FOOT / WEAK FOOT', 'Height', 'Weight', 'Work Rate (ATT) / Work Rate (DEF)', 'Added on', 'PNG URL', 'GIF URL', 'RenderZ URL', 'PlayStyles', 'Traits'].includes(header)) continue;
+      const value = read(row, header);
+      if (!value) continue;
+      const number = Number(value);
+      if (Number.isFinite(number)) raw_stats[header] = number;
+    }
+
+    for (const stat of REQUIRED_GAMEPLAY_STATS) {
+      if (typeof raw_stats[stat] !== 'number') throw new Error(`Row ${index + 2} is missing numeric ${stat}.`);
+    }
+
+    return {
+      source_image_url,
+      raw_stats,
+      playstyles: splitProfileLabels(read(row, 'PlayStyles')),
+      traits: splitProfileLabels(read(row, 'Traits')),
+    };
+  });
+}
+
 export function playerCardToAdminInput(card: PlayerCard | AdminPlayerCard): AdminPlayerCardInput {
   return {
     id: card.id,
@@ -291,12 +344,12 @@ export async function listCurrentUserOwnedCards() {
 
   const { data, error } = await supabase
     .from('user_player_cards')
-    .select('*, player_cards(*)')
+    .select('*, player_cards(*, player_card_gameplay_profiles(*))')
     .eq('user_id', user.id)
     .order('opened_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as OwnedPlayerCard[];
+  return (data ?? []) as unknown as OwnedPlayerCard[];
 }
 
 export async function listCurrentUserShowcase() {
@@ -394,6 +447,15 @@ export async function bulkForgePlayerCards(rarity: CardRarity, userPlayerCardIds
 
   if (error) throw new Error(await getFunctionErrorMessage(error));
   return data as BulkForgePlayerCardsResult;
+}
+
+export async function importPlayerCardGameplayProfiles(profiles: PlayerCardGameplayProfileInput[]) {
+  const { data, error } = await supabase.functions.invoke<GameplayProfileImportResult>('manage_cards', {
+    body: { action: 'importPlayerCardGameplayProfiles', profiles },
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  return data;
 }
 
 export async function upsertPlayerCards(cards: AdminPlayerCardInput[]) {

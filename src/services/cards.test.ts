@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { getPlayerCardDisplayImageUrl, groupCatalogWithOwnership, parsePlayerCardCsv } from './cards';
+import { getPlayerCardDisplayImageUrl, groupCatalogWithOwnership, parsePlayerCardCsv, parsePlayerCardGameplayProfilesCsv } from './cards';
 
 test('cards service sends admin player card upserts, deletes, admin listings, and user GIF upgrades through manage_cards', () => {
   const source = readFileSync('src/services/cards.ts', 'utf8');
@@ -92,6 +92,29 @@ test('catalog ownership grouping tracks base copies and GIF upgrades separately'
     hasGifUpgrade: true,
     gifOwnedCards: [ownedCards[5]],
   }]);
+});
+
+test('gameplay profile CSV parser preserves numeric stats and splits profile labels', () => {
+  const csv = [
+    'Name,PAC,SHO,PAS,DRI,DEF,PHY,Acceleration,PNG URL,OVR,PlayStyles,Traits',
+    'Neymar Jr,95,91,88,96,37,63,97,https://s6.imgcdn.dev/YqwFCS.png,91,"Technical Level 2; Finesse Shot","Roulette; Flair"',
+  ].join('\n');
+
+  assert.deepEqual(parsePlayerCardGameplayProfilesCsv(csv), [{
+    source_image_url: 'https://s6.imgcdn.dev/YqwFCS.png',
+    raw_stats: { PAC: 95, SHO: 91, PAS: 88, DRI: 96, DEF: 37, PHY: 63, Acceleration: 97, OVR: 91 },
+    playstyles: ['Technical Level 2', 'Finesse Shot'],
+    traits: ['Roulette', 'Flair'],
+  }]);
+});
+
+test('gameplay profile CSV parser rejects rows missing required stats', () => {
+  const csv = [
+    'PAC,SHO,PAS,DRI,DEF,PHY,PNG URL,OVR',
+    '95,91,88,96,37,63,https://s6.imgcdn.dev/YqwFCS.png,',
+  ].join('\n');
+
+  assert.throws(() => parsePlayerCardGameplayProfilesCsv(csv), /OVR/);
 });
 
 test('playerCardToAdminInput carries admin drop weights', () => {
