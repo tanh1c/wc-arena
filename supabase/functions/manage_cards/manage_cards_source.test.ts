@@ -141,6 +141,20 @@ test('manage_cards filters pack draws by admin-configured card pools', () => {
   assert.match(source, /splitAlternatePositions/);
 });
 
+test('manage_cards patches core gameplay stats without replacing imported raw stats', () => {
+  const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
+
+  assert.match(source, /action: 'updatePlayerCardGameplayProfileCore'/);
+  assert.match(source, /body\.action === 'updatePlayerCardGameplayProfileCore'/);
+  assert.match(source, /requireAdminUser\(req, corsHeaders\)/);
+  assert.match(source, /updatePlayerCardGameplayProfileCore\(adminAuth\.supabase, body\.cardId, body\.rawStats, body\.playstyles, body\.traits\)/);
+  assert.match(source, /from\('player_card_gameplay_profiles'\)[\s\S]*select\('raw_stats, source_image_url'\)/);
+  assert.match(source, /existingStats/);
+  assert.match(source, /REQUIRED_GAMEPLAY_STATS/);
+  assert.match(source, /source_image_url: profile\.source_image_url/);
+  assert.match(source, /\.from\('player_card_gameplay_profiles'\)\.upsert/);
+});
+
 test('manage_cards validates admin card import boundary input', () => {
   const source = readFileSync('supabase/functions/manage_cards/index.ts', 'utf8');
 

@@ -7,7 +7,7 @@ import { CARD_RARITIES, DROP_EASE_PRESETS, getEffectiveRarityOdds, type CardRari
 import { PACK_IMAGE_OPTIONS } from '../config/packImages';
 import { useAuth } from '../lib/auth';
 import { listAdminAuditLogs, listRecentPredictionsForAdmin, listRewardReviewsForAdmin, listUserTrustSignalsForAdmin, recalculateScores, updateMatchResult, type AdminAuditLogRow, type AdminPredictionRow, type RewardReviewRow, type UserTrustSignalRow } from '../services/admin';
-import { deletePlayerCard, importPlayerCardGameplayProfiles, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, parsePlayerCardGameplayProfilesCsv, playerCardToAdminInput, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
+import { deletePlayerCard, importPlayerCardGameplayProfiles, listAdminPlayerCards, listCardPackCatalog, parsePlayerCardCsv, parsePlayerCardGameplayProfilesCsv, playerCardToAdminInput, updatePlayerCardGameplayProfileCore, upsertCardPackCatalog, upsertPlayerCards, type AdminPlayerCard, type AdminPlayerCardInput, type CardPackCatalog, type CardPackCatalogInput, type CardPackPoolType, type PlayerCard } from '../services/cards';
 import { listGlobalLeaderboard, type LeaderboardEntryWithProfile } from '../services/leaderboard';
 import { listMatches, type MatchRow } from '../services/matches';
 import { getCurrentUserRole } from '../services/profile';
@@ -385,14 +385,14 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
       if (manualGameplayProfileStatKeys.some((stat) => !manualProfileStats[stat].trim())) throw new Error('Enter a number for every gameplay stat.');
       const raw_stats = Object.fromEntries(manualGameplayProfileStatKeys.map((stat) => [stat, Number(manualProfileStats[stat])])) as Record<ManualGameplayProfileStat, number>;
       if (Object.values(raw_stats).some((stat) => !Number.isFinite(stat))) throw new Error('Enter a number for every gameplay stat.');
-      const result = await importPlayerCardGameplayProfiles([{
-        source_image_url: cardDraft.image_url,
+      await updatePlayerCardGameplayProfileCore(
+        cardDraft.id,
         raw_stats,
-        playstyles: manualProfilePlaystyles.split(';').map((item) => item.trim()).filter(Boolean),
-        traits: manualProfileTraits.split(';').map((item) => item.trim()).filter(Boolean),
-      }]);
+        manualProfilePlaystyles.split(';').map((item) => item.trim()).filter(Boolean),
+        manualProfileTraits.split(';').map((item) => item.trim()).filter(Boolean),
+      );
       await loadPlayerCards();
-      setCardActionState({ success: `Saved gameplay profile for ${cardDraft.name || 'player card'} (${result.importedCount}).` });
+      setCardActionState({ success: `Saved gameplay profile for ${cardDraft.name || 'player card'}.` });
     } catch (nextError) {
       setCardActionState({ error: getErrorMessage(nextError) });
     }

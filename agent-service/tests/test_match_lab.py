@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from app.match_lab.actions import decide_action, parse_action
-from app.match_lab.resolver import resolve_match
+from app.match_lab.resolver import rarity_modifier, resolve_match, resolve_team_strengths
 from app.match_lab.rules import validate_xi
 
 
@@ -31,6 +31,18 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertEqual(result, resolve_match("seed", xi, xi, 10))
         self.assertTrue(10 <= len(result["timeline"]) <= 14)
         self.assertTrue({event["type"] for event in result["timeline"]} <= {"possession", "pass", "dribble", "shot", "save", "goal"})
+
+    def test_resolver_normalizes_stats_against_reference_profiles(self):
+        strong = [{"slot_id": "st", "card_id": "strong", "stats": {"OVR": 95, "PAC": 95, "SHO": 95, "PAS": 95, "DRI": 95, "DEF": 95, "PHY": 95, "Finishing": 95}, "rarity": "Common"}]
+        weak = [{"slot_id": "st", "card_id": "weak", "stats": {"OVR": 40, "PAC": 40, "SHO": 40, "PAS": 40, "DRI": 40, "DEF": 40, "PHY": 40, "Finishing": 40}, "rarity": "Common"}]
+        strengths = resolve_team_strengths(strong, weak, [card["stats"] for card in strong + weak])
+        self.assertGreater(strengths["home"]["shot"], strengths["away"]["shot"])
+        self.assertEqual(resolve_match("seed", strong, weak, 10, [card["stats"] for card in strong + weak]), resolve_match("seed", strong, weak, 10, [card["stats"] for card in strong + weak]))
+
+    def test_rarity_modifier_is_small_and_unknown_is_neutral(self):
+        self.assertEqual(rarity_modifier("Unknown"), 0)
+        self.assertGreater(rarity_modifier("GOAT"), rarity_modifier("Common"))
+        self.assertLessEqual(rarity_modifier("GOAT"), 0.035)
 
     def test_xi_requires_unique_position_eligible_cards(self):
         cards = [

@@ -26,6 +26,7 @@ type Body =
   | { action: 'listAdminPlayerCards' }
   | { action: 'upsertPlayerCards'; cards: AdminPlayerCardInput[] }
   | { action: 'importPlayerCardGameplayProfiles'; profiles: PlayerCardGameplayProfileInput[] }
+  | { action: 'updatePlayerCardGameplayProfileCore'; cardId: string; rawStats: unknown; playstyles?: unknown; traits?: unknown }
   | { action: 'deletePlayerCard'; id: string };
 
 type CardPackPoolType = 'all' | 'manual' | 'team' | 'nation_region' | 'league' | 'position';
@@ -125,6 +126,12 @@ Deno.serve(async (req) => {
       const adminAuth = await requireAdminUser(req, corsHeaders);
       if (adminAuth instanceof Response) return adminAuth;
       return jsonResponse(await importPlayerCardGameplayProfiles(adminAuth.supabase, body.profiles));
+    }
+
+    if (body.action === 'updatePlayerCardGameplayProfileCore') {
+      const adminAuth = await requireAdminUser(req, corsHeaders);
+      if (adminAuth instanceof Response) return adminAuth;
+      return jsonResponse(await updatePlayerCardGameplayProfileCore(adminAuth.supabase, body.cardId, body.rawStats, body.playstyles, body.traits));
     }
 
     if (body.action === 'deletePlayerCard') {
@@ -629,6 +636,46 @@ async function importPlayerCardGameplayProfiles(supabase: SupabaseClient, profil
   const { data, error } = await supabase.from('player_card_gameplay_profiles').upsert(rows).select('*');
   if (error) throw error;
   return { profiles: data ?? [], importedCount: rows.length };
+}
+
+async function updatePlayerCardGameplayProfileCore(
+  supabase: SupabaseClient,
+  id: string,
+  rawStats: unknown,
+  playstyles: unknown,
+  traits: unknown,
+) {
+  const cardId = normalizeRequiredString(id, 'cardId');
+  const coreStats = normalizeRawStats(rawStats);
+  const { data: profile, error: profileError } = await supabase
+    .from('player_card_gameplay_profiles')
+    .select('raw_stats, source_image_url')
+    .eq('card_id', cardId)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profile) throw new Error('Player card gameplay profile is missing. Import it from CSV first.');
+
+  const existingStats = Object.fromEntries(
+    Object.entries(profile.raw_stats ?? {}).filter(([, stat]) => typeof stat === 'number' && Number.isFinite(stat)),
+  );
+  const mergedStats = {
+    ...existingStats,
+    ...Object.fromEntries(REQUIRED_GAMEPLAY_STATS.map((stat) => [stat, coreStats[stat]])),
+  };
+  const { data, error } = await supabase
+    .from('player_card_gameplay_profiles')
+    .upsert({
+      card_id: cardId,
+      source_image_url: profile.source_image_url,
+      raw_stats: mergedStats,
+      playstyles: normalizeStringArray(playstyles, 'playstyles'),
+      traits: normalizeStringArray(traits, 'traits'),
+      updated_at: new Date().toISOString(),
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return { profile: data };
 }
 
 async function deletePlayerCard(supabase: SupabaseClient, id: string) {

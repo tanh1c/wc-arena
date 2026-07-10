@@ -25,6 +25,21 @@ test('gameplay profiles preserve source stats behind read-only RLS', () => {
   assert.doesNotMatch(source, /grant (insert|update|delete|all) on public\.player_card_gameplay_profiles to authenticated/i);
 });
 
+test('match lab service normalizes catalog stats, enforces bot bands, and hides raw stats', () => {
+  const source = readFileSync('agent-service/app/match_lab/service.py', 'utf8');
+
+  assert.match(source, /def _catalog_profiles/);
+  assert.match(source, /resolve_match\(seed, player_xi, bot_xi, 12, _catalog_profiles\(access_token\)\)/);
+  assert.match(source, /def _matches_ovr_band/);
+  assert.match(source, /_matches_ovr_band\(profile, recipe\["ovr_band"\]\)/);
+  assert.match(source, /def sanitize_xi/);
+  assert.match(source, /"player_xi": sanitize_xi\(player_xi\)/);
+  assert.match(source, /"bot_xi": sanitize_xi\(bot_xi\)/);
+  assert.doesNotMatch(source, /"player_xi": player_xi/);
+  assert.match(source, /"strengths": \{side:/);
+  assert.match(source, /for key in \("slot_id", "card_id", "owned_card_id", "position", "rarity"\)/);
+});
+
 test('match lab reports are owner-readable, compact, and expire after ninety days', () => {
   const source = migrationSource('add_match_lab_runs');
 

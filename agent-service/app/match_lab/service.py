@@ -25,6 +25,19 @@ def _profile(catalog: dict[str, Any]) -> dict[str, Any] | None:
     return value.get("raw_stats") if isinstance(value, dict) else None
 
 
+def _matches_ovr_band(stats: dict[str, Any], band: str) -> bool:
+    try:
+        minimum, maximum = (int(value) for value in band.split("-", 1))
+    except (TypeError, ValueError):
+        return False
+    ovr = stats.get("OVR")
+    return isinstance(ovr, (int, float)) and not isinstance(ovr, bool) and minimum <= ovr <= maximum
+
+
+def sanitize_xi(xi: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{key: card[key] for key in ("slot_id", "card_id", "owned_card_id", "position", "rarity") if key in card} for card in xi]
+
+
 def _owned_xi(access_token: str, user_id: str, formation: str, selections: list[dict[str, str]]) -> list[dict[str, Any]]:
     client = get_user_supabase_client(access_token)
     owned_ids = [selection["owned_card_id"] for selection in selections]
@@ -53,6 +66,12 @@ def _owned_xi(access_token: str, user_id: str, formation: str, selections: list[
     return validated
 
 
+def _catalog_profiles(access_token: str) -> list[dict[str, Any]]:
+    client = get_user_supabase_client(access_token)
+    response = client.table("player_cards").select("player_card_gameplay_profiles(raw_stats)").limit(500).execute()
+    return [profile for card in response.data or [] if (profile := _profile(card))]
+
+
 def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
     recipe = BOT_RECIPES.get(bot_id)
     if not recipe:
@@ -64,7 +83,7 @@ def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     used = set()
     for slot_id, position in slots.items():
-        card = next((row for row in cards if row["id"] not in used and position in {item.strip() for item in [row["position"], *(row.get("alternate_positions") or "").split(",")]} and _profile(row)), None)
+        card = next((row for row in cards if row["id"] not in used and position in {item.strip() for item in [row["position"], *(row.get("alternate_positions") or "").split(",")]} and (profile := _profile(row)) and _matches_ovr_band(profile, recipe["ovr_band"])), None)
         if not card:
             raise RuntimeError("Match Lab bot roster is not configured.")
         profile = _profile(card)
@@ -79,7 +98,7 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
     player_xi = _owned_xi(access_token, user_id, formation, selections)
     bot_xi = _bot_xi(access_token, bot_id)
     seed = secrets.token_urlsafe(16)
-    result = resolve_match(seed, player_xi, bot_xi, 12)
+    result = resolve_match(seed, player_xi, bot_xi, 12, _catalog_profiles(access_token))
     report = {"score": result["score"], "timeline": result["timeline"], "metrics": {"hotspots": len(result["timeline"])} }
     report_text = json.dumps(report, separators=(",", ":"))
     if len(report_text.encode()) > 25600:
@@ -100,13 +119,17 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
         "final_report": report,
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }).select("id").single().execute()
+    debug_payload = None
+    if debug:
+        debug_payload = {"hotspots": len(result["timeline"]), "action_source": "deterministic", "strengths": {side: {event: round(value, 3) for event, value in events.items()} for side, events in result["strengths"].items()}}
     return {
         "id": response.data["id"],
         "status": "completed",
         "formation": formation,
         "bot_id": bot_id,
-        "player_xi": player_xi,
-        "bot_xi": bot_xi,
-        **result,
-        "debug": {"hotspots": len(result["timeline"]), "action_source": "deterministic"} if debug else None,
+        "player_xi": sanitize_xi(player_xi),
+        "bot_xi": sanitize_xi(bot_xi),
+        "score": result["score"],
+        "timeline": result["timeline"],
+        "debug": debug_payload,
     }

@@ -35,6 +35,9 @@ test('cards service sends admin player card upserts, deletes, admin listings, an
   assert.match(source, /body: \{ action: 'bulkForgeCards', rarity, userPlayerCardIds \}/);
   assert.doesNotMatch(source, /body: \{ action: 'forgeCard', cardId \}/);
   assert.match(source, /getFunctionErrorMessage\(error\)/);
+  assert.match(source, /export type PlayerCardGameplayProfileCoreInput/);
+  assert.match(source, /export async function updatePlayerCardGameplayProfileCore/);
+  assert.match(source, /action: 'updatePlayerCardGameplayProfileCore', cardId, rawStats, playstyles, traits/);
 });
 
 test('pack catalog supports admin-configured card pools', () => {

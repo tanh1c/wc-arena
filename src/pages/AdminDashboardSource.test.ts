@@ -60,8 +60,8 @@ test('admin player-card editor uses field-based gameplay profile inputs', () => 
   assert.match(source, /PHY/);
   assert.match(source, /inputMode="numeric"/);
   assert.match(source, /importPlayerCardGameplayProfiles/);
-  assert.match(source, /source_image_url: cardDraft\.image_url/);
-  assert.match(source, /raw_stats/);
+  assert.match(source, /updatePlayerCardGameplayProfileCore/);
+  assert.match(source, /updatePlayerCardGameplayProfileCore\(\s*cardDraft\.id,\s*raw_stats/);
   assert.match(source, /player_card_gameplay_profiles/);
   assert.match(source, /editPlayerCard/);
   assert.match(source, /startNewPlayerCard/);
