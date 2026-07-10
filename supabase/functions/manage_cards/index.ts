@@ -541,7 +541,7 @@ function formatIconChasePityState(iconMissCount: number) {
 
 async function listAdminPlayerCards(supabase: SupabaseClient) {
   const [{ data: cards, error: cardsError }, { data: weights, error: weightsError }] = await Promise.all([
-    supabase.from('player_cards').select('*').order('rarity', { ascending: true }).order('name', { ascending: true }),
+    supabase.from('player_cards').select('*, player_card_gameplay_profiles(raw_stats, playstyles, traits)').order('rarity', { ascending: true }).order('name', { ascending: true }),
     supabase.from('player_card_drop_weights').select('card_id, drop_weight'),
   ]);
   if (cardsError) throw cardsError;

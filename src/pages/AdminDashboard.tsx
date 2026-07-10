@@ -767,21 +767,36 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                   </select>
                 </label>
               </div>
-              <div className="max-h-[70dvh] overflow-auto">
-                <table className="w-full min-w-[860px] text-left text-xs font-bold">
+              <div className="max-h-[70dvh] overflow-x-auto overflow-y-auto">
+                <table className="w-full min-w-[1700px] text-left text-xs font-bold">
                   <thead className="sticky top-0 z-10 bg-muted font-black uppercase">
                     <tr>
                       <th className="border-b-4 border-r-2 border-main p-3">Card</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Position</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Alternate positions</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Team</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">League</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Nation</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Foot</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Skill moves</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Height / weight</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Work rates</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Added</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">OVR</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Core stats</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">PlayStyles</th>
+                      <th className="border-b-4 border-r-2 border-main p-3">Traits</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Rarity</th>
                       <th className="border-b-4 border-r-2 border-main p-3">Drop Weight</th>
                       <th className="border-b-4 border-main p-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visiblePlayerCards.map((card) => (
-                      <tr key={card.id} className="border-b-2 border-main last:border-b-0">
+                    {visiblePlayerCards.map((card) => {
+                      const profile = Array.isArray(card.player_card_gameplay_profiles) ? card.player_card_gameplay_profiles[0] : card.player_card_gameplay_profiles;
+                      const stats = profile?.raw_stats;
+
+                      return <tr key={card.id} className="border-b-2 border-main last:border-b-0 align-top">
                         <td className="border-r-2 border-main p-3">
                           <div className="flex items-center gap-3">
                             <img src={card.image_url} alt="" className="h-12 w-12 border-2 border-main object-cover bg-muted" loading="lazy" />
@@ -792,7 +807,19 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                           </div>
                         </td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.position}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.alternate_positions || '—'}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.team}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.league}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.nation_region}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.footedness || '—'}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.skill_moves || '—'}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{[card.height, card.weight].filter(Boolean).join(' / ') || '—'}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{[card.work_rate_att, card.work_rate_def].filter(Boolean).join(' / ') || '—'}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{card.added_on || '—'}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{stats?.OVR ?? '—'}</td>
+                        <td className="border-r-2 border-main p-3 uppercase">{stats ? `PAC ${stats.PAC} · SHO ${stats.SHO} · PAS ${stats.PAS} · DRI ${stats.DRI} · DEF ${stats.DEF} · PHY ${stats.PHY}` : '—'}</td>
+                        <td className="border-r-2 border-main p-3 normal-case">{profile?.playstyles.join(', ') || '—'}</td>
+                        <td className="border-r-2 border-main p-3 normal-case">{profile?.traits.join(', ') || '—'}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.rarity}</td>
                         <td className="border-r-2 border-main p-3 uppercase">{card.drop_weight}</td>
                         <td className="p-3">
@@ -801,9 +828,9 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
                             <button type="button" onClick={() => void removePlayerCard(card)} disabled={cardActionState.loading} className="border-2 border-main bg-c5 px-3 py-2 font-black uppercase text-[10px] disabled:opacity-60">Delete</button>
                           </div>
                         </td>
-                      </tr>
-                    ))}
-                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={6} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
+                      </tr>;
+                    })}
+                    {!loading && visiblePlayerCards.length === 0 && <tr><td colSpan={18} className="p-4 font-black uppercase">{playerCards.length === 0 ? 'No player cards yet.' : 'No player cards match your search.'}</td></tr>}
                   </tbody>
                 </table>
               </div>

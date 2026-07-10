@@ -65,7 +65,14 @@ test('admin player-card catalog exposes local search, rarity filter, and sort co
   assert.match(source, /Team A-Z/);
   assert.match(source, /Position A-Z/);
   assert.match(source, /No player cards match your search\./);
-  assert.match(source, /max-h-\[70dvh\] overflow-auto/);
+  assert.match(source, /max-h-\[70dvh\] overflow-x-auto overflow-y-auto/);
+  assert.match(source, /min-w-\[1700px\]/);
+  assert.match(source, /League/);
+  assert.match(source, /Nation/);
+  assert.match(source, /Alternate positions/);
+  assert.match(source, /Foot/);
+  assert.match(source, /Work rates/);
+  assert.match(source, /Added/);
   assert.match(source, /<thead className="sticky top-0 z-10 bg-muted font-black uppercase">/);
   assert.match(source, /visiblePlayerCards\.map/);
 });

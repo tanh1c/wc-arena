@@ -12,4 +12,5 @@ test('admin profile import resolves cards by exact source image URL', () => {
   assert.match(source, /Player card source image URL is ambiguous or missing/);
   assert.match(source, /raw_stats/);
   assert.match(source, /required gameplay stat/);
+  assert.match(source, /player_card_gameplay_profiles\(raw_stats, playstyles, traits\)/);
 });
