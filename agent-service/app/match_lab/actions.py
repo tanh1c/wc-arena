@@ -16,7 +16,10 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
         f"Safe match snapshot: {json.dumps(snapshot, separators=(',', ':'))}",
     ])
     for attempt in range(2):
-        action = parse_action(_call_llm(prompt), local_slots, actor_slot)
+        try:
+            action = parse_action(_call_llm(prompt, timeout=1), local_slots, actor_slot)
+        except RuntimeError:
+            action = None
         if action:
             return action, "llm" if attempt == 0 else "retried"
     return {"action": "pass", "actor_slot": actor_slot, "target_slot": next(slot for slot in local_slots if slot != actor_slot), "risk": 20}, "fallback"
@@ -33,7 +36,7 @@ def parse_action(raw: str | None, local_slots: set[str], required_actor: str) ->
         return None
     if action["action"] not in ALLOWED_ACTIONS or action["actor_slot"] != required_actor:
         return None
-    if not isinstance(action["target_slot"], str) or action["target_slot"] not in local_slots:
+    if not isinstance(action["target_slot"], str) or action["target_slot"] not in local_slots or action["target_slot"] == required_actor:
         return None
     if not isinstance(action["risk"], int) or isinstance(action["risk"], bool) or not 0 <= action["risk"] <= 90:
         return None

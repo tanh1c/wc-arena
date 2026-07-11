@@ -3,6 +3,8 @@ import random
 from collections.abc import Iterable
 from typing import Any
 
+from app.match_lab.actions import decide_action
+
 EVENT_TYPES = ("possession", "pass", "dribble", "shot", "save", "goal")
 RARITY_MODIFIERS = {
     "Common": 0.0,
@@ -126,6 +128,15 @@ def _pick_side(randomizer: random.Random, home_strength: float, away_strength: f
     return "home" if total <= 0 or randomizer.random() < home_strength / total else "away"
 
 
+def _success(randomizer: random.Random, attack: float, defence: float, risk: int) -> bool:
+    chance = max(0.05, min(0.95, 0.35 + attack * 0.55 - defence * 0.3 - risk / 900))
+    return randomizer.random() < chance
+
+
+def _summary(side: str, event_type: str, actor_slot: str) -> str:
+    return f"{side.title()} {event_type} by {actor_slot.upper()}"
+
+
 def resolve_match(
     seed: str,
     home_xi: list[dict[str, Any]],
@@ -136,27 +147,46 @@ def resolve_match(
     randomizer = random.Random(int(hashlib.sha256(seed.encode()).hexdigest(), 16))
     count = max(10, min(14, hotspots))
     strengths = resolve_team_strengths(home_xi, away_xi, reference_profiles)
-    home_score = 0
-    away_score = 0
+    squads = {"home": home_xi, "away": away_xi}
+    score = {"home": 0, "away": 0}
     timeline = []
+    action_sources = {"llm": 0, "retried": 0, "fallback": 0}
 
     for index in range(count):
-        event_type = EVENT_TYPES[randomizer.randrange(len(EVENT_TYPES))]
-        if event_type == "goal":
-            home_attack = strengths["home"]["shot"]
-            away_attack = strengths["away"]["shot"]
-            home_goal = max(0.0, home_attack - strengths["away"]["save"] * 0.65)
-            away_goal = max(0.0, away_attack - strengths["home"]["save"] * 0.65)
-            side = _pick_side(randomizer, home_goal, away_goal)
-            if (home_goal if side == "home" else away_goal) >= randomizer.random():
-                if side == "home":
-                    home_score += 1
-                else:
-                    away_score += 1
+        side = _pick_side(randomizer, strengths["home"]["possession"], strengths["away"]["possession"])
+        opponents = "away" if side == "home" else "home"
+        squad = squads[side]
+        actor = squad[randomizer.randrange(len(squad))]
+        actor_slot = actor.get("slot_id", "player")
+        target_slots = {card.get("slot_id", "player") for card in squad if card.get("slot_id") != actor_slot}
+        snapshot = {
+            "minute": min(90, 5 + index * 8),
+            "side": side,
+            "score": score,
+            "actor": {"slot_id": actor_slot, "position": actor.get("position")},
+            "recent_events": [event["type"] for event in timeline[-3:]],
+        }
+        if target_slots:
+            action, source = decide_action(snapshot, actor_slot, target_slots)
+        else:
+            action, source = {"action": "pass", "actor_slot": actor_slot, "target_slot": "", "risk": 20}, "fallback"
+        action_sources[source] += 1
+        action_type = action["action"]
+
+        if action_type == "shoot":
+            attack = strengths[side]["shot"]
+            defence = strengths[opponents]["save"]
+            if _success(randomizer, attack, defence, action["risk"]):
+                event_type = "goal"
+                score[side] += 1
             else:
                 event_type = "save"
         else:
-            side = _pick_side(randomizer, strengths["home"][event_type], strengths["away"][event_type])
-        timeline.append({"minute": min(90, 5 + index * 8), "type": event_type, "side": side, "score": {"home": home_score, "away": away_score}})
+            defence = strengths[opponents]["possession"]
+            if _success(randomizer, strengths[side][action_type], defence, action["risk"]):
+                event_type = action_type
+            else:
+                event_type = "possession"
+        timeline.append({"minute": snapshot["minute"], "type": event_type, "side": side, "score": dict(score), "summary": _summary(side, event_type, actor_slot)})
 
-    return {"score": {"home": home_score, "away": away_score}, "timeline": timeline, "strengths": strengths}
+    return {"score": score, "timeline": timeline, "strengths": strengths, "action_sources": action_sources}

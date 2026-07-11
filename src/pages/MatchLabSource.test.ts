@@ -21,7 +21,10 @@ test('match lab uses its own service and excludes reward flow', () => {
   assert.match(source, /Defensive Wall/);
   assert.match(source, /Debug/);
   assert.match(source, /SquadPitchBuilder/);
-  assert.match(source, /formationKeys/);
+  assert.match(source, /matchLabFormationKeys/);
+  assert.match(source, /availableFormations=\{matchLabFormationKeys\}/);
+  assert.match(source, /event\.summary \?\? event\.type\.toUpperCase\(\)/);
+  assert.doesNotMatch(source, /formationKeys/);
   assert.match(source, /listSavedSquadFormations/);
   assert.match(source, /pruneAssignmentsForOwnedCards/);
   assert.match(source, /relative z-10 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:gap-6 lg:p-6/);

@@ -102,7 +102,7 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
     bot_xi = _bot_xi(access_token, bot_id)
     seed = secrets.token_urlsafe(16)
     result = resolve_match(seed, player_xi, bot_xi, 12)
-    report = {"score": result["score"], "timeline": result["timeline"], "metrics": {"hotspots": len(result["timeline"])} }
+    report = {"score": result["score"], "timeline": result["timeline"], "metrics": {"hotspots": len(result["timeline"]), "action_sources": result["action_sources"]}}
     report_text = json.dumps(report, separators=(",", ":"))
     if len(report_text.encode()) > 25600:
         raise RuntimeError("Match Lab report exceeded its storage limit.")
@@ -124,7 +124,7 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
     }).select("id").execute()
     debug_payload = None
     if debug:
-        debug_payload = {"hotspots": len(result["timeline"]), "action_source": "deterministic", "strengths": {side: {event: round(value, 3) for event, value in events.items()} for side, events in result["strengths"].items()}}
+        debug_payload = {"hotspots": len(result["timeline"]), "action_sources": result["action_sources"], "strengths": {side: {event: round(value, 3) for event, value in events.items()} for side, events in result["strengths"].items()}}
     return {
         "id": response.data[0]["id"],
         "status": "completed",

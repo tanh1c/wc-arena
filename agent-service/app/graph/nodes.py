@@ -522,7 +522,7 @@ def _build_prompt(state: AgentState, message: str) -> str:
     )
 
 
-def _call_llm(prompt: str) -> str | None:
+def _call_llm(prompt: str, timeout: float = 30) -> str | None:
     from app.settings import get_settings
 
     settings = get_settings()
@@ -538,10 +538,11 @@ def _call_llm(prompt: str) -> str | None:
         "api_key": api_key,
         "model": settings.llm_model or "gpt-4.1-mini",
         "temperature": 0.3,
+        "timeout": timeout,
     }
     if settings.llm_base_url:
         kwargs["base_url"] = settings.llm_base_url
-        kwargs["http_client"] = httpx.Client(timeout=30, trust_env=False)
+        kwargs["http_client"] = httpx.Client(timeout=timeout, trust_env=False)
 
     try:
         response = ChatOpenAI(**kwargs).invoke(prompt)

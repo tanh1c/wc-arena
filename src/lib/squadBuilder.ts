@@ -63,6 +63,7 @@ const formations: Record<FormationKey, SquadSlot[]> = {
 };
 
 export const formationKeys = Object.keys(formations) as FormationKey[];
+export const matchLabFormationKeys: FormationKey[] = ['4-3-3', '4-2-3-1', '3-5-2'];
 
 export function getFormationSlots(formation: FormationKey) {
   return formations[formation];

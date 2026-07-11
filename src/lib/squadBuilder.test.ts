@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { assignCardToSlot, clearSlot, getAssignedOwnedCardIds, getCardPositions, getFormationSlots, getSquadSummary, isCardEligibleForSlot, pruneAssignmentsForOwnedCards, validateMatchLabSquad } from './squadBuilder';
+import { assignCardToSlot, clearSlot, getAssignedOwnedCardIds, getCardPositions, getFormationSlots, getSquadSummary, isCardEligibleForSlot, matchLabFormationKeys, pruneAssignmentsForOwnedCards, validateMatchLabSquad } from './squadBuilder';
 import type { OwnedPlayerCard } from '../services/cards';
 
 function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_cards']['rarity'] = 'Common'): OwnedPlayerCard {
@@ -38,6 +38,10 @@ function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_card
 test('formation returns eleven slots', () => {
   assert.equal(getFormationSlots('4-3-3').length, 11);
   assert.equal(getFormationSlots('4-2-3-1').length, 11);
+});
+
+test('Match Lab excludes Squad Builder-only 4-4-2', () => {
+  assert.deepEqual(matchLabFormationKeys, ['4-3-3', '4-2-3-1', '3-5-2']);
 });
 
 test('card positions include clean alternate positions', () => {

@@ -32,6 +32,38 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertTrue(10 <= len(result["timeline"]) <= 14)
         self.assertTrue({event["type"] for event in result["timeline"]} <= {"possession", "pass", "dribble", "shot", "save", "goal"})
 
+    def test_hotspots_use_agent_intent_but_keep_score_resolution_authoritative(self):
+        xi = [
+            {"slot_id": "st", "card_id": "st", "position": "ST", "effective_stats": {"OVR": 90, "PAC": 90, "SHO": 90, "PAS": 90, "DRI": 90, "DEF": 50, "PHY": 80, "Finishing": 90, "Shot Power": 90, "Long Shot": 90, "Volleys": 90, "Penalties": 90}, "rarity": "Common"},
+            {"slot_id": "cm", "card_id": "cm", "position": "CM", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 60, "PHY": 70, "Finishing": 80, "Shot Power": 80, "Long Shot": 80, "Volleys": 80, "Penalties": 80}, "rarity": "Common"},
+        ]
+        def shoot_action(_, actor_slot, local_slots):
+            return {"action": "shoot", "actor_slot": actor_slot, "target_slot": next(iter(local_slots)), "risk": 40}, "llm"
+
+        with patch("app.match_lab.resolver.decide_action", side_effect=shoot_action) as decide:
+            result = resolve_match("seed", xi, xi, 10)
+
+        self.assertEqual(decide.call_count, 10)
+        self.assertEqual(result["action_sources"], {"llm": 10, "retried": 0, "fallback": 0})
+        self.assertTrue(all(event["type"] in {"goal", "save"} and event["summary"] for event in result["timeline"]))
+        scores = [event["score"] for event in result["timeline"]]
+        self.assertTrue(all(scores[index]["home"] >= scores[index - 1]["home"] and scores[index]["away"] >= scores[index - 1]["away"] for index in range(1, len(scores))))
+
+    def test_llm_exception_retries_then_falls_back(self):
+        with patch("app.match_lab.actions._call_llm", side_effect=RuntimeError("unavailable")):
+            action, source = decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
+        self.assertEqual(source, "fallback")
+        self.assertEqual(action["action"], "pass")
+        self.assertEqual(action["target_slot"], "rw")
+
+    def test_actions_reject_self_targets(self):
+        self.assertIsNone(parse_action('{"action":"pass","actor_slot":"cm1","target_slot":"cm1","risk":40}', {"cm1", "rw"}, "cm1"))
+
+    def test_match_lab_action_uses_short_model_timeout(self):
+        with patch("app.match_lab.actions._call_llm", return_value='{"action":"pass","actor_slot":"cm1","target_slot":"rw","risk":40}') as call:
+            decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
+        self.assertEqual(call.call_args.kwargs["timeout"], 1)
+
     def test_resolver_normalizes_stats_against_reference_profiles(self):
         strong = [{"slot_id": "st", "card_id": "strong", "stats": {"OVR": 95, "PAC": 95, "SHO": 95, "PAS": 95, "DRI": 95, "DEF": 95, "PHY": 95, "Finishing": 95}, "rarity": "Common"}]
         weak = [{"slot_id": "st", "card_id": "weak", "stats": {"OVR": 40, "PAC": 40, "SHO": 40, "PAS": 40, "DRI": 40, "DEF": 40, "PHY": 40, "Finishing": 40}, "rarity": "Common"}]
@@ -103,7 +135,7 @@ class MatchLabActionTest(unittest.TestCase):
 
         player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
         bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
-        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}}
+        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}}
         with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result), patch("app.match_lab.service.get_service_supabase_client", return_value=ServiceClient()):
             self.assertEqual(run_match_lab("jwt", "user", "4-3-3", "starter", [], False)["id"], "run-1")
 
