@@ -11,6 +11,16 @@ function migrationSource(name: string) {
   return readFileSync(join(migrationsDir, file), 'utf8');
 }
 
+function latestMigrationSourceContaining(needle: string) {
+  const sources = readdirSync(migrationsDir)
+    .filter((entry) => entry.endsWith('.sql'))
+    .sort()
+    .map((entry) => readFileSync(join(migrationsDir, entry), 'utf8'));
+  const source = sources.reverse().find((content) => content.includes(needle));
+  assert.ok(source, `missing migration containing ${needle}`);
+  return source;
+}
+
 test('gameplay profiles preserve source stats behind read-only RLS', () => {
   const source = migrationSource('add_player_card_gameplay_profiles');
 
@@ -34,6 +44,15 @@ test('effective stats are database-derived and browser-read-only', () => {
   assert.match(source, /player_cards_effective_stats_after_rarity/i);
   assert.match(source, /revoke execute on function private\.recompute_player_card_effective_stats\(\) from public, anon, authenticated/i);
   assert.doesNotMatch(source, /grant (insert|update|delete|all) on public\.player_card_gameplay_profiles to authenticated/i);
+});
+
+test('effective stats normalize against unclamped raw catalog ranges', () => {
+  const source = latestMigrationSourceContaining('private.recompute_player_card_effective_stats');
+
+  assert.match(source, /\(stat\.value #>> '\{\}'\)::numeric as value/i);
+  assert.doesNotMatch(source, /least\(100::numeric,\s*greatest\(0::numeric,\s*\(stat\.value #>> '\{\}'\)::numeric\)\)/i);
+  assert.match(source, /round\(\s*least\(\s*100::numeric,\s*greatest\(\s*0::numeric,/is);
+  assert.match(source, /when 'GOAT' then 3\.5/i);
 });
 
 test('match lab uses persisted effective stats, enforces bot bands, and hides raw stats', () => {
