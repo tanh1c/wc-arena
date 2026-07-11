@@ -60,6 +60,15 @@ test('match lab validation requires an eligible distinct profiled eleven', () =>
   const assignments = Object.fromEntries(slots.map((slot, index) => [slot.id, cards[index].id]));
 
   assert.deepEqual(validateMatchLabSquad('4-3-3', assignments, cards), { valid: true, reason: null });
+  for (const card of cards) {
+    const profile = card.player_cards.player_card_gameplay_profiles;
+    if (Array.isArray(profile)) card.player_cards.player_card_gameplay_profiles = profile[0];
+  }
+  assert.deepEqual(validateMatchLabSquad('4-3-3', assignments, cards), { valid: true, reason: null });
+  const profile = cards[0].player_cards.player_card_gameplay_profiles;
+  cards[0].player_cards.player_card_gameplay_profiles = [];
+  assert.deepEqual(validateMatchLabSquad('4-3-3', assignments, cards), { valid: false, reason: 'Every card needs a gameplay profile.' });
+  cards[0].player_cards.player_card_gameplay_profiles = profile;
   assert.equal(validateMatchLabSquad('4-3-3', { ...assignments, rw: cards[0].id }, cards).valid, false);
   assert.equal(validateMatchLabSquad('4-3-3', Object.fromEntries(Object.entries(assignments).slice(1)), cards).valid, false);
   cards[1].card_id = cards[0].card_id;

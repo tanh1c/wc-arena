@@ -44,7 +44,7 @@ export type PlayerCard = {
   image_url: string;
   gif_url: string | null;
   rarity: CardRarity;
-  player_card_gameplay_profiles?: PlayerCardGameplayProfile[];
+  player_card_gameplay_profiles?: PlayerCardGameplayProfile | PlayerCardGameplayProfile[] | null;
 };
 
 export type AdminPlayerCard = PlayerCard & {

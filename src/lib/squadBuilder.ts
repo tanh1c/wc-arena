@@ -76,6 +76,10 @@ export function isCardEligibleForSlot(card: OwnedPlayerCard, slot: SquadSlot) {
   return getCardPositions(card.player_cards).includes(slot.label);
 }
 
+function hasGameplayProfile(profile: OwnedPlayerCard['player_cards']['player_card_gameplay_profiles']) {
+  return Array.isArray(profile) ? profile.length > 0 : Boolean(profile);
+}
+
 export function validateMatchLabSquad(formation: FormationKey, assignments: SquadAssignments, ownedCards: OwnedPlayerCard[]) {
   const slots = getFormationSlots(formation);
   const cardById = new Map(ownedCards.map((card) => [card.id, card]));
@@ -85,7 +89,7 @@ export function validateMatchLabSquad(formation: FormationKey, assignments: Squa
   const selectedCards = slots.map((slot) => cardById.get(assignments[slot.id]));
   if (selectedCards.some((card) => !card)) return { valid: false, reason: 'Choose a card for every slot.' };
   if (new Set(selectedCards.map((card) => card!.card_id)).size !== slots.length) return { valid: false, reason: 'Use one copy of each player card.' };
-  if (selectedCards.some((card) => !card!.player_cards.player_card_gameplay_profiles?.length)) return { valid: false, reason: 'Every card needs a gameplay profile.' };
+  if (selectedCards.some((card) => !hasGameplayProfile(card!.player_cards.player_card_gameplay_profiles))) return { valid: false, reason: 'Every card needs a gameplay profile.' };
   if (selectedCards.some((card, index) => !isCardEligibleForSlot(card!, slots[index]))) return { valid: false, reason: 'Every card must match its slot position.' };
 
   return { valid: true, reason: null };
