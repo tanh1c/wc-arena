@@ -24,5 +24,7 @@ test('match lab uses its own service and excludes reward flow', () => {
   assert.match(source, /formationKeys/);
   assert.match(source, /listSavedSquadFormations/);
   assert.match(source, /pruneAssignmentsForOwnedCards/);
+  assert.match(source, /relative z-10 flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:gap-6 lg:p-6/);
+  assert.doesNotMatch(source, /max-w-7xl/);
   assert.doesNotMatch(source, /sendAgentMessage|openCardPack|forgePlayerCard|Rewards/);
 });
