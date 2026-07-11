@@ -25,6 +25,71 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertEqual(action["action"], "pass")
         self.assertEqual(action["actor_slot"], "cm1")
 
+    def test_match_lab_debug_summaries_stay_out_of_the_persisted_report(self):
+        from app.match_lab.service import run_match_lab
+
+        class InsertBuilder:
+            def select(self, columns):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        class ServiceClient:
+            def table(self, name):
+                return self
+
+            def insert(self, payload):
+                self.payload = payload
+                return InsertBuilder()
+
+        player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
+        bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
+        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}, "hotspot_summaries": [{"minute": 5}]}
+        service = ServiceClient()
+        with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result), patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            response = run_match_lab("jwt", "user", "4-3-3", "starter", [], True)
+
+        self.assertEqual(response["debug"]["hotspot_summaries"], result["hotspot_summaries"])
+        self.assertNotIn("hotspot_summaries", service.payload["final_report"])
+
+    def test_resolver_exposes_safe_deterministic_local_context_only_for_debug(self):
+        xi = [
+            {"slot_id": "st", "card_id": "st", "position": "ST", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+            {"slot_id": "cm", "card_id": "cm", "position": "CM", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+            {"slot_id": "rw", "card_id": "rw", "position": "RW", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+        ]
+        calls = []
+
+        def action(snapshot, actor_slot, target_slots):
+            calls.append((snapshot, actor_slot, target_slots))
+            return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(target_slots)[0], "risk": 20}, "llm"
+
+        with patch("app.match_lab.resolver.decide_action", side_effect=action):
+            result = resolve_match("seed", xi, xi, 10, coach_intents={"home": "keep shape", "away": "press high"}, debug=True)
+            initial_calls = list(calls)
+            comparison = resolve_match("seed", xi, xi, 10, coach_intents={"home": "keep shape", "away": "press high"}, debug=True)
+
+        self.assertEqual(
+            [(item["side"], item["local_actors"], item["action"], item["outcome"]) for item in result["hotspot_summaries"]],
+            [(item["side"], item["local_actors"], item["action"], item["outcome"]) for item in comparison["hotspot_summaries"]],
+        )
+        self.assertEqual(len(result["hotspot_summaries"]), 10)
+        self.assertEqual(len(initial_calls), 10)
+        for summary, (snapshot, actor_slot, target_slots) in zip(result["hotspot_summaries"], initial_calls):
+            local = summary["local_actors"]
+            self.assertEqual(local["carrier"], actor_slot)
+            self.assertLessEqual(len(local["support"]), 2)
+            self.assertLessEqual(len(local["opponents"]), 2)
+            self.assertNotIn(actor_slot, local["support"])
+            self.assertEqual(target_slots, set(local["support"]))
+            self.assertEqual(snapshot["coach_intent"], summary["coach_intent"])
+            self.assertEqual(set(summary), {"minute", "side", "coach_intent", "local_actors", "action", "outcome", "latency_ms"})
+            self.assertTrue(set(local["support"]) <= {"st", "cm", "rw"})
+            self.assertTrue(set(local["opponents"]) <= {"st", "cm", "rw"})
+            self.assertIsInstance(summary["latency_ms"], int)
+        self.assertNotIn("hotspot_summaries", resolve_match("seed", xi, xi, 10))
+
     def test_resolver_is_deterministic_and_emits_supported_events(self):
         xi = [{"slot_id": "gk", "card_id": "gk", "stats": {"GK Reflexes": 100, "GK Diving": 100, "GK Handling": 100, "Positioning": 100, "OVR": 90, "PAC": 1, "SHO": 1, "PAS": 1, "DRI": 1, "DEF": 1, "PHY": 1}, "rarity": "Common"}]
         result = resolve_match("seed", xi, xi, 10)

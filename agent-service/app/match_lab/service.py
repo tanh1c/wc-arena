@@ -12,6 +12,11 @@ BOT_RECIPES = {
     "pressing-academy": {"formation": "4-2-3-1", "ovr_band": "68-84", "identity": "High pressure"},
     "defensive-wall": {"formation": "3-5-2", "ovr_band": "76-91", "identity": "Compact block"},
 }
+COACH_INTENTS = {
+    "Balanced basics": "keep shape and choose safe progression",
+    "High pressure": "press high and play forward quickly",
+    "Compact block": "stay compact and counter through available outlets",
+}
 
 
 def list_bots() -> list[dict[str, str]]:
@@ -101,7 +106,11 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
     player_xi = _owned_xi(access_token, user_id, formation, selections)
     bot_xi = _bot_xi(access_token, bot_id)
     seed = secrets.token_urlsafe(16)
-    result = resolve_match(seed, player_xi, bot_xi, 12)
+    coach_intents = {
+        "home": COACH_INTENTS["Balanced basics"],
+        "away": COACH_INTENTS[BOT_RECIPES[bot_id]["identity"]],
+    }
+    result = resolve_match(seed, player_xi, bot_xi, 12, coach_intents=coach_intents, debug=debug)
     report = {"score": result["score"], "timeline": result["timeline"], "metrics": {"hotspots": len(result["timeline"]), "action_sources": result["action_sources"]}}
     report_text = json.dumps(report, separators=(",", ":"))
     if len(report_text.encode()) > 25600:
@@ -124,7 +133,7 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
     }).select("id").execute()
     debug_payload = None
     if debug:
-        debug_payload = {"hotspots": len(result["timeline"]), "action_sources": result["action_sources"], "strengths": {side: {event: round(value, 3) for event, value in events.items()} for side, events in result["strengths"].items()}}
+        debug_payload = {"hotspots": len(result["timeline"]), "action_sources": result["action_sources"], "strengths": {side: {event: round(value, 3) for event, value in events.items()} for side, events in result["strengths"].items()}, "hotspot_summaries": result["hotspot_summaries"]}
     return {
         "id": response.data[0]["id"],
         "status": "completed",

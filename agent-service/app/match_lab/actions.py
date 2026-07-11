@@ -22,7 +22,7 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
             action = None
         if action:
             return action, "llm" if attempt == 0 else "retried"
-    return {"action": "pass", "actor_slot": actor_slot, "target_slot": next(slot for slot in local_slots if slot != actor_slot), "risk": 20}, "fallback"
+    return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(slot for slot in local_slots if slot != actor_slot)[0], "risk": 20}, "fallback"
 
 
 def parse_action(raw: str | None, local_slots: set[str], required_actor: str) -> dict[str, Any] | None:

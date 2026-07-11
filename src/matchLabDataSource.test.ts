@@ -61,8 +61,8 @@ test('match lab uses persisted effective stats, enforces bot bands, and hides ra
   const source = readFileSync('agent-service/app/match_lab/service.py', 'utf8');
 
   assert.match(source, /player_card_gameplay_profiles\(raw_stats, effective_stats\)/);
-  assert.match(source, /resolve_match\(seed, player_xi, bot_xi, 12\)/);
-  assert.doesNotMatch(source, /resolve_match\(seed, player_xi, bot_xi, 12, _catalog_profiles\(access_token\)\)/);
+  assert.match(source, /resolve_match\(seed, player_xi, bot_xi, 12, coach_intents=coach_intents, debug=debug\)/);
+  assert.doesNotMatch(source, /_catalog_profiles\(access_token\)/);
   assert.match(source, /def _matches_ovr_band/);
   assert.match(source, /_matches_ovr_band\(effective_stats, recipe\["ovr_band"\]\)/);
   assert.match(source, /def sanitize_xi/);

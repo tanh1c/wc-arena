@@ -1,6 +1,7 @@
 import hashlib
 import random
 from collections.abc import Iterable
+from time import perf_counter
 from typing import Any
 
 from app.match_lab.actions import decide_action
@@ -137,19 +138,39 @@ def _summary(side: str, event_type: str, actor_slot: str) -> str:
     return f"{side.title()} {event_type} by {actor_slot.upper()}"
 
 
+def _slots(cards: list[dict[str, Any]], excluded: set[str] | None = None, limit: int = 2) -> list[str]:
+    excluded = excluded or set()
+    slots = []
+    for card in cards:
+        slot = card.get("slot_id")
+        if isinstance(slot, str) and slot and slot not in excluded and slot not in slots:
+            slots.append(slot)
+        if len(slots) == limit:
+            break
+    return slots
+
+
+def _local_actors(squad: list[dict[str, Any]], opponent_squad: list[dict[str, Any]], actor_slot: str) -> dict[str, Any]:
+    return {"carrier": actor_slot, "support": _slots(squad, {actor_slot}), "opponents": _slots(opponent_squad)}
+
+
 def resolve_match(
     seed: str,
     home_xi: list[dict[str, Any]],
     away_xi: list[dict[str, Any]],
     hotspots: int = 12,
     reference_profiles: list[dict[str, Any]] | None = None,
+    coach_intents: dict[str, str] | None = None,
+    debug: bool = False,
 ) -> dict[str, Any]:
     randomizer = random.Random(int(hashlib.sha256(seed.encode()).hexdigest(), 16))
     count = max(10, min(14, hotspots))
     strengths = resolve_team_strengths(home_xi, away_xi, reference_profiles)
     squads = {"home": home_xi, "away": away_xi}
+    coach_intents = coach_intents or {}
     score = {"home": 0, "away": 0}
     timeline = []
+    hotspot_summaries = []
     action_sources = {"llm": 0, "retried": 0, "fallback": 0}
 
     for index in range(count):
@@ -158,18 +179,23 @@ def resolve_match(
         squad = squads[side]
         actor = squad[randomizer.randrange(len(squad))]
         actor_slot = actor.get("slot_id", "player")
-        target_slots = {card.get("slot_id", "player") for card in squad if card.get("slot_id") != actor_slot}
+        local_actors = _local_actors(squad, squads[opponents], actor_slot)
         snapshot = {
             "minute": min(90, 5 + index * 8),
             "side": side,
             "score": score,
             "actor": {"slot_id": actor_slot, "position": actor.get("position")},
+            "coach_intent": coach_intents.get(side, "keep shape and choose safe progression"),
+            "local_actors": local_actors,
             "recent_events": [event["type"] for event in timeline[-3:]],
         }
+        target_slots = set(local_actors["support"])
         if target_slots:
+            started = perf_counter()
             action, source = decide_action(snapshot, actor_slot, target_slots)
+            latency_ms = round((perf_counter() - started) * 1000)
         else:
-            action, source = {"action": "pass", "actor_slot": actor_slot, "target_slot": "", "risk": 20}, "fallback"
+            action, source, latency_ms = {"action": "pass", "actor_slot": actor_slot, "target_slot": "", "risk": 20}, "fallback", 0
         action_sources[source] += 1
         action_type = action["action"]
 
@@ -188,5 +214,18 @@ def resolve_match(
             else:
                 event_type = "possession"
         timeline.append({"minute": snapshot["minute"], "type": event_type, "side": side, "score": dict(score), "summary": _summary(side, event_type, actor_slot)})
+        if debug:
+            hotspot_summaries.append({
+                "minute": snapshot["minute"],
+                "side": side,
+                "coach_intent": snapshot["coach_intent"],
+                "local_actors": local_actors,
+                "action": {"type": action_type, "target_slot": action["target_slot"], "risk": action["risk"], "source": source},
+                "outcome": {"type": event_type, "score": dict(score)},
+                "latency_ms": latency_ms,
+            })
 
-    return {"score": score, "timeline": timeline, "strengths": strengths, "action_sources": action_sources}
+    result = {"score": score, "timeline": timeline, "strengths": strengths, "action_sources": action_sources}
+    if debug:
+        result["hotspot_summaries"] = hotspot_summaries
+    return result

@@ -24,6 +24,9 @@ test('match lab uses its own service and excludes reward flow', () => {
   assert.match(source, /matchLabFormationKeys/);
   assert.match(source, /availableFormations=\{matchLabFormationKeys\}/);
   assert.match(source, /event\.summary \?\? event\.type\.toUpperCase\(\)/);
+  assert.match(source, /aria-expanded/);
+  assert.match(source, /hotspot_summaries/);
+  assert.doesNotMatch(source, /JSON\.stringify\(result\.debug/);
   assert.doesNotMatch(source, /formationKeys/);
   assert.match(source, /listSavedSquadFormations/);
   assert.match(source, /pruneAssignmentsForOwnedCards/);

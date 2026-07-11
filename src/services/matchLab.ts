@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 const agentApiUrl = (import.meta.env.VITE_AGENT_API_URL as string | undefined)?.replace(/\/$/, '') || 'http://localhost:8000';
 
 export type MatchLabBot = { id: 'starter' | 'pressing-academy' | 'defensive-wall'; formation: '4-3-3' | '4-2-3-1' | '3-5-2'; ovr_band: string; identity: string };
-export type MatchLabRun = { status: string; formation: string; bot_id: string; score: { home: number; away: number }; timeline: Array<{ minute: number; type: string; side: string; score: { home: number; away: number }; summary?: string }>; debug?: { hotspots: number; action_sources: Record<string, number>; strengths: Record<string, Record<string, number>> } | null };
+export type MatchLabRun = { status: string; formation: string; bot_id: string; score: { home: number; away: number }; timeline: Array<{ minute: number; type: string; side: string; score: { home: number; away: number }; summary?: string }>; debug?: { hotspots: number; action_sources: Record<string, number>; strengths: Record<string, Record<string, number>>; hotspot_summaries: Array<{ minute: number; side: string; coach_intent: string; local_actors: { carrier: string; support: string[]; opponents: string[] }; action: { type: string; target_slot: string; risk: number; source: string }; outcome: { type: string; score: { home: number; away: number } }; latency_ms: number }> } | null };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const { data, error } = await supabase.auth.getSession();
