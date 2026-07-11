@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { assignCardToSlot, clearSlot, getAssignedOwnedCardIds, getCardPositions, getFormationSlots, getSquadSummary, isCardEligibleForSlot, validateMatchLabSquad } from './squadBuilder';
+import { assignCardToSlot, clearSlot, getAssignedOwnedCardIds, getCardPositions, getFormationSlots, getSquadSummary, isCardEligibleForSlot, pruneAssignmentsForOwnedCards, validateMatchLabSquad } from './squadBuilder';
 import type { OwnedPlayerCard } from '../services/cards';
 
 function ownedCard(id: string, rating = 80, rarity: OwnedPlayerCard['player_cards']['rarity'] = 'Common'): OwnedPlayerCard {
@@ -105,6 +105,35 @@ test('clearing a slot removes only that slot', () => {
 
 test('assigned owned card ids are exposed as a set', () => {
   assert.deepEqual(getAssignedOwnedCardIds({ st: 'owned-1', lw: 'owned-2' }), new Set(['owned-1', 'owned-2']));
+});
+
+test('imported assignments keep only owned, eligible, distinct formation cards', () => {
+  const slots = getFormationSlots('4-3-3');
+  const cards = slots.map((slot, index) => {
+    const card = ownedCard(`owned-${index}`);
+    card.card_id = `player-${index}`;
+    card.player_cards.position = slot.label;
+    return card;
+  });
+  const duplicatePlayer = ownedCard('owned-copy');
+  duplicatePlayer.card_id = cards[0].card_id;
+  duplicatePlayer.player_cards.position = 'ST';
+  const wrongPosition = ownedCard('owned-wrong');
+  wrongPosition.card_id = 'player-wrong';
+  wrongPosition.player_cards.position = 'GK';
+
+  assert.deepEqual(pruneAssignmentsForOwnedCards('4-3-3', {
+    gk: cards[0].id,
+    lb: cards[1].id,
+    cb1: cards[1].id,
+    cb2: duplicatePlayer.id,
+    rb: wrongPosition.id,
+    missing: cards[2].id,
+    cm1: 'missing-owned-card',
+  }, [...cards, duplicatePlayer, wrongPosition]), {
+    gk: cards[0].id,
+    lb: cards[1].id,
+  });
 });
 
 test('squad summary is stable for empty and partial squads', () => {

@@ -107,6 +107,25 @@ export function getAssignedOwnedCardIds(assignments: SquadAssignments) {
   return new Set(Object.values(assignments));
 }
 
+export function pruneAssignmentsForOwnedCards(formation: FormationKey, assignments: SquadAssignments, ownedCards: OwnedPlayerCard[]): SquadAssignments {
+  const slots = new Map(getFormationSlots(formation).map((slot) => [slot.id, slot]));
+  const cards = new Map(ownedCards.map((card) => [card.id, card]));
+  const usedOwnedCardIds = new Set<string>();
+  const usedCardIds = new Set<string>();
+  const pruned: SquadAssignments = {};
+
+  for (const [slotId, ownedCardId] of Object.entries(assignments)) {
+    const slot = slots.get(slotId);
+    const card = cards.get(ownedCardId);
+    if (!slot || !card || usedOwnedCardIds.has(card.id) || usedCardIds.has(card.card_id) || !isCardEligibleForSlot(card, slot)) continue;
+    pruned[slotId] = card.id;
+    usedOwnedCardIds.add(card.id);
+    usedCardIds.add(card.card_id);
+  }
+
+  return pruned;
+}
+
 export function getSquadSummary(assignments: SquadAssignments, ownedCards: OwnedPlayerCard[]): SquadSummary {
   const cardById = new Map(ownedCards.map((card) => [card.id, card]));
   const cards = Object.values(assignments).map((id) => cardById.get(id)).filter((card): card is OwnedPlayerCard => Boolean(card));

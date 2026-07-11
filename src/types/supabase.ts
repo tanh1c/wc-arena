@@ -1988,6 +1988,36 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_squad_formations: {
+        Row: {
+          assignments: Json
+          created_at: string
+          formation: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assignments?: Json
+          created_at?: string
+          formation: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assignments?: Json
+          created_at?: string
+          formation?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       teams: {
         Row: {
           country_code: string
