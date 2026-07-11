@@ -55,7 +55,7 @@ test('admin player-card catalog edits complete gameplay profiles inline without 
   assert.match(source, /Raw stats \(editable\)/);
   assert.match(source, /Effective stats \(derived\)/);
   assert.match(source, /effective_stats/);
-  assert.match(source, /Derived from the current catalog range and rarity bonus\./);
+  assert.match(source, /Preserves source archetype inside a rarity power band with position-weighted OVR\./);
   assert.match(source, /replacePlayerCardGameplayProfileRawStats/);
   assert.match(source, /importPlayerCardGameplayProfiles\(matchedProfiles\)[\s\S]*await loadPlayerCards\(\)/);
   assert.match(source, /Save stats/);

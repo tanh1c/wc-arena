@@ -803,7 +803,7 @@ export default function AdminDashboard({ themeControls }: AdminDashboardProps) {
 
             <div className="min-w-0 flex flex-col">
               <div className="bg-main text-inv font-black px-4 py-3 uppercase tracking-wide text-sm border-b-4 border-main">Catalog ({visiblePlayerCards.length}/{playerCards.length})</div>
-              <div className="border-b-4 border-main bg-muted p-4 text-xs font-bold normal-case">Raw stats are imported from CSV. Effective stats are read-only. Derived from the current catalog range and rarity bonus.</div>
+              <div className="border-b-4 border-main bg-muted p-4 text-xs font-bold normal-case">Raw stats are imported from CSV. Effective stats are read-only. Preserves source archetype inside a rarity power band with position-weighted OVR.</div>
               <div className="grid grid-cols-1 gap-3 border-b-4 border-main bg-card p-4 md:grid-cols-[minmax(0,1fr)_180px_220px_220px]">
                 <label className="flex flex-col gap-1 text-[10px] font-black uppercase">
                   Search cards

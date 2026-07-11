@@ -48,6 +48,7 @@ class MatchLabActionTest(unittest.TestCase):
         card = {
             "slot_id": "rw",
             "card_id": "salah",
+            "position": "RW",
             "effective_stats": {"OVR": 50, "PAC": 50, "SHO": 50, "PAS": 50, "DRI": 50, "DEF": 50, "PHY": 50},
             "rarity": "GOAT",
         }
@@ -55,6 +56,23 @@ class MatchLabActionTest(unittest.TestCase):
         strengths = resolve_team_strengths([card], [card])
 
         self.assertEqual(strengths["home"]["shot"], 0.5)
+
+    def test_goalkeeper_drives_save_strength(self):
+        goalkeeper = {"position": "GK", "effective_stats": {"OVR": 95, "DEF": 95, "GK Reflexes": 95, "GK Diving": 95, "GK Handling": 95, "Positioning": 95}}
+        outfield = {"position": "ST", "effective_stats": {"OVR": 50, "DEF": 50, "GK Reflexes": 50, "GK Diving": 50, "GK Handling": 50, "Positioning": 50}}
+
+        strengths = resolve_team_strengths([goalkeeper, outfield], [outfield, outfield])
+
+        self.assertEqual(strengths["home"]["save"], 0.95)
+        self.assertEqual(strengths["away"]["save"], 0.5)
+
+    def test_forward_drives_shot_strength(self):
+        forward = {"position": "ST", "effective_stats": {"OVR": 95, "PAC": 95, "SHO": 95, "PAS": 50, "DRI": 50, "DEF": 50, "PHY": 50, "Finishing": 95, "Shot Power": 95, "Long Shot": 95, "Volleys": 95, "Penalties": 95}}
+        defender = {"position": "CB", "effective_stats": {"OVR": 50, "PAC": 50, "SHO": 50, "PAS": 50, "DRI": 50, "DEF": 95, "PHY": 50, "Finishing": 50, "Shot Power": 50, "Long Shot": 50, "Volleys": 50, "Penalties": 50}}
+
+        strengths = resolve_team_strengths([forward, defender], [defender, defender])
+
+        self.assertGreater(strengths["home"]["shot"], strengths["away"]["shot"])
 
     def test_xi_requires_unique_position_eligible_cards(self):
         cards = [

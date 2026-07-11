@@ -8,9 +8,9 @@ from app.match_lab.rules import FORMATIONS, validate_xi
 from app.tools.supabase_tools import get_service_supabase_client, get_user_supabase_client
 
 BOT_RECIPES = {
-    "starter": {"formation": "4-3-3", "ovr_band": "70-84", "identity": "Balanced basics"},
-    "pressing-academy": {"formation": "4-2-3-1", "ovr_band": "75-88", "identity": "High pressure"},
-    "defensive-wall": {"formation": "3-5-2", "ovr_band": "78-90", "identity": "Compact block"},
+    "starter": {"formation": "4-3-3", "ovr_band": "50-68", "identity": "Balanced basics"},
+    "pressing-academy": {"formation": "4-2-3-1", "ovr_band": "68-84", "identity": "High pressure"},
+    "defensive-wall": {"formation": "3-5-2", "ovr_band": "76-91", "identity": "Compact block"},
 }
 
 
@@ -80,15 +80,20 @@ def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     used = set()
     for slot_id, position in slots.items():
-        card = next((row for row in cards if row["id"] not in used and position in {item.strip() for item in [row["position"], *(row.get("alternate_positions") or "").split(",")]} and (profile := _profile(row)) and _matches_ovr_band(profile, recipe["ovr_band"])), None)
-        if not card:
+        card = None
+        effective_stats = None
+        for candidate in cards:
+            effective_stats = _profile(candidate, "effective_stats")
+            if candidate["id"] not in used and position in {item.strip() for item in [candidate["position"], *(candidate.get("alternate_positions") or "").split(",")]} and effective_stats and _matches_ovr_band(effective_stats, recipe["ovr_band"]):
+                card = candidate
+                break
+        if not card or not effective_stats:
             raise RuntimeError("Match Lab bot roster is not configured.")
         raw_stats = _profile(card)
         if not raw_stats:
             raise RuntimeError("Match Lab bot roster is not configured.")
-        effective_stats = _profile(card, "effective_stats")
         used.add(card["id"])
-        selected.append({"slot_id": slot_id, "card_id": card["id"], "position": card["position"], "stats": effective_stats or raw_stats, "effective_stats": effective_stats, "rarity": card["rarity"]})
+        selected.append({"slot_id": slot_id, "card_id": card["id"], "position": card["position"], "stats": effective_stats, "effective_stats": effective_stats, "rarity": card["rarity"]})
     return selected
 
 

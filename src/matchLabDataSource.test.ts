@@ -46,13 +46,15 @@ test('effective stats are database-derived and browser-read-only', () => {
   assert.doesNotMatch(source, /grant (insert|update|delete|all) on public\.player_card_gameplay_profiles to authenticated/i);
 });
 
-test('effective stats normalize against unclamped raw catalog ranges', () => {
+test('effective stats preserve archetypes inside explicit rarity power budgets', () => {
   const source = latestMigrationSourceContaining('private.recompute_player_card_effective_stats');
 
-  assert.match(source, /\(stat\.value #>> '\{\}'\)::numeric as value/i);
-  assert.doesNotMatch(source, /least\(100::numeric,\s*greatest\(0::numeric,\s*\(stat\.value #>> '\{\}'\)::numeric\)\)/i);
-  assert.match(source, /round\(\s*least\(\s*100::numeric,\s*greatest\(\s*0::numeric,/is);
-  assert.match(source, /when 'GOAT' then 3\.5/i);
+  assert.match(source, /when 'Common' then 50::numeric[\s\S]*when 'Common' then 60::numeric/i);
+  assert.match(source, /when 'GOAT' then 98::numeric[\s\S]*when 'GOAT' then 100::numeric/i);
+  assert.match(source, /when position = 'GK' then 'GK'/i);
+  assert.match(source, /when stat\.key in \('Total Stats', 'Base Stats', 'TotalStats', 'total_stats'\) then false/i);
+  assert.match(source, /'OVR', round\(least\(band\.maximum_value, greatest\(band\.minimum_value,/is);
+  assert.doesNotMatch(source, /when 'GOAT' then 3\.5/i);
 });
 
 test('match lab uses persisted effective stats, enforces bot bands, and hides raw stats', () => {
@@ -62,7 +64,7 @@ test('match lab uses persisted effective stats, enforces bot bands, and hides ra
   assert.match(source, /resolve_match\(seed, player_xi, bot_xi, 12\)/);
   assert.doesNotMatch(source, /resolve_match\(seed, player_xi, bot_xi, 12, _catalog_profiles\(access_token\)\)/);
   assert.match(source, /def _matches_ovr_band/);
-  assert.match(source, /_matches_ovr_band\(profile, recipe\["ovr_band"\]\)/);
+  assert.match(source, /_matches_ovr_band\(effective_stats, recipe\["ovr_band"\]\)/);
   assert.match(source, /def sanitize_xi/);
   assert.match(source, /"player_xi": sanitize_xi\(player_xi\)/);
   assert.match(source, /"bot_xi": sanitize_xi\(bot_xi\)/);

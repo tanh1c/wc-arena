@@ -21,6 +21,23 @@ EVENT_STATS = {
     "shot": (("Finishing", "SHO"), ("Shot Power", "SHO"), ("Long Shot", "SHO"), ("Volleys", "SHO"), ("Penalties", "SHO")),
     "save": (("GK Reflexes", "DEF", "OVR"), ("GK Diving", "DEF", "OVR"), ("GK Handling", "DEF", "OVR"), ("Positioning", "DEF", "OVR")),
 }
+POSITION_EVENT_WEIGHTS = {
+    "possession": {"GK": 0.10, "DEF": 0.25, "MID": 0.40, "FWD": 0.25},
+    "pass": {"GK": 0.10, "DEF": 0.25, "MID": 0.40, "FWD": 0.25},
+    "dribble": {"GK": 0.05, "DEF": 0.20, "MID": 0.35, "FWD": 0.40},
+    "shot": {"GK": 0.05, "DEF": 0.15, "MID": 0.30, "FWD": 0.50},
+    "save": {"GK": 0.70, "DEF": 0.25, "MID": 0.05, "FWD": 0.0},
+}
+
+
+def _position_group(position: Any) -> str:
+    if position == "GK":
+        return "GK"
+    if position in {"CB", "LB", "RB", "LWB", "RWB"}:
+        return "DEF"
+    if position in {"CDM", "CM", "CAM", "LM", "RM"}:
+        return "MID"
+    return "FWD"
 
 
 def _number(value: Any) -> float | None:
@@ -91,7 +108,12 @@ def resolve_team_strengths(
     def average(cards: list[dict[str, Any]], event_type: str) -> float:
         if not cards:
             return 0.5
-        return sum(_card_strength(card, event_type, reference_profiles) for card in cards) / len(cards)
+        weights = POSITION_EVENT_WEIGHTS[event_type]
+        weighted_cards = [(card, weights[_position_group(card.get("position"))]) for card in cards]
+        total_weight = sum(weight for _, weight in weighted_cards)
+        if not total_weight:
+            return 0.5
+        return sum(_card_strength(card, event_type, reference_profiles) * weight for card, weight in weighted_cards) / total_weight
 
     return {
         "home": {event_type: average(home_xi, event_type) for event_type in EVENT_STATS},
