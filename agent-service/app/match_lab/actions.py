@@ -6,6 +6,10 @@ from app.graph.nodes import _call_llm
 ALLOWED_ACTIONS = {"pass", "dribble", "shoot"}
 
 
+class ProviderActionError(RuntimeError):
+    pass
+
+
 def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[str]) -> tuple[dict[str, Any], str]:
     prompt = "\n".join([
         "Choose one legal football action for this Match Lab highlight.",
@@ -15,13 +19,17 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
         f"Allowed target slots: {sorted(local_slots)}",
         f"Safe match snapshot: {json.dumps(snapshot, separators=(',', ':'))}",
     ])
+    provider_failures = 0
     for attempt in range(2):
         try:
             action = parse_action(_call_llm(prompt, timeout=1), local_slots, actor_slot)
         except RuntimeError:
-            action = None
+            provider_failures += 1
+            continue
         if action:
             return action, "llm" if attempt == 0 else "retried"
+    if provider_failures == 2:
+        raise ProviderActionError("Match Lab model is unavailable.")
     return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(slot for slot in local_slots if slot != actor_slot)[0], "risk": 20}, "fallback"
 
 

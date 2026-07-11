@@ -2,8 +2,8 @@ import unittest
 
 from unittest.mock import patch
 
-from app.match_lab.actions import decide_action, parse_action
-from app.match_lab.resolver import rarity_modifier, resolve_match, resolve_team_strengths
+from app.match_lab.actions import ProviderActionError, decide_action, parse_action
+from app.match_lab.resolver import MatchPausedError, rarity_modifier, resolve_match, resolve_team_strengths
 from app.match_lab.rules import validate_xi
 
 
@@ -42,6 +42,16 @@ class MatchLabActionTest(unittest.TestCase):
             def insert(self, payload):
                 self.payload = payload
                 return InsertBuilder()
+
+            def update(self, payload):
+                self.update_payload = payload
+                return self
+
+            def eq(self, column, value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
 
         player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
         bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
@@ -90,6 +100,40 @@ class MatchLabActionTest(unittest.TestCase):
             self.assertIsInstance(summary["latency_ms"], int)
         self.assertNotIn("hotspot_summaries", resolve_match("seed", xi, xi, 10))
 
+    def test_resume_continues_at_the_paused_hotspot_without_replaying_events(self):
+        xi = [
+            {"slot_id": "st", "card_id": "st", "position": "ST", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+            {"slot_id": "cm", "card_id": "cm", "position": "CM", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+        ]
+        def pass_action(_, actor_slot, target_slots):
+            return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(target_slots)[0], "risk": 20}, "llm"
+
+        with patch("app.match_lab.resolver.decide_action", side_effect=pass_action):
+            complete = resolve_match("seed", xi, xi, 10)
+
+        with patch("app.match_lab.resolver.decide_action", side_effect=[
+            ({"action": "pass", "actor_slot": "st", "target_slot": "cm", "risk": 20}, "llm"),
+            ({"action": "pass", "actor_slot": "st", "target_slot": "cm", "risk": 20}, "llm"),
+            ProviderActionError("unavailable"),
+        ]):
+            with self.assertRaises(MatchPausedError) as paused:
+                resolve_match("seed", xi, xi, 10)
+
+        partial = paused.exception.result
+        with patch("app.match_lab.resolver.decide_action", side_effect=pass_action):
+            resumed = resolve_match(
+                "seed", xi, xi, 10,
+                start_index=partial["hotspot_index"],
+                initial_score=partial["score"],
+                initial_timeline=partial["timeline"],
+                initial_action_sources=partial["action_sources"],
+            )
+
+        self.assertEqual(partial["hotspot_index"], 2)
+        self.assertEqual(len(partial["timeline"]), 2)
+        self.assertEqual(resumed["timeline"][:2], partial["timeline"])
+        self.assertEqual(resumed, complete)
+
     def test_resolver_is_deterministic_and_emits_supported_events(self):
         xi = [{"slot_id": "gk", "card_id": "gk", "stats": {"GK Reflexes": 100, "GK Diving": 100, "GK Handling": 100, "Positioning": 100, "OVR": 90, "PAC": 1, "SHO": 1, "PAS": 1, "DRI": 1, "DEF": 1, "PHY": 1}, "rarity": "Common"}]
         result = resolve_match("seed", xi, xi, 10)
@@ -114,8 +158,13 @@ class MatchLabActionTest(unittest.TestCase):
         scores = [event["score"] for event in result["timeline"]]
         self.assertTrue(all(scores[index]["home"] >= scores[index - 1]["home"] and scores[index]["away"] >= scores[index - 1]["away"] for index in range(1, len(scores))))
 
-    def test_llm_exception_retries_then_falls_back(self):
+    def test_provider_exception_retries_then_pauses(self):
         with patch("app.match_lab.actions._call_llm", side_effect=RuntimeError("unavailable")):
+            with self.assertRaises(ProviderActionError):
+                decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
+
+    def test_llm_exception_retries_then_falls_back(self):
+        with patch("app.match_lab.actions._call_llm", side_effect=["bad", "still bad"]):
             action, source = decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
         self.assertEqual(source, "fallback")
         self.assertEqual(action["action"], "pass")
@@ -178,6 +227,70 @@ class MatchLabActionTest(unittest.TestCase):
         ]
         self.assertIsNone(validate_xi("4-3-3", cards))
 
+    def test_completed_run_clears_server_only_resolver_state(self):
+        from app.match_lab.service import run_match_lab
+
+        class InsertBuilder:
+            def select(self, columns):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        class ServiceClient:
+            def table(self, name):
+                return self
+
+            def insert(self, payload):
+                self.insert_payload = payload
+                return InsertBuilder()
+
+            def update(self, payload):
+                self.update_payload = payload
+                return self
+
+            def eq(self, column, value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
+        bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
+        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}}
+        service = ServiceClient()
+        with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result), patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            run_match_lab("jwt", "user", "4-3-3", "starter", [], False)
+
+        self.assertIsNone(service.update_payload["resolver_state"])
+
+    def test_feedback_whitelists_only_ratings_and_text(self):
+        from app.match_lab.service import submit_match_lab_feedback
+
+        class ServiceClient:
+            def table(self, name):
+                return self
+
+            def select(self, columns):
+                return self
+
+            def eq(self, column, value):
+                return self
+
+            def update(self, payload):
+                self.update_payload = payload
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"status": "completed"}]})()
+
+        service = ServiceClient()
+        feedback = {"fun_rating": 5, "clarity_rating": 4, "fairness_rating": 3, "feedback_text": "Good", "status": "abandoned"}
+        with patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            submit_match_lab_feedback("user", "run-1", feedback)
+
+        self.assertEqual(service.update_payload, {"fun_rating": 5, "clarity_rating": 4, "fairness_rating": 3, "feedback_text": "Good"})
+
     def test_match_lab_run_reads_the_inserted_run_id_from_list_response(self):
         from app.match_lab.service import run_match_lab
 
@@ -197,6 +310,16 @@ class MatchLabActionTest(unittest.TestCase):
             def insert(self, payload):
                 self.payload = payload
                 return InsertBuilder()
+
+            def update(self, payload):
+                self.update_payload = payload
+                return self
+
+            def eq(self, column, value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
 
         player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
         bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]

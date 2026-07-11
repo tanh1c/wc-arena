@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from time import perf_counter
 from typing import Any
 
-from app.match_lab.actions import decide_action
+from app.match_lab.actions import ProviderActionError, decide_action
 
 EVENT_TYPES = ("possession", "pass", "dribble", "shot", "save", "goal")
 RARITY_MODIFIERS = {
@@ -154,6 +154,12 @@ def _local_actors(squad: list[dict[str, Any]], opponent_squad: list[dict[str, An
     return {"carrier": actor_slot, "support": _slots(squad, {actor_slot}), "opponents": _slots(opponent_squad)}
 
 
+class MatchPausedError(RuntimeError):
+    def __init__(self, result: dict[str, Any]):
+        super().__init__("Match Lab model is unavailable.")
+        self.result = result
+
+
 def resolve_match(
     seed: str,
     home_xi: list[dict[str, Any]],
@@ -162,18 +168,22 @@ def resolve_match(
     reference_profiles: list[dict[str, Any]] | None = None,
     coach_intents: dict[str, str] | None = None,
     debug: bool = False,
+    start_index: int = 0,
+    initial_score: dict[str, int] | None = None,
+    initial_timeline: list[dict[str, Any]] | None = None,
+    initial_action_sources: dict[str, int] | None = None,
 ) -> dict[str, Any]:
-    randomizer = random.Random(int(hashlib.sha256(seed.encode()).hexdigest(), 16))
     count = max(10, min(14, hotspots))
     strengths = resolve_team_strengths(home_xi, away_xi, reference_profiles)
     squads = {"home": home_xi, "away": away_xi}
     coach_intents = coach_intents or {}
-    score = {"home": 0, "away": 0}
-    timeline = []
+    score = dict(initial_score or {"home": 0, "away": 0})
+    timeline = list(initial_timeline or [])
     hotspot_summaries = []
-    action_sources = {"llm": 0, "retried": 0, "fallback": 0}
+    action_sources = {"llm": 0, "retried": 0, "fallback": 0, **(initial_action_sources or {})}
 
-    for index in range(count):
+    for index in range(start_index, count):
+        randomizer = random.Random(int(hashlib.sha256(f"{seed}:{index}".encode()).hexdigest(), 16))
         side = _pick_side(randomizer, strengths["home"]["possession"], strengths["away"]["possession"])
         opponents = "away" if side == "home" else "home"
         squad = squads[side]
@@ -192,7 +202,10 @@ def resolve_match(
         target_slots = set(local_actors["support"])
         if target_slots:
             started = perf_counter()
-            action, source = decide_action(snapshot, actor_slot, target_slots)
+            try:
+                action, source = decide_action(snapshot, actor_slot, target_slots)
+            except ProviderActionError as exc:
+                raise MatchPausedError({"score": score, "timeline": timeline, "strengths": strengths, "action_sources": action_sources, "hotspot_index": index}) from exc
             latency_ms = round((perf_counter() - started) * 1000)
         else:
             action, source, latency_ms = {"action": "pass", "actor_slot": actor_slot, "target_slot": "", "risk": 20}, "fallback", 0

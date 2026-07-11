@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 from app.auth import verify_supabase_user
 from app.graph.workflow import run_agent_turn
 from app.match_lab.models import MatchLabFeedbackRequest, MatchLabRunRequest
-from app.match_lab.service import list_bots, run_match_lab
+from app.match_lab.service import abandon_match_lab, list_bots, list_match_lab_runs, resume_match_lab, run_match_lab, submit_match_lab_feedback
 from app.models import AgentChatRequest, AgentChatResponse, AuthenticatedUser
 from app.picks.runner import run_agent_picks
 from app.settings import get_settings
@@ -39,6 +39,41 @@ async def match_lab_run(payload: MatchLabRunRequest, user: AuthenticatedUser = D
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.get("/match-lab/runs")
+async def match_lab_runs(user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    return {"runs": list_match_lab_runs(user.user_id)}
+
+
+@router.post("/match-lab/runs/{run_id}/resume")
+async def match_lab_resume(run_id: str, debug: bool = False, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    try:
+        return resume_match_lab(user.user_id, run_id, debug)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/match-lab/runs/{run_id}/abandon")
+async def match_lab_abandon(run_id: str, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    try:
+        return abandon_match_lab(user.user_id, run_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/match-lab/runs/{run_id}/feedback")
+async def match_lab_feedback(run_id: str, payload: MatchLabFeedbackRequest, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    try:
+        return submit_match_lab_feedback(user.user_id, run_id, payload.model_dump())
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.post("/agent/chat", response_model=AgentChatResponse)

@@ -61,13 +61,16 @@ test('match lab uses persisted effective stats, enforces bot bands, and hides ra
   const source = readFileSync('agent-service/app/match_lab/service.py', 'utf8');
 
   assert.match(source, /player_card_gameplay_profiles\(raw_stats, effective_stats\)/);
-  assert.match(source, /resolve_match\(seed, player_xi, bot_xi, 12, coach_intents=coach_intents, debug=debug\)/);
+  assert.match(source, /start_index=row\["hotspot_index"\]/);
+  assert.match(source, /initial_timeline=row\["broadcast_timeline"\]/);
+  assert.match(source, /"resolver_state": None/);
+  assert.match(source, /\.eq\("id", row\["id"\]\)\.eq\("user_id", row\["user_id"\]\)/);
   assert.doesNotMatch(source, /_catalog_profiles\(access_token\)/);
   assert.match(source, /def _matches_ovr_band/);
-  assert.match(source, /_matches_ovr_band\(effective_stats, recipe\["ovr_band"\]\)/);
+  assert.match(source, /_matches_ovr_band\(_profile\(candidate, "effective_stats"\) or \{\}, recipe\["ovr_band"\]\)/);
   assert.match(source, /def sanitize_xi/);
-  assert.match(source, /"player_xi": sanitize_xi\(player_xi\)/);
-  assert.match(source, /"bot_xi": sanitize_xi\(bot_xi\)/);
+  assert.match(source, /"player_xi": sanitize_xi\(state\["home_xi"\]\)/);
+  assert.match(source, /"bot_xi": sanitize_xi\(state\["away_xi"\]\)/);
   assert.doesNotMatch(source, /"player_xi": player_xi/);
   assert.match(source, /"strengths": \{side:/);
   assert.match(source, /for key in \("slot_id", "card_id", "owned_card_id", "position", "rarity"\)/);
@@ -85,4 +88,14 @@ test('match lab reports are owner-readable, compact, and expire after ninety day
   assert.doesNotMatch(source, /for (insert|update|delete) to authenticated/i);
   assert.match(source, /match_lab_runs.*interval '90 days'/is);
   assert.doesNotMatch(source, /grant (insert|update|delete|all) on public\.match_lab_runs to authenticated/i);
+});
+
+test('paused Match Lab resolver state is server-only', () => {
+  const migration = migrationSource('match_lab_resume_state');
+  const service = readFileSync('agent-service/app/match_lab/service.py', 'utf8');
+
+  assert.match(migration, /add column resolver_state jsonb/i);
+  assert.match(service, /"resolver_state": \{"home_xi": home_xi, "away_xi": away_xi/);
+  assert.match(service, /"resolver_state": None/);
+  assert.doesNotMatch(service, /select\([^\n]*resolver_state/);
 });
