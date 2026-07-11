@@ -121,12 +121,12 @@ def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, 
         "broadcast_timeline": result["timeline"],
         "final_report": report,
         "completed_at": datetime.now(timezone.utc).isoformat(),
-    }).select("id").single().execute()
+    }).select("id").execute()
     debug_payload = None
     if debug:
         debug_payload = {"hotspots": len(result["timeline"]), "action_source": "deterministic", "strengths": {side: {event: round(value, 3) for event, value in events.items()} for side, events in result["strengths"].items()}}
     return {
-        "id": response.data["id"],
+        "id": response.data[0]["id"],
         "status": "completed",
         "formation": formation,
         "bot_id": bot_id,

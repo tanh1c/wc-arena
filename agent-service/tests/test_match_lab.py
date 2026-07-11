@@ -81,6 +81,32 @@ class MatchLabActionTest(unittest.TestCase):
         ]
         self.assertIsNone(validate_xi("4-3-3", cards))
 
+    def test_match_lab_run_reads_the_inserted_run_id_from_list_response(self):
+        from app.match_lab.service import run_match_lab
+
+        class InsertBuilder:
+            def select(self, columns):
+                self.columns = columns
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        class ServiceClient:
+            def table(self, name):
+                self.table_name = name
+                return self
+
+            def insert(self, payload):
+                self.payload = payload
+                return InsertBuilder()
+
+        player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
+        bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
+        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}}
+        with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result), patch("app.match_lab.service.get_service_supabase_client", return_value=ServiceClient()):
+            self.assertEqual(run_match_lab("jwt", "user", "4-3-3", "starter", [], False)["id"], "run-1")
+
 
 if __name__ == "__main__":
     unittest.main()
