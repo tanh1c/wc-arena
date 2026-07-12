@@ -205,6 +205,7 @@ class MatchLabActionTest(unittest.TestCase):
         request = httpx.Request("POST", "https://provider.example/v1/chat/completions")
         cases = [
             (httpx.TimeoutException("private timeout"), {"category": "timeout", "exception_class": "TimeoutException"}),
+            (httpx.ReadTimeout("private response body", request=request), {"category": "timeout", "exception_class": "ReadTimeout"}),
             (httpx.ConnectError("private endpoint", request=request), {"category": "provider_error", "exception_class": "ConnectError"}),
             (httpx.HTTPStatusError("private provider body", request=request, response=httpx.Response(429, request=request)), {"category": "rate_limit", "exception_class": "HTTPStatusError"}),
             (httpx.HTTPStatusError("private provider body", request=request, response=httpx.Response(401, request=request)), {"category": "client_error", "exception_class": "HTTPStatusError"}),
@@ -224,6 +225,27 @@ class MatchLabActionTest(unittest.TestCase):
 
         self.assertEqual(call.call_count, 2)
         self.assertEqual([item.kwargs for item in call.call_args_list], [{}, {}])
+
+    def test_read_timeouts_retry_once_then_use_safe_fallback(self):
+        from app.match_lab.actions import _MatchLabLLMError
+
+        timeout = _MatchLabLLMError({"category": "timeout", "exception_class": "ReadTimeout"})
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=timeout) as call:
+            with self.assertLogs("app.match_lab.actions", "INFO") as logs:
+                action, source = decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(source, "fallback")
+        self.assertEqual(action, {"action": "pass", "actor_slot": "cm1", "target_slot": "rw", "risk": 20})
+        self.assertEqual(len(logs.output), 2)
+        for index, line in enumerate(logs.output, start=1):
+            self.assertIn(f'"attempt": {index}', line)
+            self.assertIn('"category": "timeout"', line)
+            self.assertIn('"exception_class": "ReadTimeout"', line)
+            self.assertNotIn("private_snapshot", line)
+            self.assertNotIn("do-not-log", line)
+            self.assertNotIn("cm1", line)
+            self.assertNotIn("rw", line)
 
     def test_hard_deadline_retries_once_and_logs_safe_timeout(self):
         from app.match_lab.actions import _MatchLabLLMError

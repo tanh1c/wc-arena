@@ -92,6 +92,7 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
         f"Safe match snapshot: {json.dumps(snapshot, separators=(',', ':'))}",
     ])
     provider_failures = 0
+    read_timeout_failures = 0
     for attempt in range(2):
         started = perf_counter()
         try:
@@ -102,12 +103,14 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
             )
         except RuntimeError as exc:
             provider_failures += 1
+            fields = _provider_error_fields(exc)
+            read_timeout_failures += fields == {"category": "timeout", "exception_class": "ReadTimeout"}
             _log_action_attempt(
                 "attempt_failed",
                 attempt=attempt + 1,
                 elapsed_ms=round((perf_counter() - started) * 1000),
                 timeout_seconds=ACTION_TIMEOUT_SECONDS,
-                **_provider_error_fields(exc),
+                **fields,
             )
             continue
         if action:
@@ -118,7 +121,7 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
             elapsed_ms=round((perf_counter() - started) * 1000),
             timeout_seconds=ACTION_TIMEOUT_SECONDS,
         )
-    if provider_failures == 2:
+    if provider_failures == 2 and read_timeout_failures != 2:
         raise ProviderActionError("Match Lab model is unavailable.")
     return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(slot for slot in local_slots if slot != actor_slot)[0], "risk": 20}, "fallback"
 
