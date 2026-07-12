@@ -172,6 +172,7 @@ def resolve_match(
     initial_score: dict[str, int] | None = None,
     initial_timeline: list[dict[str, Any]] | None = None,
     initial_action_sources: dict[str, int] | None = None,
+    end_index: int | None = None,
 ) -> dict[str, Any]:
     count = max(10, min(14, hotspots))
     strengths = resolve_team_strengths(home_xi, away_xi, reference_profiles)
@@ -182,7 +183,7 @@ def resolve_match(
     hotspot_summaries = []
     action_sources = {"llm": 0, "retried": 0, "fallback": 0, **(initial_action_sources or {})}
 
-    for index in range(start_index, count):
+    for index in range(start_index, max(start_index, min(count, end_index if end_index is not None else count))):
         randomizer = random.Random(int(hashlib.sha256(f"{seed}:{index}".encode()).hexdigest(), 16))
         side = _pick_side(randomizer, strengths["home"]["possession"], strengths["away"]["possession"])
         opponents = "away" if side == "home" else "home"

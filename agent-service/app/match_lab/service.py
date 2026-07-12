@@ -17,6 +17,8 @@ COACH_INTENTS = {
     "High pressure": "press high and play forward quickly",
     "Compact block": "stay compact and counter through available outlets",
 }
+MATCH_LAB_TOTAL_HOTSPOTS = 12
+MATCH_LAB_HOTSPOTS_PER_REQUEST = 2
 
 
 def list_bots() -> list[dict[str, str]]:
@@ -120,8 +122,11 @@ def _response(row: dict[str, Any], result: dict[str, Any], debug: bool, state: d
 def _advance_run(row: dict[str, Any], debug: bool) -> dict[str, Any]:
     state = row["resolver_state"]
     try:
-        result = resolve_match(row["seed"], state["home_xi"], state["away_xi"], 12, coach_intents=_coach_intents(row["bot_id"]), debug=debug, start_index=row["hotspot_index"], initial_score={"home": row["home_score"], "away": row["away_score"]}, initial_timeline=row["broadcast_timeline"], initial_action_sources=state.get("action_sources"))
-        row.update({"status": "completed", "hotspot_index": len(result["timeline"]), "home_score": result["score"]["home"], "away_score": result["score"]["away"], "broadcast_timeline": result["timeline"], "final_report": _report(result), "completed_at": datetime.now(timezone.utc).isoformat(), "resolver_state": None})
+        result = resolve_match(row["seed"], state["home_xi"], state["away_xi"], MATCH_LAB_TOTAL_HOTSPOTS, coach_intents=_coach_intents(row["bot_id"]), debug=debug, start_index=row["hotspot_index"], end_index=row["hotspot_index"] + MATCH_LAB_HOTSPOTS_PER_REQUEST, initial_score={"home": row["home_score"], "away": row["away_score"]}, initial_timeline=row["broadcast_timeline"], initial_action_sources=state.get("action_sources"))
+        completed = len(result["timeline"]) >= MATCH_LAB_TOTAL_HOTSPOTS
+        row.update({"status": "completed" if completed else "paused", "hotspot_index": len(result["timeline"]), "home_score": result["score"]["home"], "away_score": result["score"]["away"], "broadcast_timeline": result["timeline"], "resolver_state": None if completed else {**state, "action_sources": result["action_sources"]}})
+        if completed:
+            row.update({"final_report": _report(result), "completed_at": datetime.now(timezone.utc).isoformat()})
     except MatchPausedError as exc:
         result = exc.result
         row.update({"status": "paused", "hotspot_index": result["hotspot_index"], "home_score": result["score"]["home"], "away_score": result["score"]["away"], "broadcast_timeline": result["timeline"], "resolver_state": {**state, "action_sources": result["action_sources"]}})
@@ -132,7 +137,7 @@ def _advance_run(row: dict[str, Any], debug: bool) -> dict[str, Any]:
 
 def run_match_lab(access_token: str, user_id: str, formation: str, bot_id: str, selections: list[dict[str, str]], debug: bool) -> dict[str, Any]:
     home_xi, away_xi = _owned_xi(access_token, user_id, formation, selections), _bot_xi(access_token, bot_id)
-    row = {"user_id": user_id, "status": "running", "formation": formation, "bot_id": bot_id, "player_squad": [{"slot_id": card["slot_id"], "card_id": card["card_id"]} for card in home_xi], "bot_squad": [{"slot_id": card["slot_id"], "card_id": card["card_id"]} for card in away_xi], "seed": secrets.token_urlsafe(16), "hotspot_index": 0, "home_score": 0, "away_score": 0, "broadcast_timeline": [], "resolver_state": {"home_xi": home_xi, "away_xi": away_xi, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}}}
+    row = {"user_id": user_id, "status": "paused", "formation": formation, "bot_id": bot_id, "player_squad": [{"slot_id": card["slot_id"], "card_id": card["card_id"]} for card in home_xi], "bot_squad": [{"slot_id": card["slot_id"], "card_id": card["card_id"]} for card in away_xi], "seed": secrets.token_urlsafe(16), "hotspot_index": 0, "home_score": 0, "away_score": 0, "broadcast_timeline": [], "resolver_state": {"home_xi": home_xi, "away_xi": away_xi, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}}}
     response = get_service_supabase_client().table("match_lab_runs").insert(row).select("id").execute()
     row["id"] = response.data[0]["id"]
     return _advance_run(row, debug)

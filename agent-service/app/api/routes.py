@@ -42,7 +42,7 @@ async def match_lab_bot_xi(bot_id: str, user: AuthenticatedUser = Depends(verify
 
 
 @router.post("/match-lab/runs")
-async def match_lab_run(payload: MatchLabRunRequest, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+def match_lab_run(payload: MatchLabRunRequest, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
     try:
         return run_match_lab(user.access_token, user.user_id, payload.formation, payload.bot_id, [selection.model_dump() for selection in payload.xi], payload.debug)
     except ValueError as exc:
@@ -57,7 +57,7 @@ async def match_lab_runs(user: AuthenticatedUser = Depends(verify_supabase_user)
 
 
 @router.post("/match-lab/runs/{run_id}/resume")
-async def match_lab_resume(run_id: str, debug: bool = False, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+def match_lab_resume(run_id: str, debug: bool = False, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
     try:
         return resume_match_lab(user.user_id, run_id, debug)
     except LookupError as exc:

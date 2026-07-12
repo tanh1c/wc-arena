@@ -57,7 +57,7 @@ class MatchLabActionTest(unittest.TestCase):
 
         player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
         bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
-        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}, "hotspot_summaries": [{"minute": 5}]}
+        result = {"score": {"home": 1, "away": 0}, "timeline": [{"minute": minute} for minute in range(12)], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}, "hotspot_summaries": [{"minute": 5}]}
         service = ServiceClient()
         with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result), patch("app.match_lab.service.get_service_supabase_client", return_value=service):
             response = run_match_lab("jwt", "user", "4-3-3", "starter", [], True)
@@ -134,6 +134,29 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertEqual(partial["hotspot_index"], 2)
         self.assertEqual(len(partial["timeline"]), 2)
         self.assertEqual(resumed["timeline"][:2], partial["timeline"])
+        self.assertEqual(resumed, complete)
+
+    def test_resolver_batch_resumes_to_the_uninterrupted_result(self):
+        xi = [
+            {"slot_id": "st", "card_id": "st", "position": "ST", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+            {"slot_id": "cm", "card_id": "cm", "position": "CM", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80}, "rarity": "Common"},
+        ]
+
+        def pass_action(_, actor_slot, target_slots):
+            return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(target_slots)[0], "risk": 20}, "llm"
+
+        with patch("app.match_lab.resolver.decide_action", side_effect=pass_action):
+            complete = resolve_match("seed", xi, xi, 10)
+            partial = resolve_match("seed", xi, xi, 10, end_index=2)
+            resumed = resolve_match(
+                "seed", xi, xi, 10,
+                start_index=2,
+                initial_score=partial["score"],
+                initial_timeline=partial["timeline"],
+                initial_action_sources=partial["action_sources"],
+            )
+
+        self.assertEqual(len(partial["timeline"]), 2)
         self.assertEqual(resumed, complete)
 
     def test_resolver_is_deterministic_and_emits_supported_events(self):
@@ -395,6 +418,81 @@ class MatchLabActionTest(unittest.TestCase):
         ]
         self.assertIsNone(validate_xi("4-3-3", cards))
 
+    def test_run_match_lab_persists_a_two_hotspot_batch(self):
+        from app.match_lab.service import run_match_lab
+
+        class InsertBuilder:
+            def select(self, _columns):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        class ServiceClient:
+            def table(self, _name):
+                return self
+
+            def insert(self, payload):
+                self.insert_payload = dict(payload)
+                return InsertBuilder()
+
+            def update(self, payload):
+                self.update_payload = dict(payload)
+                return self
+
+            def eq(self, _column, _value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
+        bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
+        result = {"score": {"home": 1, "away": 0}, "timeline": [{"minute": 5}, {"minute": 13}], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 2, "retried": 0, "fallback": 0}}
+        service = ServiceClient()
+        with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result) as resolve, patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            response = run_match_lab("jwt", "user", "4-3-3", "starter", [], False)
+
+        self.assertEqual(service.insert_payload["status"], "paused")
+        self.assertEqual(resolve.call_args.kwargs["end_index"], 2)
+        self.assertEqual(service.update_payload["status"], "paused")
+        self.assertEqual(service.update_payload["hotspot_index"], 2)
+        self.assertNotIn("final_report", service.update_payload)
+        self.assertNotIn("completed_at", service.update_payload)
+        self.assertEqual(response["status"], "paused")
+
+    def test_resume_match_lab_completes_the_final_batch(self):
+        from app.match_lab.service import resume_match_lab
+
+        class ServiceClient:
+            def table(self, _name):
+                return self
+
+            def update(self, payload):
+                self.update_payload = dict(payload)
+                return self
+
+            def eq(self, _column, _value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        state = {"home_xi": [{"slot_id": "st", "card_id": "player", "position": "ST", "rarity": "Common"}], "away_xi": [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}], "action_sources": {"llm": 10, "retried": 0, "fallback": 0}}
+        row = {"id": "run-1", "user_id": "user", "status": "paused", "formation": "4-3-3", "bot_id": "starter", "seed": "seed", "hotspot_index": 10, "home_score": 1, "away_score": 0, "broadcast_timeline": [{"minute": minute} for minute in range(10)], "resolver_state": state}
+        result = {"score": {"home": 2, "away": 0}, "timeline": [{"minute": minute} for minute in range(12)], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 12, "retried": 0, "fallback": 0}}
+        service = ServiceClient()
+        with patch("app.match_lab.service._owned_run", return_value=row), patch("app.match_lab.service.resolve_match", return_value=result) as resolve, patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            response = resume_match_lab("user", "run-1", False)
+
+        self.assertEqual(resolve.call_args.kwargs["start_index"], 10)
+        self.assertEqual(resolve.call_args.kwargs["end_index"], 12)
+        self.assertEqual(service.update_payload["status"], "completed")
+        self.assertIsNone(service.update_payload["resolver_state"])
+        self.assertIn("final_report", service.update_payload)
+        self.assertIn("completed_at", service.update_payload)
+        self.assertEqual(response["status"], "completed")
+
     def test_completed_run_clears_server_only_resolver_state(self):
         from app.match_lab.service import run_match_lab
 
@@ -425,7 +523,7 @@ class MatchLabActionTest(unittest.TestCase):
 
         player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
         bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
-        result = {"score": {"home": 1, "away": 0}, "timeline": [], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}}
+        result = {"score": {"home": 1, "away": 0}, "timeline": [{"minute": minute} for minute in range(12)], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 0, "retried": 0, "fallback": 0}}
         service = ServiceClient()
         with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result), patch("app.match_lab.service.get_service_supabase_client", return_value=service):
             run_match_lab("jwt", "user", "4-3-3", "starter", [], False)
