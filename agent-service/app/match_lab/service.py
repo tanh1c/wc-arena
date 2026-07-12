@@ -44,6 +44,10 @@ def sanitize_xi(xi: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{key: card[key] for key in ("slot_id", "card_id", "owned_card_id", "position", "rarity") if key in card} for card in xi]
 
 
+def sanitize_bot_preview_xi(xi: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{key: card[key] for key in ("slot_id", "card_id", "name", "position", "rarity", "team", "league", "nation_region", "image_url") if key in card} for card in xi]
+
+
 def _owned_xi(access_token: str, user_id: str, formation: str, selections: list[dict[str, str]]) -> list[dict[str, Any]]:
     client = get_user_supabase_client(access_token)
     owned_ids = [selection["owned_card_id"] for selection in selections]
@@ -69,7 +73,7 @@ def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
     if not recipe:
         raise ValueError("Unknown Match Lab bot.")
     client = get_user_supabase_client(access_token)
-    response = client.table("player_cards").select("id,position,alternate_positions,rarity,player_card_gameplay_profiles(raw_stats, effective_stats)").limit(500).execute()
+    response = client.table("player_cards").select("id,name,position,alternate_positions,rarity,team,league,nation_region,image_url,player_card_gameplay_profiles(raw_stats, effective_stats)").order("id").limit(500).execute()
     cards = response.data or []
     selected: list[dict[str, Any]] = []
     used = set()
@@ -81,8 +85,15 @@ def _bot_xi(access_token: str, bot_id: str) -> list[dict[str, Any]]:
         if not raw_stats or not effective_stats:
             raise RuntimeError("Match Lab bot roster is not configured.")
         used.add(card["id"])
-        selected.append({"slot_id": slot_id, "card_id": card["id"], "position": card["position"], "stats": effective_stats, "effective_stats": effective_stats, "rarity": card["rarity"]})
+        selected.append({"slot_id": slot_id, "card_id": card["id"], "name": card.get("name"), "position": card["position"], "stats": effective_stats, "effective_stats": effective_stats, "rarity": card["rarity"], "team": card.get("team"), "league": card.get("league"), "nation_region": card.get("nation_region"), "image_url": card.get("image_url")})
     return selected
+
+
+def get_bot_xi_preview(access_token: str, bot_id: str) -> dict[str, Any]:
+    recipe = BOT_RECIPES.get(bot_id)
+    if not recipe:
+        raise ValueError("Unknown Match Lab bot.")
+    return {"bot": {"id": bot_id, **recipe}, "xi": sanitize_bot_preview_xi(_bot_xi(access_token, bot_id))}
 
 
 def _coach_intents(bot_id: str) -> dict[str, str]:

@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabaseClient';
 const agentApiUrl = (import.meta.env.VITE_AGENT_API_URL as string | undefined)?.replace(/\/$/, '') || 'http://localhost:8000';
 
 export type MatchLabBot = { id: 'starter' | 'pressing-academy' | 'defensive-wall'; formation: '4-3-3' | '4-2-3-1' | '3-5-2'; ovr_band: string; identity: string };
+export type MatchLabBotXiCard = { slot_id: string; card_id: string; name?: string | null; position: string; rarity: string; team?: string | null; league?: string | null; nation_region?: string | null; image_url?: string | null };
+export type MatchLabBotXiPreview = { bot: MatchLabBot; xi: MatchLabBotXiCard[] };
 type Score = { home: number; away: number };
 type TimelineEvent = { minute: number; type: string; side: string; score: Score; summary?: string };
 export type MatchLabRun = { id: string; status: 'running' | 'paused' | 'completed' | 'abandoned'; formation: string; bot_id: string; hotspot_index: number; score: Score; timeline: TimelineEvent[]; fun_rating?: number | null; clarity_rating?: number | null; fairness_rating?: number | null; feedback_text?: string | null; debug?: { hotspots: number; action_sources: Record<string, number>; strengths: Record<string, Record<string, number>>; hotspot_summaries: Array<{ minute: number; side: string; coach_intent: string; local_actors: { carrier: string; support: string[]; opponents: string[] }; action: { type: string; target_slot: string; risk: number; source: string }; outcome: { type: string; score: Score }; latency_ms: number }> } | null };
@@ -22,6 +24,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function listMatchLabBots() {
   return (await request<{ bots: MatchLabBot[] }>('/match-lab/bots')).bots;
+}
+
+export function getMatchLabBotXi(botId: MatchLabBot['id']) {
+  return request<MatchLabBotXiPreview>(`/match-lab/bots/${encodeURIComponent(botId)}/xi`);
 }
 
 export async function listMatchLabRuns() {

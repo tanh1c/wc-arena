@@ -20,6 +20,10 @@ test('match lab uses its own service and excludes reward flow', () => {
   assert.match(source, /Pressing Academy/);
   assert.match(source, /Defensive Wall/);
   assert.match(source, /Debug/);
+  assert.match(source, /getMatchLabBotXi/);
+  assert.match(source, /getFormationSlots/);
+  assert.match(source, /cancelled/);
+  assert.doesNotMatch(source, /Bot XI is revealed and ready for matchup inspection/);
   assert.match(source, /Personal report history/);
   assert.match(source, /Retry \/ resume/);
   assert.match(source, /Abandon/);

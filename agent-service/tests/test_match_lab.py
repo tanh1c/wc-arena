@@ -291,6 +291,65 @@ class MatchLabActionTest(unittest.TestCase):
 
         self.assertEqual(service.update_payload, {"fun_rating": 5, "clarity_rating": 4, "fairness_rating": 3, "feedback_text": "Good"})
 
+    def test_bot_preview_exposes_only_display_safe_card_fields(self):
+        from app.match_lab.service import get_bot_xi_preview
+
+        bot_xi = [{
+            "slot_id": "gk", "card_id": "bot-card", "name": "Preview Keeper", "position": "GK", "rarity": "Common",
+            "team": "Team", "league": "League", "nation_region": "Nation", "image_url": "https://example.com/card.png",
+            "stats": {"OVR": 50}, "effective_stats": {"OVR": 50}, "profile": {"OVR": 50},
+            "alternate_positions": ["CB"], "resolver_state": {"seed": "private"}, "prompt": "private",
+        }]
+        with patch("app.match_lab.service._bot_xi", return_value=bot_xi):
+            preview = get_bot_xi_preview("jwt", "starter")
+
+        self.assertEqual(preview["bot"], {"id": "starter", "formation": "4-3-3", "ovr_band": "50-68", "identity": "Balanced basics"})
+        self.assertEqual(preview["xi"], [{"slot_id": "gk", "card_id": "bot-card", "name": "Preview Keeper", "position": "GK", "rarity": "Common", "team": "Team", "league": "League", "nation_region": "Nation", "image_url": "https://example.com/card.png"}])
+
+    def test_bot_preview_rejects_unknown_bot(self):
+        from app.match_lab.service import get_bot_xi_preview
+
+        with self.assertRaises(ValueError):
+            get_bot_xi_preview("jwt", "missing")
+
+    def test_bot_xi_orders_catalog_before_selecting_formation_slots(self):
+        from app.match_lab.rules import FORMATIONS
+        from app.match_lab.service import _bot_xi
+
+        class CatalogQuery:
+            def select(self, columns):
+                return self
+
+            def order(self, column):
+                self.order_column = column
+                return self
+
+            def limit(self, amount):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": cards})()
+
+        class UserClient:
+            def __init__(self):
+                self.query = CatalogQuery()
+
+            def table(self, name):
+                return self.query
+
+        cards = [{
+            "id": f"card-{slot_id}", "name": slot_id, "position": position,
+            "alternate_positions": "", "rarity": "Common", "team": None,
+            "league": None, "nation_region": None, "image_url": None,
+            "player_card_gameplay_profiles": {"raw_stats": {"OVR": 60}, "effective_stats": {"OVR": 60}},
+        } for slot_id, position in FORMATIONS["4-3-3"].items()]
+        client = UserClient()
+        with patch("app.match_lab.service.get_user_supabase_client", return_value=client):
+            xi = _bot_xi("jwt", "starter")
+
+        self.assertEqual(client.query.order_column, "id")
+        self.assertEqual([card["slot_id"] for card in xi], list(FORMATIONS["4-3-3"]))
+
     def test_match_lab_run_reads_the_inserted_run_id_from_list_response(self):
         from app.match_lab.service import run_match_lab
 

@@ -74,6 +74,10 @@ test('match lab uses persisted effective stats, enforces bot bands, and hides ra
   assert.doesNotMatch(source, /"player_xi": player_xi/);
   assert.match(source, /"strengths": \{side:/);
   assert.match(source, /for key in \("slot_id", "card_id", "owned_card_id", "position", "rarity"\)/);
+  assert.match(source, /def sanitize_bot_preview_xi/);
+  assert.match(source, /sanitize_bot_preview_xi\(_bot_xi\(access_token, bot_id\)\)/);
+  assert.match(source, /"name", "position", "rarity", "team", "league", "nation_region", "image_url"/);
+  assert.doesNotMatch(source, /def sanitize_bot_preview_xi[^\n]*\n[^\n]*"effective_stats"/);
 });
 
 test('match lab reports are owner-readable, compact, and expire after ninety days', () => {

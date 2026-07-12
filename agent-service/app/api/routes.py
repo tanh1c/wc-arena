@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 from app.auth import verify_supabase_user
 from app.graph.workflow import run_agent_turn
 from app.match_lab.models import MatchLabFeedbackRequest, MatchLabRunRequest
-from app.match_lab.service import abandon_match_lab, list_bots, list_match_lab_runs, resume_match_lab, run_match_lab, submit_match_lab_feedback
+from app.match_lab.service import abandon_match_lab, get_bot_xi_preview, list_bots, list_match_lab_runs, resume_match_lab, run_match_lab, submit_match_lab_feedback
 from app.models import AgentChatRequest, AgentChatResponse, AuthenticatedUser
 from app.picks.runner import run_agent_picks
 from app.settings import get_settings
@@ -29,6 +29,16 @@ def health() -> dict[str, bool]:
 @router.get("/match-lab/bots")
 async def match_lab_bots(user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
     return {"bots": list_bots()}
+
+
+@router.get("/match-lab/bots/{bot_id}/xi")
+async def match_lab_bot_xi(bot_id: str, user: AuthenticatedUser = Depends(verify_supabase_user)) -> dict:
+    try:
+        return get_bot_xi_preview(user.access_token, bot_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 @router.post("/match-lab/runs")
