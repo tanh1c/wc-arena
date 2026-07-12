@@ -47,7 +47,28 @@ class LlmSettingsTest(unittest.TestCase):
             "base_url": "https://provider.example/v1",
             "model": "provider/model",
             "temperature": 0.3,
+            "timeout": 30,
         }])
+
+    def test_call_llm_can_disable_sdk_retries(self):
+        calls = []
+
+        class FakeChatOpenAI:
+            def __init__(self, **kwargs):
+                calls.append(kwargs)
+
+            def invoke(self, prompt):
+                return types.SimpleNamespace(content="response")
+
+        with patch.dict(os.environ, {"LLM_API_KEY": "provider-key"}, clear=False):
+            get_settings.cache_clear()
+            sys.modules["langchain_openai"] = types.SimpleNamespace(ChatOpenAI=FakeChatOpenAI)
+            from app.graph.nodes import _call_llm
+
+            self.assertEqual(_call_llm("ping", timeout=5, max_retries=0), "response")
+
+        self.assertEqual(calls[0]["timeout"], 5)
+        self.assertEqual(calls[0]["max_retries"], 0)
 
 
 if __name__ == "__main__":

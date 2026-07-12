@@ -158,10 +158,13 @@ class MatchLabActionTest(unittest.TestCase):
         scores = [event["score"] for event in result["timeline"]]
         self.assertTrue(all(scores[index]["home"] >= scores[index - 1]["home"] and scores[index]["away"] >= scores[index - 1]["away"] for index in range(1, len(scores))))
 
-    def test_provider_exception_retries_then_pauses(self):
-        with patch("app.match_lab.actions._call_llm", side_effect=RuntimeError("unavailable")):
+    def test_provider_exception_retries_once_then_pauses_without_sdk_retries(self):
+        with patch("app.match_lab.actions._call_llm", side_effect=RuntimeError("unavailable")) as call:
             with self.assertRaises(ProviderActionError):
                 decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual([item.kwargs for item in call.call_args_list], [{"timeout": 5, "max_retries": 0}] * 2)
 
     def test_llm_exception_retries_then_falls_back(self):
         with patch("app.match_lab.actions._call_llm", side_effect=["bad", "still bad"]):
@@ -173,10 +176,10 @@ class MatchLabActionTest(unittest.TestCase):
     def test_actions_reject_self_targets(self):
         self.assertIsNone(parse_action('{"action":"pass","actor_slot":"cm1","target_slot":"cm1","risk":40}', {"cm1", "rw"}, "cm1"))
 
-    def test_match_lab_action_uses_short_model_timeout(self):
+    def test_match_lab_action_uses_bounded_model_timeout(self):
         with patch("app.match_lab.actions._call_llm", return_value='{"action":"pass","actor_slot":"cm1","target_slot":"rw","risk":40}') as call:
             decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
-        self.assertEqual(call.call_args.kwargs["timeout"], 1)
+        self.assertEqual(call.call_args.kwargs, {"timeout": 5, "max_retries": 0})
 
     def test_resolver_normalizes_stats_against_reference_profiles(self):
         strong = [{"slot_id": "st", "card_id": "strong", "stats": {"OVR": 95, "PAC": 95, "SHO": 95, "PAS": 95, "DRI": 95, "DEF": 95, "PHY": 95, "Finishing": 95}, "rarity": "Common"}]

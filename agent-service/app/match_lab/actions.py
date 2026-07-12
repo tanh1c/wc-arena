@@ -22,7 +22,7 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
     provider_failures = 0
     for attempt in range(2):
         try:
-            action = parse_action(_call_llm(prompt, timeout=1), local_slots, actor_slot)
+            action = parse_action(_call_llm(prompt, timeout=5, max_retries=0), local_slots, actor_slot)
         except RuntimeError:
             provider_failures += 1
             continue
