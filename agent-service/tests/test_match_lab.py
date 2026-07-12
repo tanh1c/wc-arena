@@ -418,7 +418,7 @@ class MatchLabActionTest(unittest.TestCase):
         ]
         self.assertIsNone(validate_xi("4-3-3", cards))
 
-    def test_run_match_lab_persists_a_two_hotspot_batch(self):
+    def test_run_match_lab_persists_a_running_two_hotspot_checkpoint(self):
         from app.match_lab.service import run_match_lab
 
         class InsertBuilder:
@@ -453,13 +453,89 @@ class MatchLabActionTest(unittest.TestCase):
         with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", return_value=result) as resolve, patch("app.match_lab.service.get_service_supabase_client", return_value=service):
             response = run_match_lab("jwt", "user", "4-3-3", "starter", [], False)
 
-        self.assertEqual(service.insert_payload["status"], "paused")
+        self.assertEqual(service.insert_payload["status"], "running")
         self.assertEqual(resolve.call_args.kwargs["end_index"], 2)
-        self.assertEqual(service.update_payload["status"], "paused")
+        self.assertEqual(service.update_payload["status"], "running")
         self.assertEqual(service.update_payload["hotspot_index"], 2)
         self.assertNotIn("final_report", service.update_payload)
         self.assertNotIn("completed_at", service.update_payload)
+        self.assertEqual(response["status"], "running")
+
+    def test_match_lab_provider_pause_stays_paused(self):
+        from app.match_lab.service import run_match_lab
+
+        class InsertBuilder:
+            def select(self, _columns):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        class ServiceClient:
+            def table(self, _name):
+                return self
+
+            def insert(self, payload):
+                self.insert_payload = dict(payload)
+                return InsertBuilder()
+
+            def update(self, payload):
+                self.update_payload = dict(payload)
+                return self
+
+            def eq(self, _column, _value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        player_xi = [{"slot_id": "st", "card_id": "player", "owned_card_id": "owned", "position": "ST", "rarity": "Common"}]
+        bot_xi = [{"slot_id": "st", "card_id": "bot", "position": "ST", "rarity": "Common"}]
+        partial = {"hotspot_index": 1, "score": {"home": 0, "away": 0}, "timeline": [{"minute": 5}], "strengths": {"home": {}, "away": {}}, "action_sources": {"llm": 1, "retried": 0, "fallback": 0}}
+        service = ServiceClient()
+        with patch("app.match_lab.service._owned_xi", return_value=player_xi), patch("app.match_lab.service._bot_xi", return_value=bot_xi), patch("app.match_lab.service.resolve_match", side_effect=MatchPausedError(partial)), patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            response = run_match_lab("jwt", "user", "4-3-3", "starter", [], False)
+
+        self.assertEqual(service.insert_payload["status"], "running")
+        self.assertEqual(service.update_payload["status"], "paused")
+        self.assertEqual(service.update_payload["hotspot_index"], 1)
+        self.assertNotIn("final_report", service.update_payload)
+        self.assertNotIn("completed_at", service.update_payload)
         self.assertEqual(response["status"], "paused")
+
+    def test_resume_match_lab_accepts_running_checkpoint(self):
+        from app.match_lab.service import resume_match_lab
+
+        row = {"id": "run-1", "user_id": "user", "status": "running"}
+        with patch("app.match_lab.service._owned_run", return_value=row), patch("app.match_lab.service._advance_run", return_value={"id": "run-1", "status": "running"}) as advance:
+            response = resume_match_lab("user", "run-1", False)
+
+        advance.assert_called_once_with(row, False)
+        self.assertEqual(response["status"], "running")
+
+    def test_abandon_match_lab_accepts_running_checkpoint(self):
+        from app.match_lab.service import abandon_match_lab
+
+        class ServiceClient:
+            def table(self, _name):
+                return self
+
+            def update(self, payload):
+                self.update_payload = dict(payload)
+                return self
+
+            def eq(self, _column, _value):
+                return self
+
+            def execute(self):
+                return type("Response", (), {"data": [{"id": "run-1"}]})()
+
+        service = ServiceClient()
+        with patch("app.match_lab.service._owned_run", return_value={"id": "run-1", "status": "running"}), patch("app.match_lab.service.get_service_supabase_client", return_value=service):
+            response = abandon_match_lab("user", "run-1")
+
+        self.assertEqual(service.update_payload, {"status": "abandoned", "resolver_state": None})
+        self.assertEqual(response, {"id": "run-1", "status": "abandoned"})
 
     def test_resume_match_lab_completes_the_final_batch(self):
         from app.match_lab.service import resume_match_lab

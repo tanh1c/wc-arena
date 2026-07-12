@@ -44,3 +44,17 @@ test('match lab uses its own service and excludes reward flow', () => {
   assert.doesNotMatch(source, /max-w-7xl/);
   assert.doesNotMatch(source, /sendAgentMessage|openCardPack|forgePlayerCard|Rewards/);
 });
+
+test('match lab continues running checkpoints and keeps real pauses manual', () => {
+  assert.match(source, /result\?\.status !== 'running'/);
+  assert.match(source, /resumeMatchLabRun\(result\.id, debug\)/);
+  assert.match(source, /next\.status === 'running' && next\.hotspot_index <= previousHotspot/);
+  assert.match(source, /Simulating hot spot/);
+  assert.match(source, /result\.status === 'abandoned'/);
+  assert.match(source, /Abandoned run/);
+  assert.match(source, /requestGeneration/);
+  assert.match(source, /cancelled/);
+  assert.match(source, /run\.status === 'running'/);
+  assert.match(source, /run\.status === 'paused'/);
+  assert.doesNotMatch(source, /resolver_state/);
+});

@@ -97,8 +97,13 @@ test('match lab reports are owner-readable, compact, and expire after ninety day
 test('paused Match Lab resolver state is server-only', () => {
   const migration = migrationSource('match_lab_resume_state');
   const service = readFileSync('agent-service/app/match_lab/service.py', 'utf8');
+  const access = latestMigrationSourceContaining('revoke select on public.match_lab_runs from authenticated');
 
   assert.match(migration, /add column resolver_state jsonb/i);
+  assert.match(access, /revoke select on public\.match_lab_runs from authenticated/i);
+  assert.match(access, /grant select \([\s\S]*completed_at[\s\S]*\) on public\.match_lab_runs to authenticated/i);
+  assert.doesNotMatch(access, /resolver_state/i);
+  assert.doesNotMatch(access, /\bseed\b/i);
   assert.match(service, /"resolver_state": \{"home_xi": home_xi, "away_xi": away_xi/);
   assert.match(service, /"resolver_state": None/);
   assert.doesNotMatch(service, /select\([^\n]*resolver_state/);
