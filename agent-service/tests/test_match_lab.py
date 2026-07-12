@@ -191,7 +191,7 @@ class MatchLabActionTest(unittest.TestCase):
         with patch("app.match_lab.actions._call_llm", return_value="response") as call:
             _call_llm_child(connection, "prompt")
 
-        self.assertEqual(call.call_args.kwargs, {"timeout": 5, "max_retries": 0})
+        self.assertEqual(call.call_args.kwargs, {"timeout": 8, "max_retries": 0})
         self.assertEqual(connection.messages, [("ok", "response")])
 
     def test_provider_exception_retries_once_then_pauses_without_sdk_retries(self):
@@ -236,7 +236,7 @@ class MatchLabActionTest(unittest.TestCase):
             self.assertIn("match_lab_action attempt_failed", line)
             self.assertIn(f'"attempt": {index}', line)
             self.assertIn('"elapsed_ms": ', line)
-            self.assertIn('"timeout_seconds": 5', line)
+            self.assertIn('"timeout_seconds": 8', line)
             self.assertIn('"category": "timeout"', line)
             self.assertIn('"exception_class": "TimeoutError"', line)
             self.assertNotIn("private-provider-body", line)
@@ -277,7 +277,7 @@ class MatchLabActionTest(unittest.TestCase):
             self.assertIn("match_lab_action parse_error", line)
             self.assertIn(f'"attempt": {index}', line)
             self.assertIn('"elapsed_ms": ', line)
-            self.assertIn('"timeout_seconds": 5', line)
+            self.assertIn('"timeout_seconds": 8', line)
             self.assertNotIn("private malformed", line)
             self.assertNotIn("private_snapshot", line)
             self.assertNotIn("do-not-log", line)

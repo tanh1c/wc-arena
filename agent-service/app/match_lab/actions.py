@@ -7,7 +7,7 @@ from typing import Any, Callable
 from app.graph.nodes import _call_llm
 
 ALLOWED_ACTIONS = {"pass", "dribble", "shoot"}
-ACTION_TIMEOUT_SECONDS = 5
+ACTION_TIMEOUT_SECONDS = 8
 logger = logging.getLogger(__name__)
 
 
