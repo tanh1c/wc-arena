@@ -1,13 +1,38 @@
 import json
+import logging
+from time import perf_counter
 from typing import Any
 
 from app.graph.nodes import _call_llm
 
 ALLOWED_ACTIONS = {"pass", "dribble", "shoot"}
+ACTION_TIMEOUT_SECONDS = 5
+logger = logging.getLogger(__name__)
 
 
 class ProviderActionError(RuntimeError):
     pass
+
+
+def _log_action_attempt(event: str, **fields: Any) -> None:
+    logger.info("match_lab_action %s %s", event, json.dumps(fields))
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+
+
+def _provider_error_fields(exc: RuntimeError) -> dict[str, str]:
+    cause = exc.__cause__
+    exception_class = type(cause).__name__ if cause else type(exc).__name__
+    status_code = getattr(cause, "status_code", None)
+    if status_code == 429:
+        category = "rate_limit"
+    elif isinstance(cause, TimeoutError) or "timeout" in exception_class.lower():
+        category = "timeout"
+    elif isinstance(status_code, int) and 400 <= status_code < 500:
+        category = "client_error"
+    else:
+        category = "provider_error"
+    return {"category": category, "exception_class": exception_class}
 
 
 def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[str]) -> tuple[dict[str, Any], str]:
@@ -21,13 +46,31 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
     ])
     provider_failures = 0
     for attempt in range(2):
+        started = perf_counter()
         try:
-            action = parse_action(_call_llm(prompt, timeout=5, max_retries=0), local_slots, actor_slot)
-        except RuntimeError:
+            action = parse_action(
+                _call_llm(prompt, timeout=ACTION_TIMEOUT_SECONDS, max_retries=0),
+                local_slots,
+                actor_slot,
+            )
+        except RuntimeError as exc:
             provider_failures += 1
+            _log_action_attempt(
+                "attempt_failed",
+                attempt=attempt + 1,
+                elapsed_ms=round((perf_counter() - started) * 1000),
+                timeout_seconds=ACTION_TIMEOUT_SECONDS,
+                **_provider_error_fields(exc),
+            )
             continue
         if action:
             return action, "llm" if attempt == 0 else "retried"
+        _log_action_attempt(
+            "parse_error",
+            attempt=attempt + 1,
+            elapsed_ms=round((perf_counter() - started) * 1000),
+            timeout_seconds=ACTION_TIMEOUT_SECONDS,
+        )
     if provider_failures == 2:
         raise ProviderActionError("Match Lab model is unavailable.")
     return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(slot for slot in local_slots if slot != actor_slot)[0], "risk": 20}, "fallback"

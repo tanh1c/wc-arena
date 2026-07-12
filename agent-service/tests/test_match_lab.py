@@ -166,6 +166,68 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertEqual(call.call_count, 2)
         self.assertEqual([item.kwargs for item in call.call_args_list], [{"timeout": 5, "max_retries": 0}] * 2)
 
+    def test_provider_timeout_logs_safe_attempt_fields(self):
+        def timeout(*_args, **_kwargs):
+            raise RuntimeError("provider response: private-provider-body") from TimeoutError("private timeout")
+
+        with patch("app.match_lab.actions._call_llm", side_effect=timeout):
+            with self.assertLogs("app.match_lab.actions", "INFO") as logs:
+                with self.assertRaises(ProviderActionError):
+                    decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(len(logs.output), 2)
+        for index, line in enumerate(logs.output, start=1):
+            self.assertIn("match_lab_action attempt_failed", line)
+            self.assertIn(f'"attempt": {index}', line)
+            self.assertIn('"elapsed_ms": ', line)
+            self.assertIn('"timeout_seconds": 5', line)
+            self.assertIn('"category": "timeout"', line)
+            self.assertIn('"exception_class": "TimeoutError"', line)
+            self.assertNotIn("private-provider-body", line)
+            self.assertNotIn("private timeout", line)
+            self.assertNotIn("private_snapshot", line)
+            self.assertNotIn("do-not-log", line)
+            self.assertNotIn("cm1", line)
+            self.assertNotIn("rw", line)
+
+    def test_rate_limit_category_uses_status_code_without_logging_provider_body(self):
+        class RateLimited(Exception):
+            status_code = 429
+
+        def rate_limited(*_args, **_kwargs):
+            raise RuntimeError("provider response: private-provider-body") from RateLimited("private rate-limit body")
+
+        with patch("app.match_lab.actions._call_llm", side_effect=rate_limited):
+            with self.assertLogs("app.match_lab.actions", "INFO") as logs:
+                with self.assertRaises(ProviderActionError):
+                    decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(len(logs.output), 2)
+        for line in logs.output:
+            self.assertIn('"category": "rate_limit"', line)
+            self.assertIn('"exception_class": "RateLimited"', line)
+            self.assertNotIn("private-provider-body", line)
+            self.assertNotIn("private rate-limit body", line)
+
+    def test_invalid_actions_log_parse_errors_without_raw_output(self):
+        with patch("app.match_lab.actions._call_llm", side_effect=["private malformed model output", "still private malformed output"]):
+            with self.assertLogs("app.match_lab.actions", "INFO") as logs:
+                action, source = decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(source, "fallback")
+        self.assertEqual(action, {"action": "pass", "actor_slot": "cm1", "target_slot": "rw", "risk": 20})
+        self.assertEqual(len(logs.output), 2)
+        for index, line in enumerate(logs.output, start=1):
+            self.assertIn("match_lab_action parse_error", line)
+            self.assertIn(f'"attempt": {index}', line)
+            self.assertIn('"elapsed_ms": ', line)
+            self.assertIn('"timeout_seconds": 5', line)
+            self.assertNotIn("private malformed", line)
+            self.assertNotIn("private_snapshot", line)
+            self.assertNotIn("do-not-log", line)
+            self.assertNotIn("cm1", line)
+            self.assertNotIn("rw", line)
+
     def test_llm_exception_retries_then_falls_back(self):
         with patch("app.match_lab.actions._call_llm", side_effect=["bad", "still bad"]):
             action, source = decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
