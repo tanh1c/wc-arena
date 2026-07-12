@@ -1,3 +1,4 @@
+import time
 import unittest
 
 from unittest.mock import patch
@@ -5,6 +6,10 @@ from unittest.mock import patch
 from app.match_lab.actions import ProviderActionError, decide_action, parse_action
 from app.match_lab.resolver import MatchPausedError, rarity_modifier, resolve_match, resolve_team_strengths
 from app.match_lab.rules import validate_xi
+
+
+def _slow_match_lab_worker(_connection, _prompt):
+    time.sleep(2)
 
 
 class MatchLabActionTest(unittest.TestCase):
@@ -19,7 +24,7 @@ class MatchLabActionTest(unittest.TestCase):
         self.assertIsNone(parse_action('{"action":"shoot","actor_slot":"rw","risk":40}', slots, "cm1"))
 
     def test_invalid_actions_retry_once_then_use_safe_fallback(self):
-        with patch("app.match_lab.actions._call_llm", side_effect=["bad", "still bad"]):
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=["bad", "still bad"]):
             action, source = decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
         self.assertEqual(source, "fallback")
         self.assertEqual(action["action"], "pass")
@@ -158,19 +163,70 @@ class MatchLabActionTest(unittest.TestCase):
         scores = [event["score"] for event in result["timeline"]]
         self.assertTrue(all(scores[index]["home"] >= scores[index - 1]["home"] and scores[index]["away"] >= scores[index - 1]["away"] for index in range(1, len(scores))))
 
+    def test_match_lab_llm_deadline_stops_waiting_for_slow_worker(self):
+        from time import perf_counter
+        from app.match_lab.actions import _MatchLabLLMError, _call_llm_with_deadline
+
+        started = perf_counter()
+        with self.assertRaises(_MatchLabLLMError) as raised:
+            _call_llm_with_deadline("prompt", deadline_seconds=0.05, worker=_slow_match_lab_worker)
+
+        self.assertLess(perf_counter() - started, 1)
+        self.assertEqual(raised.exception.safe_fields, {"category": "timeout", "exception_class": "MatchLabActionDeadline"})
+
+    def test_match_lab_llm_child_uses_bounded_timeout_without_sdk_retries(self):
+        from app.match_lab.actions import _call_llm_child
+
+        class Connection:
+            def __init__(self):
+                self.messages = []
+
+            def send(self, message):
+                self.messages.append(message)
+
+            def close(self):
+                pass
+
+        connection = Connection()
+        with patch("app.match_lab.actions._call_llm", return_value="response") as call:
+            _call_llm_child(connection, "prompt")
+
+        self.assertEqual(call.call_args.kwargs, {"timeout": 5, "max_retries": 0})
+        self.assertEqual(connection.messages, [("ok", "response")])
+
     def test_provider_exception_retries_once_then_pauses_without_sdk_retries(self):
-        with patch("app.match_lab.actions._call_llm", side_effect=RuntimeError("unavailable")) as call:
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=RuntimeError("unavailable")) as call:
             with self.assertRaises(ProviderActionError):
                 decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
 
         self.assertEqual(call.call_count, 2)
-        self.assertEqual([item.kwargs for item in call.call_args_list], [{"timeout": 5, "max_retries": 0}] * 2)
+        self.assertEqual([item.kwargs for item in call.call_args_list], [{}, {}])
+
+    def test_hard_deadline_retries_once_and_logs_safe_timeout(self):
+        from app.match_lab.actions import _MatchLabLLMError
+
+        timeout = _MatchLabLLMError({"category": "timeout", "exception_class": "MatchLabActionDeadline"})
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=timeout) as call:
+            with self.assertLogs("app.match_lab.actions", "INFO") as logs:
+                with self.assertRaises(ProviderActionError):
+                    decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(len(logs.output), 2)
+        for index, line in enumerate(logs.output, start=1):
+            self.assertIn(f'"attempt": {index}', line)
+            self.assertIn('"category": "timeout"', line)
+            self.assertIn('"exception_class": "MatchLabActionDeadline"', line)
+            self.assertNotIn("private_snapshot", line)
+            self.assertNotIn("do-not-log", line)
+            self.assertNotIn("cm1", line)
+            self.assertNotIn("rw", line)
 
     def test_provider_timeout_logs_safe_attempt_fields(self):
         def timeout(*_args, **_kwargs):
             raise RuntimeError("provider response: private-provider-body") from TimeoutError("private timeout")
 
-        with patch("app.match_lab.actions._call_llm", side_effect=timeout):
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=timeout):
             with self.assertLogs("app.match_lab.actions", "INFO") as logs:
                 with self.assertRaises(ProviderActionError):
                     decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
@@ -197,7 +253,7 @@ class MatchLabActionTest(unittest.TestCase):
         def rate_limited(*_args, **_kwargs):
             raise RuntimeError("provider response: private-provider-body") from RateLimited("private rate-limit body")
 
-        with patch("app.match_lab.actions._call_llm", side_effect=rate_limited):
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=rate_limited):
             with self.assertLogs("app.match_lab.actions", "INFO") as logs:
                 with self.assertRaises(ProviderActionError):
                     decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
@@ -210,7 +266,7 @@ class MatchLabActionTest(unittest.TestCase):
             self.assertNotIn("private rate-limit body", line)
 
     def test_invalid_actions_log_parse_errors_without_raw_output(self):
-        with patch("app.match_lab.actions._call_llm", side_effect=["private malformed model output", "still private malformed output"]):
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=["private malformed model output", "still private malformed output"]):
             with self.assertLogs("app.match_lab.actions", "INFO") as logs:
                 action, source = decide_action({"private_snapshot": "do-not-log"}, "cm1", {"cm1", "rw"})
 
@@ -229,7 +285,7 @@ class MatchLabActionTest(unittest.TestCase):
             self.assertNotIn("rw", line)
 
     def test_llm_exception_retries_then_falls_back(self):
-        with patch("app.match_lab.actions._call_llm", side_effect=["bad", "still bad"]):
+        with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=["bad", "still bad"]):
             action, source = decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
         self.assertEqual(source, "fallback")
         self.assertEqual(action["action"], "pass")
@@ -238,10 +294,12 @@ class MatchLabActionTest(unittest.TestCase):
     def test_actions_reject_self_targets(self):
         self.assertIsNone(parse_action('{"action":"pass","actor_slot":"cm1","target_slot":"cm1","risk":40}', {"cm1", "rw"}, "cm1"))
 
-    def test_match_lab_action_uses_bounded_model_timeout(self):
-        with patch("app.match_lab.actions._call_llm", return_value='{"action":"pass","actor_slot":"cm1","target_slot":"rw","risk":40}') as call:
+    def test_match_lab_action_uses_hard_deadline_wrapper(self):
+        with patch("app.match_lab.actions._call_llm_with_deadline", return_value='{"action":"pass","actor_slot":"cm1","target_slot":"rw","risk":40}') as call:
             decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
-        self.assertEqual(call.call_args.kwargs, {"timeout": 5, "max_retries": 0})
+        self.assertEqual(call.call_count, 1)
+        self.assertEqual(call.call_args.kwargs, {})
+        self.assertIn("Required actor slot: cm1", call.call_args.args[0])
 
     def test_resolver_normalizes_stats_against_reference_profiles(self):
         strong = [{"slot_id": "st", "card_id": "strong", "stats": {"OVR": 95, "PAC": 95, "SHO": 95, "PAS": 95, "DRI": 95, "DEF": 95, "PHY": 95, "Finishing": 95}, "rarity": "Common"}]

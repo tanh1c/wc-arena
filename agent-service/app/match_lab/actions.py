@@ -1,7 +1,8 @@
 import json
 import logging
+import multiprocessing
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
 from app.graph.nodes import _call_llm
 
@@ -14,13 +15,13 @@ class ProviderActionError(RuntimeError):
     pass
 
 
-def _log_action_attempt(event: str, **fields: Any) -> None:
-    logger.info("match_lab_action %s %s", event, json.dumps(fields))
-    for handler in logging.getLogger().handlers:
-        handler.flush()
+class _MatchLabLLMError(RuntimeError):
+    def __init__(self, safe_fields: dict[str, str]):
+        super().__init__("LLM call failed")
+        self.safe_fields = safe_fields
 
 
-def _provider_error_fields(exc: RuntimeError) -> dict[str, str]:
+def _safe_error_fields(exc: RuntimeError) -> dict[str, str]:
     cause = exc.__cause__
     exception_class = type(cause).__name__ if cause else type(exc).__name__
     status_code = getattr(cause, "status_code", None)
@@ -33,6 +34,64 @@ def _provider_error_fields(exc: RuntimeError) -> dict[str, str]:
     else:
         category = "provider_error"
     return {"category": category, "exception_class": exception_class}
+
+
+def _call_llm_child(connection: Any, prompt: str) -> None:
+    try:
+        connection.send(("ok", _call_llm(prompt, timeout=ACTION_TIMEOUT_SECONDS, max_retries=0)))
+    except RuntimeError as exc:
+        connection.send(("error", _safe_error_fields(exc)))
+    finally:
+        connection.close()
+
+
+def _call_llm_with_deadline(
+    prompt: str,
+    deadline_seconds: float = ACTION_TIMEOUT_SECONDS,
+    worker: Callable[[Any, str], None] | None = None,
+) -> str | None:
+    context = multiprocessing.get_context("spawn")
+    receiver, sender = context.Pipe(duplex=False)
+    process = context.Process(target=worker or _call_llm_child, args=(sender, prompt), daemon=True)
+    started = perf_counter()
+    process.start()
+    sender.close()
+    try:
+        if not receiver.poll(max(0, deadline_seconds - (perf_counter() - started))):
+            raise _MatchLabLLMError({"category": "timeout", "exception_class": "MatchLabActionDeadline"})
+        try:
+            status, payload = receiver.recv()
+        except EOFError as exc:
+            raise _MatchLabLLMError({"category": "provider_error", "exception_class": "EOFError"}) from exc
+        if status == "ok":
+            return payload if isinstance(payload, str) else None
+        if status == "error" and isinstance(payload, dict):
+            fields = payload
+            if fields.get("category") in {"timeout", "rate_limit", "client_error", "provider_error"} and isinstance(fields.get("exception_class"), str):
+                raise _MatchLabLLMError({"category": fields["category"], "exception_class": fields["exception_class"]})
+        raise _MatchLabLLMError({"category": "provider_error", "exception_class": "MatchLabWorkerError"})
+    finally:
+        receiver.close()
+        if process.is_alive():
+            process.terminate()
+            process.join(0.1)
+            if process.is_alive():
+                process.kill()
+                process.join(0.1)
+        else:
+            process.join(0.1)
+
+
+def _log_action_attempt(event: str, **fields: Any) -> None:
+    logger.info("match_lab_action %s %s", event, json.dumps(fields))
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+
+
+def _provider_error_fields(exc: RuntimeError) -> dict[str, str]:
+    if isinstance(exc, _MatchLabLLMError):
+        return exc.safe_fields
+    return _safe_error_fields(exc)
 
 
 def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[str]) -> tuple[dict[str, Any], str]:
@@ -49,7 +108,7 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
         started = perf_counter()
         try:
             action = parse_action(
-                _call_llm(prompt, timeout=ACTION_TIMEOUT_SECONDS, max_retries=0),
+                _call_llm_with_deadline(prompt),
                 local_slots,
                 actor_slot,
             )
