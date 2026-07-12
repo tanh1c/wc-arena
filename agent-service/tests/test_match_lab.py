@@ -1,15 +1,12 @@
-import time
+import types
 import unittest
 
+import httpx
 from unittest.mock import patch
 
 from app.match_lab.actions import ProviderActionError, decide_action, parse_action
 from app.match_lab.resolver import MatchPausedError, rarity_modifier, resolve_match, resolve_team_strengths
 from app.match_lab.rules import validate_xi
-
-
-def _slow_match_lab_worker(_connection, _prompt):
-    time.sleep(2)
 
 
 class MatchLabActionTest(unittest.TestCase):
@@ -163,38 +160,64 @@ class MatchLabActionTest(unittest.TestCase):
         scores = [event["score"] for event in result["timeline"]]
         self.assertTrue(all(scores[index]["home"] >= scores[index - 1]["home"] and scores[index]["away"] >= scores[index - 1]["away"] for index in range(1, len(scores))))
 
-    def test_match_lab_llm_deadline_stops_waiting_for_slow_worker(self):
-        from time import perf_counter
-        from app.match_lab.actions import _MatchLabLLMError, _call_llm_with_deadline
+    def test_match_lab_llm_posts_openai_compatible_chat_completion(self):
+        from app.match_lab.actions import _call_llm_with_deadline
 
-        started = perf_counter()
-        with self.assertRaises(_MatchLabLLMError) as raised:
-            _call_llm_with_deadline("prompt", deadline_seconds=0.05, worker=_slow_match_lab_worker)
+        calls = []
 
-        self.assertLess(perf_counter() - started, 1)
-        self.assertEqual(raised.exception.safe_fields, {"category": "timeout", "exception_class": "MatchLabActionDeadline"})
-
-    def test_match_lab_llm_child_uses_bounded_timeout_without_sdk_retries(self):
-        from app.match_lab.actions import _call_llm_child
-
-        class Connection:
-            def __init__(self):
-                self.messages = []
-
-            def send(self, message):
-                self.messages.append(message)
-
-            def close(self):
+        class Response:
+            def raise_for_status(self):
                 pass
 
-        connection = Connection()
-        with patch("app.match_lab.actions._call_llm", return_value="response") as call:
-            _call_llm_child(connection, "prompt")
+            def json(self):
+                return {"choices": [{"message": {"content": "response"}}]}
 
-        self.assertEqual(call.call_args.kwargs, {"timeout": 8, "max_retries": 0})
-        self.assertEqual(connection.messages, [("ok", "response")])
+        class Client:
+            def __enter__(self):
+                return self
 
-    def test_provider_exception_retries_once_then_pauses_without_sdk_retries(self):
+            def __exit__(self, *_args):
+                pass
+
+            def post(self, url, **kwargs):
+                calls.append((url, kwargs))
+                return Response()
+
+        settings = types.SimpleNamespace(
+            llm_api_key="provider-key",
+            openai_api_key="",
+            llm_base_url="https://provider.example/v1/",
+            llm_model="provider/model",
+        )
+        with patch("app.match_lab.actions.get_settings", return_value=settings), patch("app.match_lab.actions.httpx.Client", return_value=Client()) as client:
+            self.assertEqual(_call_llm_with_deadline("prompt"), "response")
+
+        self.assertEqual(client.call_args.kwargs, {"timeout": 8, "trust_env": False})
+        self.assertEqual(calls, [("https://provider.example/v1/chat/completions", {
+            "headers": {"Authorization": "Bearer provider-key", "Content-Type": "application/json"},
+            "json": {"model": "provider/model", "temperature": 0.3, "messages": [{"role": "user", "content": "prompt"}]},
+        })])
+
+    def test_match_lab_llm_classifies_direct_provider_errors(self):
+        from app.match_lab.actions import _MatchLabLLMError, _call_llm_with_deadline
+
+        settings = types.SimpleNamespace(llm_api_key="key", openai_api_key="", llm_base_url="https://provider.example/v1", llm_model="model")
+        request = httpx.Request("POST", "https://provider.example/v1/chat/completions")
+        cases = [
+            (httpx.TimeoutException("private timeout"), {"category": "timeout", "exception_class": "TimeoutException"}),
+            (httpx.ConnectError("private endpoint", request=request), {"category": "provider_error", "exception_class": "ConnectError"}),
+            (httpx.HTTPStatusError("private provider body", request=request, response=httpx.Response(429, request=request)), {"category": "rate_limit", "exception_class": "HTTPStatusError"}),
+            (httpx.HTTPStatusError("private provider body", request=request, response=httpx.Response(401, request=request)), {"category": "client_error", "exception_class": "HTTPStatusError"}),
+            (httpx.HTTPStatusError("private provider body", request=request, response=httpx.Response(503, request=request)), {"category": "provider_error", "exception_class": "HTTPStatusError"}),
+        ]
+        for error, fields in cases:
+            with self.subTest(error=type(error).__name__), patch("app.match_lab.actions.get_settings", return_value=settings), patch("app.match_lab.actions.httpx.Client") as client:
+                client.return_value.__enter__.return_value.post.side_effect = error
+                with self.assertRaises(_MatchLabLLMError) as raised:
+                    _call_llm_with_deadline("prompt")
+            self.assertEqual(raised.exception.safe_fields, fields)
+
+    def test_provider_exception_retries_once_then_pauses(self):
         with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=RuntimeError("unavailable")) as call:
             with self.assertRaises(ProviderActionError):
                 decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})

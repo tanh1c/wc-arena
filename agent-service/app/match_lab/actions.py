@@ -1,10 +1,11 @@
 import json
 import logging
-import multiprocessing
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any
 
-from app.graph.nodes import _call_llm
+import httpx
+
+from app.settings import get_settings
 
 ALLOWED_ACTIONS = {"pass", "dribble", "shoot"}
 ACTION_TIMEOUT_SECONDS = 8
@@ -36,50 +37,37 @@ def _safe_error_fields(exc: RuntimeError) -> dict[str, str]:
     return {"category": category, "exception_class": exception_class}
 
 
-def _call_llm_child(connection: Any, prompt: str) -> None:
-    try:
-        connection.send(("ok", _call_llm(prompt, timeout=ACTION_TIMEOUT_SECONDS, max_retries=0)))
-    except RuntimeError as exc:
-        connection.send(("error", _safe_error_fields(exc)))
-    finally:
-        connection.close()
-
-
 def _call_llm_with_deadline(
     prompt: str,
     deadline_seconds: float = ACTION_TIMEOUT_SECONDS,
-    worker: Callable[[Any, str], None] | None = None,
 ) -> str | None:
-    context = multiprocessing.get_context("spawn")
-    receiver, sender = context.Pipe(duplex=False)
-    process = context.Process(target=worker or _call_llm_child, args=(sender, prompt), daemon=True)
-    started = perf_counter()
-    process.start()
-    sender.close()
+    settings = get_settings()
+    api_key = settings.llm_api_key or settings.openai_api_key
+    if not api_key or not settings.llm_base_url:
+        return None
+
     try:
-        if not receiver.poll(max(0, deadline_seconds - (perf_counter() - started))):
-            raise _MatchLabLLMError({"category": "timeout", "exception_class": "MatchLabActionDeadline"})
-        try:
-            status, payload = receiver.recv()
-        except EOFError as exc:
-            raise _MatchLabLLMError({"category": "provider_error", "exception_class": "EOFError"}) from exc
-        if status == "ok":
-            return payload if isinstance(payload, str) else None
-        if status == "error" and isinstance(payload, dict):
-            fields = payload
-            if fields.get("category") in {"timeout", "rate_limit", "client_error", "provider_error"} and isinstance(fields.get("exception_class"), str):
-                raise _MatchLabLLMError({"category": fields["category"], "exception_class": fields["exception_class"]})
-        raise _MatchLabLLMError({"category": "provider_error", "exception_class": "MatchLabWorkerError"})
-    finally:
-        receiver.close()
-        if process.is_alive():
-            process.terminate()
-            process.join(0.1)
-            if process.is_alive():
-                process.kill()
-                process.join(0.1)
-        else:
-            process.join(0.1)
+        with httpx.Client(timeout=deadline_seconds, trust_env=False) as client:
+            response = client.post(
+                f"{settings.llm_base_url.rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": settings.llm_model or "gpt-4.1-mini",
+                    "temperature": 0.3,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+    except httpx.TimeoutException as exc:
+        raise _MatchLabLLMError({"category": "timeout", "exception_class": type(exc).__name__}) from exc
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code
+        category = "rate_limit" if status_code == 429 else "client_error" if 400 <= status_code < 500 else "provider_error"
+        raise _MatchLabLLMError({"category": category, "exception_class": type(exc).__name__}) from exc
+    except (httpx.RequestError, ValueError, KeyError, IndexError, TypeError) as exc:
+        raise _MatchLabLLMError({"category": "provider_error", "exception_class": type(exc).__name__}) from exc
+    return content if isinstance(content, str) else None
 
 
 def _log_action_attempt(event: str, **fields: Any) -> None:
