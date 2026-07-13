@@ -87,6 +87,8 @@ def decide_action(snapshot: dict[str, Any], actor_slot: str, local_slots: set[st
         "Choose one legal football action for this Match Lab highlight.",
         "Return ONLY JSON with exactly action, actor_slot, target_slot, risk.",
         "action is pass, dribble, or shoot; risk is an integer from 0 to 90.",
+        "pass or dribble require one allowed non-self teammate target_slot.",
+        'shoot requires target_slot: "".',
         f"Required actor slot: {actor_slot}",
         f"Allowed target slots: {sorted(local_slots)}",
         f"Safe match snapshot: {json.dumps(snapshot, separators=(',', ':'))}",
@@ -137,7 +139,12 @@ def parse_action(raw: str | None, local_slots: set[str], required_actor: str) ->
         return None
     if action["action"] not in ALLOWED_ACTIONS or action["actor_slot"] != required_actor:
         return None
-    if not isinstance(action["target_slot"], str) or action["target_slot"] not in local_slots or action["target_slot"] == required_actor:
+    if not isinstance(action["target_slot"], str):
+        return None
+    if action["action"] == "shoot":
+        if action["target_slot"]:
+            return None
+    elif action["target_slot"] not in local_slots or action["target_slot"] == required_actor:
         return None
     if not isinstance(action["risk"], int) or isinstance(action["risk"], bool) or not 0 <= action["risk"] <= 90:
         return None

@@ -134,6 +134,18 @@ def _success(randomizer: random.Random, attack: float, defence: float, risk: int
     return randomizer.random() < chance
 
 
+def _shot_outcome(randomizer: random.Random, attack: float, defence: float, risk: int, score: dict[str, int], side: str) -> str:
+    if _success(randomizer, attack, defence, risk):
+        score[side] += 1
+        return "goal"
+    return "save"
+
+
+def _promotes_shot(randomizer: random.Random, attack: float, defence: float, risk: int) -> bool:
+    chance = max(0.05, min(0.25, 0.05 + attack * 0.2 - defence * 0.1 - risk / 1800))
+    return randomizer.random() < chance
+
+
 def _summary(side: str, event_type: str, actor_slot: str) -> str:
     return f"{side.title()} {event_type} by {actor_slot.upper()}"
 
@@ -209,24 +221,41 @@ def resolve_match(
                 raise MatchPausedError({"score": score, "timeline": timeline, "strengths": strengths, "action_sources": action_sources, "hotspot_index": index}) from exc
             latency_ms = round((perf_counter() - started) * 1000)
         else:
-            action, source, latency_ms = {"action": "pass", "actor_slot": actor_slot, "target_slot": "", "risk": 20}, "fallback", 0
+            action, source, latency_ms = {"action": "shoot", "actor_slot": actor_slot, "target_slot": "", "risk": 20}, "fallback", 0
         action_sources[source] += 1
         action_type = action["action"]
 
         if action_type == "shoot":
-            attack = strengths[side]["shot"]
-            defence = strengths[opponents]["save"]
-            if _success(randomizer, attack, defence, action["risk"]):
-                event_type = "goal"
-                score[side] += 1
-            else:
-                event_type = "save"
+            event_type = _shot_outcome(
+                randomizer,
+                strengths[side]["shot"],
+                strengths[opponents]["save"],
+                action["risk"],
+                score,
+                side,
+            )
         else:
-            defence = strengths[opponents]["possession"]
-            if _success(randomizer, strengths[side][action_type], defence, action["risk"]):
-                event_type = action_type
+            succeeded = _success(
+                randomizer,
+                strengths[side][action_type],
+                strengths[opponents]["possession"],
+                action["risk"],
+            )
+            has_shot = any(event["type"] in {"save", "goal"} for event in timeline)
+            if succeeded and (
+                (not has_shot and index >= count - 3)
+                or _promotes_shot(randomizer, strengths[side]["shot"], strengths[opponents]["save"], action["risk"])
+            ):
+                event_type = _shot_outcome(
+                    randomizer,
+                    strengths[side]["shot"],
+                    strengths[opponents]["save"],
+                    action["risk"],
+                    score,
+                    side,
+                )
             else:
-                event_type = "possession"
+                event_type = action_type if succeeded else "possession"
         timeline.append({"minute": snapshot["minute"], "type": event_type, "side": side, "score": dict(score), "summary": _summary(side, event_type, actor_slot)})
         if debug:
             hotspot_summaries.append({

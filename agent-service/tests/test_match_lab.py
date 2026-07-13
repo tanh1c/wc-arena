@@ -16,9 +16,25 @@ class MatchLabActionTest(unittest.TestCase):
             parse_action('{"action":"pass","actor_slot":"cm1","target_slot":"rw","risk":40}', slots, "cm1"),
             {"action": "pass", "actor_slot": "cm1", "target_slot": "rw", "risk": 40},
         )
+        self.assertEqual(
+            parse_action('{"action":"shoot","actor_slot":"cm1","target_slot":"","risk":40}', slots, "cm1"),
+            {"action": "shoot", "actor_slot": "cm1", "target_slot": "", "risk": 40},
+        )
+        self.assertIsNone(parse_action('{"action":"pass","actor_slot":"cm1","target_slot":"","risk":40}', slots, "cm1"))
+        self.assertIsNone(parse_action('{"action":"shoot","actor_slot":"cm1","target_slot":"rw","risk":40}', slots, "cm1"))
         self.assertIsNone(parse_action('{"action":"pass","actor_slot":"cm1","target_slot":"rw","risk":40,"extra":true}', slots, "cm1"))
         self.assertIsNone(parse_action('prose {"action":"pass"}', slots, "cm1"))
         self.assertIsNone(parse_action('{"action":"shoot","actor_slot":"rw","risk":40}', slots, "cm1"))
+
+    def test_shoot_prompt_allows_an_empty_target(self):
+        raw = '{"action":"shoot","actor_slot":"cm1","target_slot":"","risk":40}'
+        with patch("app.match_lab.actions._call_llm_with_deadline", return_value=raw) as call:
+            action, source = decide_action({"score": {"home": 0, "away": 0}}, "cm1", {"cm1", "rw"})
+
+        self.assertEqual(source, "llm")
+        self.assertEqual(action, {"action": "shoot", "actor_slot": "cm1", "target_slot": "", "risk": 40})
+        self.assertIn("pass or dribble", call.call_args.args[0])
+        self.assertIn('target_slot: ""', call.call_args.args[0])
 
     def test_invalid_actions_retry_once_then_use_safe_fallback(self):
         with patch("app.match_lab.actions._call_llm_with_deadline", side_effect=["bad", "still bad"]):
@@ -158,6 +174,28 @@ class MatchLabActionTest(unittest.TestCase):
 
         self.assertEqual(len(partial["timeline"]), 2)
         self.assertEqual(resumed, complete)
+
+    def test_pass_only_intent_still_creates_a_deterministic_shot_attempt(self):
+        xi = [
+            {"slot_id": "st", "card_id": "st", "position": "ST", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80, "Finishing": 80, "Shot Power": 80, "Long Shot": 80, "Volleys": 80, "Penalties": 80}, "rarity": "Common"},
+            {"slot_id": "cm", "card_id": "cm", "position": "CM", "effective_stats": {"OVR": 80, "PAC": 80, "SHO": 80, "PAS": 80, "DRI": 80, "DEF": 80, "PHY": 80, "Finishing": 80, "Shot Power": 80, "Long Shot": 80, "Volleys": 80, "Penalties": 80}, "rarity": "Common"},
+        ]
+
+        def pass_action(_, actor_slot, target_slots):
+            return {"action": "pass", "actor_slot": actor_slot, "target_slot": sorted(target_slots)[0], "risk": 20}, "llm"
+
+        with patch("app.match_lab.resolver.decide_action", side_effect=pass_action):
+            result = resolve_match("pass-only", xi, xi, 12)
+            comparison = resolve_match("pass-only", xi, xi, 12)
+
+        self.assertEqual(result, comparison)
+        self.assertTrue(any(event["type"] in {"save", "goal"} for event in result["timeline"]))
+        previous_score = {"home": 0, "away": 0}
+        for event in result["timeline"]:
+            self.assertTrue(
+                event["type"] == "goal" or event["score"] == previous_score
+            )
+            previous_score = event["score"]
 
     def test_resolver_is_deterministic_and_emits_supported_events(self):
         xi = [{"slot_id": "gk", "card_id": "gk", "stats": {"GK Reflexes": 100, "GK Diving": 100, "GK Handling": 100, "Positioning": 100, "OVR": 90, "PAC": 1, "SHO": 1, "PAS": 1, "DRI": 1, "DEF": 1, "PHY": 1}, "rarity": "Common"}]
